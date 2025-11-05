@@ -1,0 +1,33 @@
+name: Generate OpenAPI Zod schemas
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate OpenAPI types and Zod schemas
+        run: npm run generate:schemas
+
+      - name: Check for unstaged generated files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Generated schema files are out-of-date. Run 'npm run generate:schemas' and commit the changes.";
+            git --no-pager status --porcelain;
+            exit 1;
+          fi
