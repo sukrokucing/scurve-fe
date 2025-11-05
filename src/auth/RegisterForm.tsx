@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 import { useAuth } from "./useAuth";
 
@@ -34,7 +34,6 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { register } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,18 +51,11 @@ export function RegisterForm() {
     try {
       setIsSubmitting(true);
       await register({ name: values.name, email: values.email, password: values.password });
-      toast({
-        title: "Account created",
-        description: "You can now create your first project.",
-      });
+      toast.success("Account created — You can now create your first project.");
       navigate("/", { replace: true });
     } catch (error) {
       console.error(error);
-      toast({
-        title: "Registration failed",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
+      toast.error("Registration failed — Please try again later.");
     } finally {
       setIsSubmitting(false);
     }

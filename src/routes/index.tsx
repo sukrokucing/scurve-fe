@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import LoadingFallback from "@/components/ui/LoadingFallback";
+import RootLayout from "@/components/layout/RootLayout";
 
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 
@@ -14,77 +15,86 @@ const AppLayout = lazy(() => import("@/components/layout/AppLayout").then((m) =>
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
     element: (
       <Suspense fallback={<LoadingFallback />}>
-        <AuthLayout
-          title="Welcome back"
-          description="Enter your credentials to access S-Curve."
-          form={<LoginForm />}
-          footer={{
-            prompt: "Don't have an account?",
-            linkLabel: "Create one",
-            linkTo: "/register",
-          }}
-        />
+        <RootLayout />
       </Suspense>
     ),
-  },
-  {
-    path: "/register",
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <AuthLayout
-          title="Create your account"
-          description="Set up your workspace to start managing projects."
-          form={<RegisterForm />}
-          footer={{
-            prompt: "Already have an account?",
-            linkLabel: "Sign in",
-            linkTo: "/login",
-          }}
-        />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/",
-    element: <ProtectedRoute />,
     children: [
       {
+        path: "/login",
         element: (
-          <Suspense fallback={<LoadingFallback className="py-12" />}>
-            <AppLayout />
+          <Suspense fallback={<LoadingFallback />}>
+            <AuthLayout
+              title="Welcome back"
+              description="Enter your credentials to access S-Curve."
+              form={<LoginForm />}
+              footer={{
+                prompt: "Don't have an account?",
+                linkLabel: "Create one",
+                linkTo: "/register",
+              }}
+            />
           </Suspense>
         ),
+      },
+      {
+        path: "/register",
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <AuthLayout
+              title="Create your account"
+              description="Set up your workspace to start managing projects."
+              form={<RegisterForm />}
+              footer={{
+                prompt: "Already have an account?",
+                linkLabel: "Sign in",
+                linkTo: "/login",
+              }}
+            />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/",
+        element: <ProtectedRoute />,
         children: [
           {
-            index: true,
             element: (
-              <Suspense fallback={<LoadingFallback />}>
-                <DashboardPage />
+              <Suspense fallback={<LoadingFallback className="py-12" />}>
+                <AppLayout />
               </Suspense>
             ),
-          },
-          {
-            path: "projects",
-            element: (
-              <Suspense fallback={<LoadingFallback />}>
-                <ProjectsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "tasks",
-            element: (
-              <Suspense fallback={<LoadingFallback />}>
-                <TasksPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "*",
-            element: <Navigate to="/" replace />,
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<LoadingFallback />}>
+                    <DashboardPage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "projects",
+                element: (
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ProjectsPage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "tasks",
+                element: (
+                  <Suspense fallback={<LoadingFallback />}>
+                    <TasksPage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "*",
+                element: <Navigate to="/" replace />,
+              },
+            ],
           },
         ],
       },

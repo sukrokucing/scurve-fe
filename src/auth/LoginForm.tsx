@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 import { useAuth } from "./useAuth";
 
@@ -28,7 +28,6 @@ type LoginValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const { login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,20 +43,13 @@ export function LoginForm() {
     try {
       setIsSubmitting(true);
       await login(values);
-      toast({
-        title: "Welcome back!",
-        description: "You are now signed in.",
-      });
+      toast.success("Welcome back! You are now signed in.");
       const redirectTo =
         (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname ?? "/";
       navigate(redirectTo, { replace: true });
     } catch (error) {
       console.error(error);
-      toast({
-        title: "Login failed",
-        description: "Check your credentials and try again.",
-        variant: "destructive",
-      });
+      toast.error("Login failed — Check your credentials and try again.");
     } finally {
       setIsSubmitting(false);
     }

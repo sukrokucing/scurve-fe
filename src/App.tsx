@@ -2,8 +2,6 @@ import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 
 import { useAuth } from "@/auth/useAuth";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
 import { router } from "@/routes";
 
 function App() {
@@ -18,9 +16,7 @@ function App() {
 
   return (
     <>
-      <RouterProvider router={router} />
-      <Toaster />
-      <SonnerToaster />
+  <RouterProvider router={router} />
     </>
   );
 }

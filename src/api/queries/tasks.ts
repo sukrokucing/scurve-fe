@@ -47,7 +47,8 @@ export function useTaskMutation(projectId?: string) {
 
       const body: Partial<TaskCreateRequest> = {
         title: payload.name ?? "",
-        due_date: payload.dueDate ?? null,
+        // don't send empty string for due_date — convert empty to undefined so the server treats it as omitted
+        ...(payload.dueDate !== undefined && payload.dueDate !== "" ? { due_date: payload.dueDate } : {}),
         status: mapStatusToApi(payload.status),
       };
       const created = await openapi.createTaskForProject(projectId, body);
@@ -99,11 +100,16 @@ export function useUpdateTask() {
         }
       };
 
-      const body: Partial<TaskUpdateRequest> = {
-        title: args.payload.name,
-        due_date: args.payload.dueDate ?? null,
-        status: mapStatusToApi(args.payload.status),
-      };
+      const body: Partial<TaskUpdateRequest> = {};
+      if (args.payload.name !== undefined) body.title = args.payload.name;
+      // If dueDate is explicitly provided as empty string, treat as null (clear); if it's undefined, omit the field
+      if (Object.prototype.hasOwnProperty.call(args.payload, "dueDate")) {
+        if (args.payload.dueDate === "") body.due_date = null;
+        else body.due_date = args.payload.dueDate as string | null | undefined;
+      }
+      const mappedStatus = mapStatusToApi(args.payload.status);
+      if (mappedStatus !== undefined) body.status = mappedStatus;
+
       if (!args.projectId) throw new Error("projectId is required to update a task");
       const updated = await openapi.updateTask(args.projectId, args.id, body as TaskUpdateRequest);
       return updated;
