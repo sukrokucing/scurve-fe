@@ -7,6 +7,7 @@ type ApiProject = components["schemas"]["Project"];
 type ProjectCreateRequest = components["schemas"]["ProjectCreateRequest"];
 type ProjectUpdateRequest = components["schemas"]["ProjectUpdateRequest"];
 type ApiTask = components["schemas"]["Task"];
+type ApiProgress = components["schemas"]["Progress"];
 type TaskCreateRequest = components["schemas"]["TaskCreateRequest"];
 type TaskUpdateRequest = components["schemas"]["TaskUpdateRequest"];
 
@@ -79,7 +80,11 @@ export const openapi = {
   },
 
   // Tasks
-  async listTasksByProject(projectId: string): Promise<DomainTask[]> {
+  async listTasksByProject(projectId: string, opts?: { progress?: boolean; task_id?: string }): Promise<DomainTask[] | ApiProgress[]> {
+    if (opts?.progress) {
+      const { data } = await api.get<ApiProgress[]>(`/projects/${projectId}/tasks`, { params: { progress: true, task_id: opts.task_id } });
+      return data;
+    }
     const { data } = await api.get<ApiTask[]>(`/projects/${projectId}/tasks`);
     return data.map(mapApiTaskToDomain);
   },

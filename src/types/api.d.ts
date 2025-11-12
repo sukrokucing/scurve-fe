@@ -434,7 +434,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Set to true to list progress entries instead of tasks */
+                    progress?: boolean;
+                    /** @description Optional task id to filter progress */
+                    task_id?: string;
+                };
                 header?: never;
                 path: {
                     project_id: string;
@@ -443,27 +448,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description List tasks */
+                /** @description List tasks or progress entries */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        /**
-                         * @example [
-                         *       {
-                         *         "created_at": "2025-10-01T10:00:00Z",
-                         *         "deleted_at": null,
-                         *         "due_date": "2025-10-10T10:00:00Z",
-                         *         "id": "22222222-2222-2222-2222-222222222222",
-                         *         "project_id": "00000000-0000-0000-0000-000000000000",
-                         *         "status": "pending",
-                         *         "title": "Define launch checklist",
-                         *         "updated_at": "2025-10-01T10:00:00Z"
-                         *       }
-                         *     ]
-                         */
-                        "application/json": components["schemas"]["Task"][];
+                        "application/json": components["schemas"]["Task"][] | components["schemas"]["Progress"][];
                     };
                 };
             };
@@ -616,6 +607,37 @@ export interface components {
             email: string;
             /** @example S3cureP@ssw0rd */
             password: string;
+        };
+        Progress: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            note?: string | null;
+            /** Format: int32 */
+            progress: number;
+            /** Format: uuid */
+            project_id: string;
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ProgressCreateRequest: {
+            /** @example Halfway done - waiting on review */
+            note?: string | null;
+            /**
+             * Format: int32
+             * @example 75
+             */
+            progress: number;
+        };
+        ProgressUpdateRequest: {
+            note?: string | null;
+            /** Format: int32 */
+            progress?: number | null;
         };
         Project: {
             /** Format: date-time */

@@ -10,15 +10,15 @@ const TASKS_QUERY_KEY = ["tasks"] as const;
 
 export const tasksKeys = {
   all: TASKS_QUERY_KEY,
-  byProject: (projectId: string) => [...TASKS_QUERY_KEY, "project", projectId] as const,
+  byProject: (projectId: string, progress?: boolean) => [...TASKS_QUERY_KEY, "project", projectId, progress ? "progress" : "tasks"] as const,
 };
 
-export function useTasksByProject(projectId: string) {
-  return useQuery<Task[]>({
-    queryKey: tasksKeys.byProject(projectId),
+export function useTasksByProject(projectId: string, progress?: boolean) {
+  return useQuery<Task[] | unknown[]>({
+  queryKey: tasksKeys.byProject(projectId, progress),
     queryFn: async () => {
       if (!projectId) return [];
-      return openapi.listTasksByProject(projectId);
+      return openapi.listTasksByProject(projectId, { progress });
     },
     enabled: Boolean(projectId),
   });

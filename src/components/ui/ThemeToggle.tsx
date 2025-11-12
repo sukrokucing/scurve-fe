@@ -25,7 +25,12 @@ export function ThemeToggle() {
   }, [theme]);
 
   return (
-    <Button variant="outline" size="sm" onClick={() => setTheme((t) => (t === "glass" ? "default" : "glass"))}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setTheme((t) => (t === "glass" ? "default" : "glass"))}
+      aria-label="Toggle theme"
+    >
       {theme === "glass" ? "Glass" : "Default"}
     </Button>
   );

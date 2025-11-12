@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview --host --port 3001",
     "generate:types": "openapi-typescript \"${VITE_API_URL:-https://localhost:8800}/api-docs/openapi.json\" -o src/types/api.d.ts",
+    "generate:types:local": "openapi-typescript ./src/openapi.json -o src/types/api.d.ts",
     "generate:zod": "node scripts/generate-zod.js",
     "generate:schemas": "npm run generate:types && npm run generate:zod"
   },

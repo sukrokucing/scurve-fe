@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { openapi } from "@/api/openapiClient";
@@ -37,6 +37,8 @@ export function ProjectsPage() {
   });
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const createNameRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (createDialogOpen) {
@@ -224,6 +226,28 @@ export function ProjectsPage() {
             </DialogContent>
           </Dialog>
 
+          {/* Confirm delete dialog */}
+          <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setProjectToDelete(null); setConfirmOpen(open); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete project</DialogTitle>
+                <DialogDescription>Are you sure you want to permanently delete this project? This action cannot be undone.</DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                <Button type="button" variant="destructive" onClick={() => {
+                  if (!projectToDelete) return;
+                  deleteMutation.mutate(projectToDelete.id);
+                  setConfirmOpen(false);
+                }}>
+                  Delete
+                </Button>
+              </div>
+              <DialogFooter />
+              <DialogClose />
+            </DialogContent>
+          </Dialog>
+
           {/* Edit dialog (controlled) */}
           <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
             <DialogContent>
@@ -362,9 +386,8 @@ export function ProjectsPage() {
                           size="sm"
                           variant="destructive"
                           onClick={() => {
-                            if (confirm(`Delete project "${project.name}"? This cannot be undone.`)) {
-                              deleteMutation.mutate(project.id);
-                            }
+                            setProjectToDelete(project);
+                            setConfirmOpen(true);
                           }}
                         >
                           Delete

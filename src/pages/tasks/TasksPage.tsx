@@ -7,7 +7,7 @@ import { extractFieldErrorsFromAxios } from "@/lib/api";
 import type { Task } from "@/types/domain";
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,9 +36,16 @@ export function TasksPage() {
     if (!projects || projects.length === 0) return;
     setSelectedProject((current) => current ?? projects[0]?.id);
   }, [projects]);
+  const [showProgress, setShowProgress] = useState(false);
   const { data: tasks, isLoading, refetch, isRefetching } = useTasksByProject(
     selectedProject ?? "",
+    showProgress,
   );
+
+  // Re-run query when toggling progress view
+  useEffect(() => {
+    void refetch();
+  }, [showProgress, refetch]);
 
   const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", due_date: "", status: "todo" } });
   const [createOpen, setCreateOpen] = useState(false);
@@ -51,6 +58,92 @@ export function TasksPage() {
   const updateMutation = useUpdateTask();
 
   const currentProject = projects?.find((project) => project.id === selectedProject);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
+  const content = (() => {
+    if (!selectedProject) return (
+      <p className="text-sm text-muted-foreground">Choose a project to inspect its tasks.</p>
+    );
+    if (isLoading) return (
+      <div className="space-y-2">
+        <Skeleton className="w-full h-5" />
+        <Skeleton className="w-5/6 h-5" />
+        <Skeleton className="w-4/6 h-5" />
+      </div>
+    );
+    if (!tasks || tasks.length === 0) return (
+      <p className="text-sm text-muted-foreground">No tasks retrieved. Create tasks via the backend API to populate this view.</p>
+    );
+    // tasks present
+    if (showProgress) {
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Task ID</TableHead>
+              <TableHead>Progress</TableHead>
+              <TableHead>Note</TableHead>
+              <TableHead>Created</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {((tasks as unknown) as { id: string; task_id: string; progress: number; note?: string; created_at: string }[]).map((p) => (
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.task_id}</TableCell>
+                <TableCell>{typeof p.progress === "number" ? `${p.progress}%` : "—"}</TableCell>
+                <TableCell>{p.note ?? "—"}</TableCell>
+                <TableCell>{p.created_at}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      );
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Assignee</TableHead>
+            <TableHead>Due date</TableHead>
+            <TableHead className="text-right">Progress</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {((tasks as unknown) as Task[]).map((task) => (
+            <TableRow key={task.id}>
+              <TableCell className="font-medium">{task.name}</TableCell>
+              <TableCell className="capitalize">{task.status.replace(/_/g, " ")}</TableCell>
+              <TableCell>{task.assigneeId ?? "—"}</TableCell>
+              <TableCell>{task.dueDate ?? "—"}</TableCell>
+              <TableCell className="text-right">{typeof task.progress === "number" ? `${task.progress}%` : "—"}</TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setEditing(task);
+                    editForm.reset({ title: task.name, due_date: task.dueDate ?? "", status: task.status });
+                  }}>
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => {
+                    setTaskToDelete(task);
+                    setConfirmOpen(true);
+                  }}>
+                    Delete
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  })();
 
   return (
     <div className="space-y-6">
@@ -191,64 +284,13 @@ export function TasksPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!selectedProject ? (
-            <p className="text-sm text-muted-foreground">
-              Choose a project to inspect its tasks.
-            </p>
-          ) : isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-5/6" />
-              <Skeleton className="h-5 w-4/6" />
-            </div>
-          ) : tasks && tasks.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assignee</TableHead>
-                  <TableHead>Due date</TableHead>
-                  <TableHead className="text-right">Progress</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell className="font-medium">{task.name}</TableCell>
-                    <TableCell className="capitalize">{task.status.replace(/_/g, " ")}</TableCell>
-                    <TableCell>{task.assigneeId ?? "—"}</TableCell>
-                    <TableCell>{task.dueDate ?? "—"}</TableCell>
-                    <TableCell className="text-right">
-                      {typeof task.progress === "number" ? `${task.progress}%` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => {
-                              setEditing(task);
-                              editForm.reset({ title: task.name, due_date: task.dueDate ?? "", status: task.status });
-                            }}>
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => {
-                          if (confirm(`Delete task "${task.name}"? This cannot be undone.`)) {
-                            deleteMutation.mutate(task.id);
-                          }
-                        }}>
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No tasks retrieved. Create tasks via the backend API to populate this view.
-            </p>
-          )}
+          <div className="flex items-center justify-end gap-3 mb-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} />
+              <span>Show progress entries</span>
+            </label>
+          </div>
+          {content}
         </CardContent>
       </Card>
       {/* Edit dialog */}
@@ -335,6 +377,27 @@ export function TasksPage() {
             </form>
           </Form>
           <DialogFooter />
+        </DialogContent>
+      </Dialog>
+      {/* Confirm delete dialog */}
+      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete task</DialogTitle>
+            <DialogDescription>Are you sure you want to permanently delete this task? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={() => {
+              if (!taskToDelete) return;
+              deleteMutation.mutate(taskToDelete.id);
+              setConfirmOpen(false);
+            }}>
+              Delete
+            </Button>
+          </div>
+          <DialogFooter />
+          <DialogClose />
         </DialogContent>
       </Dialog>
     </div>
