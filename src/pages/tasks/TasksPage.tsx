@@ -63,7 +63,8 @@ export function TasksPage() {
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedProject} onValueChange={setSelectedProject}>
-            <SelectTrigger className="w-56">
+            {/* Provide an accessible name for the combobox trigger so screen readers can announce it */}
+            <SelectTrigger className="w-56" aria-label="Select project">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>

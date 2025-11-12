@@ -1,4 +1,3 @@
-import { api } from "@/api/client";
 import { useNetworkStore } from "@/store/networkStore";
 
 // Simple deduplicated backend availability checker with short TTL.
@@ -18,21 +17,50 @@ export async function checkBackendAvailable(force = false): Promise<boolean> {
   if (pending) return pending;
 
   pending = (async () => {
-    try {
-      // lightweight GET to root (assumes server responds to /)
-      await api.get("/");
-      cached = { ok: true, ts: Date.now() };
-      useNetworkStore.getState().setOffline(false, null);
-      return true;
-    } catch (err: unknown) {
+      try {
+        // Lightweight probe using the Fetch API to avoid axios interceptors.
+        // Use a configurable health path and handle the case where
+        // `VITE_API_URL` is the empty string (dev proxy / relative requests).
+        const apiEnv = import.meta.env.VITE_API_URL;
+        const healthPath = (import.meta.env.VITE_API_HEALTH_PATH as string | undefined) ?? "/api/health";
+
+        // Build probe URL:
+        // - if apiEnv is undefined -> fall back to local dev backend host
+        // - if apiEnv is empty string -> use a relative health path (works with Vite proxy)
+        // - otherwise join base + healthPath
+        let probeUrl: string;
+        if (apiEnv === undefined) {
+          probeUrl = `https://localhost:8800${healthPath}`;
+        } else if (apiEnv === "") {
+          probeUrl = healthPath;
+        } else {
+          // ensure we don't duplicate slashes
+          probeUrl = apiEnv.endsWith("/") ? `${apiEnv.replace(/\/+$/, "")}${healthPath}` : `${apiEnv}${healthPath}`;
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        try {
+          await fetch(probeUrl, { method: "GET", signal: controller.signal });
+          // treat any resolved response as reachable (status may be 200 or redirect)
+          cached = { ok: true, ts: Date.now() };
+          useNetworkStore.getState().setOffline(false, null);
+          return true;
+        } finally {
+          clearTimeout(timeout);
+        }
+      } catch (err: unknown) {
       cached = { ok: false, ts: Date.now() };
       // set offline state with optional code if it's an Axios error
       let codeStr: string | null = null;
-      if (typeof err === "object" && err !== null) {
-        const e = err as { code?: string | number; response?: { status?: number } };
-        if (typeof e.code === "string") codeStr = e.code;
-        else if (typeof e.code === "number") codeStr = String(e.code);
-        else if (e.response && typeof e.response.status !== "undefined") codeStr = String(e.response.status);
+      try {
+        if (typeof err === "object" && err !== null) {
+          const e = err as { name?: string; message?: string };
+          if (e.name) codeStr = e.name;
+          else if (e.message) codeStr = e.message;
+        }
+      } catch {
+        /* ignore */
       }
 
       useNetworkStore.getState().setOffline(true, codeStr ?? "api_unreachable");

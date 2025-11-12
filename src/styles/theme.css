@@ -1,0 +1,50 @@
+/* Theme variables (Glassmorphism - surprise theme)
+   These variables are referenced by Tailwind via `hsl(var(--...))` in
+   `tailwind.config.js`. Values are H S% L% (no surrounding `hsl()` call).
+*/
+:root {
+  /* Base / neutral */
+  --border: 210 24% 94%;
+  --input: 210 24% 99%;
+  --ring: 170 65% 60%;
+  --background: 210 28% 98%;
+  --foreground: 210 12% 12%;
+
+  /* Semantic */
+  --primary: 170 63% 68%;
+  --primary-foreground: 210 8% 8%;
+  --secondary: 200 18% 92%;
+  --secondary-foreground: 210 14% 18%;
+  --muted: 210 16% 67%;
+  --muted-foreground: 210 8% 28%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 12% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 12% 12%;
+  --accent: 190 60% 72%;
+  --accent-foreground: 210 12% 12%;
+
+  --radius: 12px;
+}
+
+/* Glass theme class (adds backdrop blur, slight translucency) */
+.theme-glass {
+  --card: 210 40% 95%; /* subtle tinted panel */
+  --card-foreground: 210 12% 12%;
+  --popover: 210 40% 94%;
+  --popover-foreground: 210 12% 12%;
+  --border: 210 24% 88%;
+  --background: 208 25% 95%;
+  --input: 208 22% 98%;
+  --ring: 170 65% 60%;
+  --primary-foreground: 210 8% 8%;
+  --muted-foreground: 210 8% 28%;
+}
+
+/* Utility: apply glass look to elements via .glass-panel */
+.glass-panel {
+  background-color: rgba(255,255,255,0.6);
+  backdrop-filter: blur(8px) saturate(110%);
+  -webkit-backdrop-filter: blur(8px) saturate(110%);
+  border: 1px solid rgba(255,255,255,0.2);
+}

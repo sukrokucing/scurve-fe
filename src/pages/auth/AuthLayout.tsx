@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type AuthLayoutProps = {
@@ -18,20 +18,21 @@ type AuthLayoutProps = {
 
 export function AuthLayout({ title, description, form, footer, className }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-background via-background to-primary/10">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-6 py-12">
+    <div className="w-full min-h-screen bg-gradient-to-br from-background via-background to-primary/10">
+      <main className="flex items-center justify-center w-full max-w-5xl min-h-screen px-6 py-12 mx-auto" role="main">
         <Card className={cn("w-full max-w-lg shadow-xl", className)}>
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-2xl font-semibold tracking-tight">{title}</CardTitle>
+            {/* Use a semantic h1 for page title to satisfy page-has-heading-one rule */}
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             {description ? (
               <CardDescription className="text-muted-foreground">{description}</CardDescription>
             ) : null}
           </CardHeader>
           <CardContent>{form}</CardContent>
         </Card>
-      </div>
+      </main>
       {footer ? (
-        <p className="pb-12 text-center text-sm text-muted-foreground">
+        <p className="pb-12 text-sm text-center text-muted-foreground">
           {footer.prompt}{" "}
           <Link className="font-medium text-primary hover:underline" to={footer.linkTo}>
             {footer.linkLabel}

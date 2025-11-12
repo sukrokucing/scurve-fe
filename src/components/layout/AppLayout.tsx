@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/auth/useAuth";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
@@ -40,9 +41,9 @@ export function AppLayout() {
                       className={({ isActive }) =>
                         cn(
                           "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              isActive
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
                         )
                       }
                       onClick={() => setOpen(false)}
@@ -73,7 +74,7 @@ export function AppLayout() {
                   cn(
                     "rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )
                 }
@@ -85,9 +86,12 @@ export function AppLayout() {
           </nav>
           <div className="flex items-center gap-3">
             {user ? <span className="hidden text-sm text-muted-foreground md:inline">{user.email}</span> : null}
-            <Button variant="outline" onClick={logout}>
-              Sign out
-            </Button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button variant="outline" onClick={logout}>
+                Sign out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
