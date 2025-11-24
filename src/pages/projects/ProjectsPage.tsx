@@ -25,7 +25,7 @@ import { extractFieldErrorsFromAxios } from "@/lib/api";
 import type { Project } from "@/types/domain";
 
 export function ProjectsPage() {
-  const { data: projects, isLoading, refetch, isRefetching } = useProjectsQuery();
+  const { data: projects, isLoading, refetch, isRefetching, error } = useProjectsQuery();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Project | null>(null);
   const createForm = useForm<ProjectFormValues>({
@@ -118,7 +118,7 @@ export function ProjectsPage() {
     },
   });
 
-  const rows = useMemo(() => projects ?? [], [projects]);
+  const rows = useMemo(() => ((projects as unknown) as Project[]) ?? [], [projects]);
 
   return (
     <div className="space-y-6">
@@ -343,7 +343,18 @@ export function ProjectsPage() {
           <CardDescription>Fetched from the S-Curve backend in real-time.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {error ? (
+            <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <div className="flex items-start justify-between gap-3">
+                <div>Failed to load projects from the backend.</div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => void refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-5 w-full" />
               <Skeleton className="h-5 w-5/6" />

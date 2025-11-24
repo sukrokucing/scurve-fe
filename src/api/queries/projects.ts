@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { openapi } from "@/api/openapiClient";
 
@@ -10,10 +11,18 @@ export const projectsKeys = {
 };
 
 export function useProjectsQuery() {
-  return useQuery({
+  return useQuery<unknown[]>({
     queryKey: projectsKeys.all,
     queryFn: async () => {
-      return openapi.listProjects();
+      try {
+        return await openapi.listProjects();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        // show a toast immediately and re-throw so react-query can handle error state
+        toast.error(`Failed to load projects: ${message}`);
+        throw err;
+      }
     },
+    retry: 1,
   });
 }

@@ -30,11 +30,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function TasksPage() {
   const { data: projects } = useProjectsQuery();
-  const [selectedProject, setSelectedProject] = useState<string | undefined>();
+  const [selectedProject, setSelectedProject] = useState<string>("");
 
   useEffect(() => {
     if (!projects || projects.length === 0) return;
-    setSelectedProject((current) => current ?? projects[0]?.id);
+    setSelectedProject((current) => (current ? current : projects[0]?.id ?? ""));
   }, [projects]);
   const [showProgress, setShowProgress] = useState(false);
   const { data: tasks, isLoading, refetch, isRefetching } = useTasksByProject(
