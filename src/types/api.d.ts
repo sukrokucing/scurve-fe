@@ -594,6 +594,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List dependencies */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TaskDependency"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        source_task_id: string;
+                        /** Format: uuid */
+                        target_task_id: string;
+                        /** @example finish-to-start */
+                        type_: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Dependency created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TaskDependency"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/dependencies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Dependency deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -679,40 +784,104 @@ export interface components {
             password: string;
         };
         Task: {
+            /** Format: uuid */
+            assignee?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             deleted_at?: string | null;
             /** Format: date-time */
             due_date?: string | null;
+            /** Format: int32 */
+            duration_days?: number | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            end_date?: string | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
+            parent_id?: string | null;
+            /** Format: int32 */
+            progress: number;
+            /** Format: uuid */
             project_id: string;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            start_date?: string | null;
             status: string;
             title: string;
             /** Format: date-time */
             updated_at: string;
         };
         TaskCreateRequest: {
+            /** Format: uuid */
+            assignee?: string | null;
             /**
              * Format: date-time
              * @example 2025-10-10T10:00:00Z
              */
             due_date?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            end_date?: string | null;
+            /** Format: uuid */
+            parent_id?: string | null;
+            /**
+             * Format: int32
+             * @example 0
+             */
+            progress?: number | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            start_date?: string | null;
             /** @example pending */
             status?: string | null;
             /** @example Define launch checklist */
             title: string;
         };
         TaskUpdateRequest: {
+            /** Format: uuid */
+            assignee?: string | null;
             /**
              * Format: date-time
              * @example 2025-11-01T10:00:00Z
              */
             due_date?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            end_date?: string | null;
+            /** Format: uuid */
+            parent_id?: string | null;
+            /** Format: int32 */
+            progress?: number | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            start_date?: string | null;
             status?: string | null;
             title?: string | null;
+        };
+        TaskDependency: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            source_task_id: string;
+            /** Format: uuid */
+            target_task_id: string;
+            type_: string;
         };
         User: {
             /** Format: date-time */

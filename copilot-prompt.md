@@ -4,7 +4,7 @@ You are a senior frontend engineer.
 This project is the frontend for the S-Curve backend (`scurve-be`), a task & project management system built with **Axum (Rust)**, **SQLx**, **JWT**, and **Utoipa (OpenAPI)**.
 
 The backend exposes all endpoints under HTTPS with HTTP/2 and serves a valid OpenAPI 3.1.0 JSON specification at:
-https://localhost:8800/api-docs/openapi.json
+https://rust-service:8800/api-docs/openapi.json
 
 less
 Copy code
@@ -59,7 +59,7 @@ npx shadcn-ui@latest add button card input label form table toast dialog
 
 # Generate types from backend
 npm i -D openapi-typescript
-npx openapi-typescript https://localhost:443/api-docs/openapi.json -o src/types/api.d.ts
+npx openapi-typescript https://rust-service:8800/api-docs/openapi.json -o src/types/api.d.ts
 📁 Directory Structure
 graphql
 Copy code
@@ -102,7 +102,7 @@ Copy code
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://localhost:443",
+  baseURL: import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || "https://rust-service:8800",
 });
 
 api.interceptors.request.use((config) => {
@@ -159,7 +159,7 @@ export const useAuth = create<AuthState>((set) => ({
 
 env
 Copy code
-VITE_API_URL=https://localhost:443
+VITE_API_URL=https://rust-service:8800
 VITE_APP_NAME=S-Curve
 🧠 Developer Workflow
 Step 1: Run backend (scurve-be) with HTTP/2 enabled (cargo run --release).
@@ -173,7 +173,7 @@ Step 3: Generate OpenAPI types when backend changes:
 
 bash
 Copy code
-npx openapi-typescript https://localhost:443/api-docs/openapi.json -o src/types/api.d.ts
+npx openapi-typescript https://rust-service:8800/api-docs/openapi.json -o src/types/api.d.ts
 Step 4: Commit both copilot-prompt.md (backend + frontend) to maintain architecture alignment.
 
 🧭 Copilot Guidance

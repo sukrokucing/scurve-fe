@@ -24,12 +24,13 @@ export async function checkBackendAvailable(force = false): Promise<boolean> {
         const apiEnv = import.meta.env.VITE_API_URL;
         const healthPath = (import.meta.env.VITE_API_HEALTH_PATH as string | undefined) ?? "/api/health";
 
-        // Build probe URL:
-        // - if apiEnv is undefined -> fall back to local dev backend host
-        // - if apiEnv is empty string -> use a relative health path (works with Vite proxy)
-        // - otherwise join base + healthPath
+        // Build probe URL.
+        // In DEV we always use the relative health path so the Vite dev server
+        // proxy can forward requests and handle self-signed certs (secure:false).
         let probeUrl: string;
-        if (apiEnv === undefined) {
+        if (import.meta.env.DEV) {
+          probeUrl = healthPath;
+        } else if (apiEnv === undefined) {
           probeUrl = `https://localhost:8800${healthPath}`;
         } else if (apiEnv === "") {
           probeUrl = healthPath;
@@ -41,11 +42,31 @@ export async function checkBackendAvailable(force = false): Promise<boolean> {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000);
         try {
-          await fetch(probeUrl, { method: "GET", signal: controller.signal });
-          // treat any resolved response as reachable (status may be 200 or redirect)
-          cached = { ok: true, ts: Date.now() };
-          useNetworkStore.getState().setOffline(false, null);
-          return true;
+          try {
+            await fetch(probeUrl, { method: "GET", signal: controller.signal });
+            // treat any resolved response as reachable (status may be 200 or redirect)
+            cached = { ok: true, ts: Date.now() };
+            useNetworkStore.getState().setOffline(false, null);
+            return true;
+          } catch (firstErr) {
+            // If the probe failed and the target is localhost over HTTPS, try HTTP
+            // This helps local dev when the backend uses a self-signed cert
+            // that the browser rejects. Fall back only for localhost/127.0.0.1.
+            try {
+              const isLocalHttps = probeUrl.startsWith("https://localhost") || probeUrl.startsWith("https://127.0.0.1");
+              if (isLocalHttps) {
+                const alt = probeUrl.replace(/^https:/, "http:");
+                await fetch(alt, { method: "GET", signal: controller.signal });
+                cached = { ok: true, ts: Date.now() };
+                useNetworkStore.getState().setOffline(false, null);
+                return true;
+              }
+            } catch (secondErr) {
+              // swallow - we'll fall through to the outer catch below
+            }
+            // rethrow the original error so outer catch records offline state
+            throw firstErr;
+          }
         } finally {
           clearTimeout(timeout);
         }
