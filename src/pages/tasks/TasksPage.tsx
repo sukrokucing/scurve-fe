@@ -177,6 +177,18 @@ export function TasksPage() {
                     onDeleteDependency={(dependencyId) => {
                         deleteDependencyMutation.mutate(dependencyId);
                     }}
+                    onDoubleClick={(ganttTask) => {
+                        // Find the full task object to edit
+                        const taskToEdit = (filteredTasks as Task[]).find(t => t.id === ganttTask.originalId);
+                        if (taskToEdit) {
+                            setEditing(taskToEdit);
+                            editForm.reset({
+                                title: taskToEdit.name,
+                                due_date: taskToEdit.dueDate ?? "",
+                                status: taskToEdit.status
+                            });
+                        }
+                    }}
                 />
             );
         }
@@ -251,15 +263,15 @@ export function TasksPage() {
     })();
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
+        <div className="space-y-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-2">
                     <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground leading-relaxed">
                         Track execution status and unblock your teams quickly.
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <Select value={selectedProject} onValueChange={setSelectedProject}>
                         {/* Provide an accessible name for the combobox trigger so screen readers can announce it */}
                         <SelectTrigger className="w-56" aria-label="Select project">
@@ -288,6 +300,9 @@ export function TasksPage() {
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Create task</DialogTitle>
+                                <DialogDescription>
+                                    Create a new task for your project with optional progress tracking.
+                                </DialogDescription>
                             </DialogHeader>
                             <Form {...createForm}>
                                 <form
@@ -301,27 +316,85 @@ export function TasksPage() {
                                             });
                                             return;
                                         }
+
+                                        // Determine target project: either from global selection or form selection
+                                        const targetProjectId = selectedProject || parsed.data.projectId;
+                                        if (!targetProjectId) {
+                                            createForm.setError("projectId", { type: "manual", message: "Project is required" });
+                                            return;
+                                        }
+
                                         const dueDate = parsed.data.due_date
                                             ? new Date(parsed.data.due_date).toISOString()
                                             : null;
-                                        createMutation.mutateAsync({ name: parsed.data.title, dueDate, status: parsed.data.status ?? "todo" })
-                                            .then(() => {
-                                                setCreateOpen(false);
-                                                createForm.reset();
-                                            })
-                                            .catch((err: unknown) => {
-                                                const fieldErrors = extractFieldErrorsFromAxios(err);
-                                                if (fieldErrors) {
-                                                    Object.entries(fieldErrors).forEach(([k, v]) => {
-                                                        if (v && v.length) createForm.setError(k as keyof TaskFormValues, { type: "server", message: v.join(", ") });
+
+                                        // Use openapi client directly for flexible project support
+                                        import("@/api/openapiClient").then(({ openapi }) => {
+                                            import("@tanstack/react-query").then(({ useQueryClient }) => {
+                                                // Can't use hook here, so we'll use a different approach
+                                                // We'll use the mutation if selectedProject matches, otherwise direct call
+                                                const payload: Partial<import("@/api/openapiClient").TaskCreateRequest> = {
+                                                    title: parsed.data.title,
+                                                    due_date: dueDate,
+                                                    status: parsed.data.status ?? "todo",
+                                                    progress: parsed.data.progress ?? 0,
+                                                };
+
+                                                openapi.createTaskForProject(targetProjectId, payload)
+                                                    .then(() => {
+                                                        setCreateOpen(false);
+                                                        createForm.reset();
+                                                        // Refetch tasks for the target project
+                                                        if (targetProjectId === selectedProject) {
+                                                            void refetchTasks();
+                                                        }
+                                                    })
+                                                    .catch((err: unknown) => {
+                                                        const fieldErrors = extractFieldErrorsFromAxios(err);
+                                                        if (fieldErrors) {
+                                                            Object.entries(fieldErrors).forEach(([k, v]) => {
+                                                                if (v && v.length) createForm.setError(k as keyof TaskFormValues, { type: "server", message: v.join(", ") });
+                                                            });
+                                                            return;
+                                                        }
+                                                        // otherwise show generic error
+                                                        console.error("Failed to create task:", err);
                                                     });
-                                                    return;
-                                                }
-                                                // otherwise hook shows toast
                                             });
+                                        });
                                     })}
                                     className="space-y-4"
                                 >
+                                    {/* Project Selector - always show for clarity */}
+                                    <FormField
+                                        control={createForm.control}
+                                        name="projectId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Project</FormLabel>
+                                                <Select
+                                                    onValueChange={field.onChange}
+                                                    defaultValue={field.value || selectedProject}
+                                                    value={field.value || selectedProject}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a project" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {projects?.map((project) => (
+                                                            <SelectItem key={project.id} value={project.id}>
+                                                                {project.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
                                     <FormField
                                         control={createForm.control}
                                         name="title"
@@ -337,7 +410,6 @@ export function TasksPage() {
                                                                 : ""
                                                         }
                                                         ref={(e) => {
-                                                            // forward react-hook-form ref and keep local ref for autofocus
                                                             if (typeof field.ref === "function") field.ref(e);
                                                             else if (field.ref && "current" in field.ref) (field.ref as { current?: HTMLInputElement | null }).current = e;
                                                             createRef.current = e;
@@ -349,32 +421,70 @@ export function TasksPage() {
                                         )}
                                     />
 
-                                    <FormField
-                                        control={createForm.control}
-                                        name="due_date"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Due date</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        type="datetime-local"
-                                                        className={
-                                                            createForm.formState.errors.due_date
-                                                                ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                : ""
-                                                        }
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField
+                                            control={createForm.control}
+                                            name="due_date"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Due date</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            type="datetime-local"
+                                                            className={
+                                                                createForm.formState.errors.due_date
+                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
+                                                                    : ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={createForm.control}
+                                            name="progress"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="flex items-center justify-between">
+                                                        <span>Progress</span>
+                                                        <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
+                                                            {field.value ?? 0}%
+                                                        </span>
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <div className="space-y-2">
+                                                            <Input
+                                                                type="range"
+                                                                min="0"
+                                                                max="100"
+                                                                step="5"
+                                                                value={field.value ?? 0}
+                                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+                                                            />
+                                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                                <span>0%</span>
+                                                                <span>25%</span>
+                                                                <span>50%</span>
+                                                                <span>75%</span>
+                                                                <span>100%</span>
+                                                            </div>
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
                                     <div className="flex justify-end">
                                         <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                                        <Button type="submit" disabled={createMutation.status === "pending"}>
-                                            {createMutation.status === "pending" ? "Creating…" : "Create"}
+                                        <Button type="submit" disabled={createForm.formState.isSubmitting}>
+                                            {createForm.formState.isSubmitting ? "Creating…" : "Create"}
                                         </Button>
                                     </div>
                                 </form>
@@ -391,15 +501,15 @@ export function TasksPage() {
                         View project backlog, progress and blockers from the backend API.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6 pt-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         {/* Search and Filter Toolbar */}
-                        <div className="flex items-center gap-2 flex-1">
-                            <div className="relative flex-1 max-w-sm">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search tasks..."
-                                    className="pl-9"
+                                    className="pl-9 h-10"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -420,32 +530,17 @@ export function TasksPage() {
                         </div>
 
                         {/* View Toggle */}
-                        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-                            <Button
-                                variant={viewMode === "list" ? "background" : "ghost"}
-                                size="sm"
-                                className={viewMode === "list" ? "bg-background shadow-sm" : ""}
-                                onClick={() => setViewMode("list")}
-                            >
-                                <List className="h-4 w-4 mr-2" />
+                        <div className="flex items-center gap-3">
+                            <Button variant={viewMode === "list" ? "default" : "outline"} onClick={() => setViewMode("list")} className="h-10">
+                                <List className="mr-2 h-4 w-4" />
                                 List
                             </Button>
-                            <Button
-                                variant={viewMode === "kanban" ? "background" : "ghost"}
-                                size="sm"
-                                className={viewMode === "kanban" ? "bg-background shadow-sm" : ""}
-                                onClick={() => setViewMode("kanban")}
-                            >
-                                <Kanban className="h-4 w-4 mr-2" />
+                            <Button variant={viewMode === "kanban" ? "default" : "outline"} onClick={() => setViewMode("kanban")} className="h-10">
+                                <Kanban className="mr-2 h-4 w-4" />
                                 Board
                             </Button>
-                            <Button
-                                variant={viewMode === "gantt" ? "background" : "ghost"}
-                                size="sm"
-                                className={viewMode === "gantt" ? "bg-background shadow-sm" : ""}
-                                onClick={() => setViewMode("gantt")}
-                            >
-                                <CalendarRange className="h-4 w-4 mr-2" />
+                            <Button variant={viewMode === "gantt" ? "default" : "outline"} onClick={() => setViewMode("gantt")} className="h-10">
+                                <CalendarRange className="mr-2 h-4 w-4" />
                                 Gantt
                             </Button>
                         </div>
@@ -458,6 +553,9 @@ export function TasksPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit task</DialogTitle>
+                        <DialogDescription>
+                            Update the task details and save your changes.
+                        </DialogDescription>
                     </DialogHeader>
                     <Form {...editForm}>
                         <form

@@ -9,7 +9,7 @@ import type { GanttTask, GanttProps } from "./types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Trash2, Plus, X } from "lucide-react";
 
 const columnHelper = createColumnHelper<GanttTask>();
@@ -24,6 +24,7 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
     const columns = [
         columnHelper.accessor("name", {
             header: "Task Name",
+            size: 200,
             cell: (info) => (
                 <Input
                     value={info.getValue()}
@@ -31,12 +32,13 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
                         const updated = { ...info.row.original, name: e.target.value };
                         onTaskUpdate(updated);
                     }}
-                    className="h-8 border-none shadow-none focus-visible:ring-1"
+                    className="h-8 border-none shadow-none focus-visible:ring-1 min-w-0"
                 />
             ),
         }),
         columnHelper.accessor("start", {
             header: "Start Date",
+            size: 150,
             cell: (info) => (
                 <Input
                     type="date"
@@ -48,12 +50,13 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
                             onTaskUpdate(updated);
                         }
                     }}
-                    className="h-8 w-32 border-none shadow-none focus-visible:ring-1"
+                    className="h-8 w-full border-none shadow-none focus-visible:ring-1"
                 />
             ),
         }),
         columnHelper.accessor("end", {
             header: "End Date",
+            size: 150,
             cell: (info) => (
                 <Input
                     type="date"
@@ -65,12 +68,13 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
                             onTaskUpdate(updated);
                         }
                     }}
-                    className="h-8 w-32 border-none shadow-none focus-visible:ring-1"
+                    className="h-8 w-full border-none shadow-none focus-visible:ring-1"
                 />
             ),
         }),
         columnHelper.accessor("progress", {
             header: "%",
+            size: 120,
             cell: (info) => (
                 <Input
                     type="number"
@@ -84,13 +88,14 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
                             onTaskUpdate(updated);
                         }
                     }}
-                    className="h-8 w-16 border-none shadow-none focus-visible:ring-1"
+                    className="h-8 w-full border-none shadow-none focus-visible:ring-1"
                 />
             ),
         }),
         columnHelper.display({
             id: "dependencies",
             header: "Predecessors",
+            size: 180,
             cell: (info) => {
                 const task = info.row.original;
                 const currentDeps = task.dependencies || [];
@@ -135,6 +140,8 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
         }),
         columnHelper.display({
             id: "actions",
+            header: "",
+            size: 60,
             cell: (info) => (
                 <Button
                     variant="ghost"
@@ -156,12 +163,16 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
 
     return (
         <div className="w-full">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left border-collapse">
                 <thead className="bg-muted/50 text-muted-foreground font-medium sticky top-0 z-10">
                     {table.getHeaderGroups().map((headerGroup) => (
                         <tr key={headerGroup.id}>
                             {headerGroup.headers.map((header) => (
-                                <th key={header.id} className="h-10 px-4 border-b font-medium">
+                                <th
+                                    key={header.id}
+                                    className="h-[50px] px-4 border-b font-medium whitespace-nowrap overflow-hidden text-ellipsis"
+                                    style={{ width: header.getSize() }}
+                                >
                                     {header.isPlaceholder
                                         ? null
                                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -172,10 +183,16 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
                 </thead>
                 <tbody>
                     {table.getRowModel().rows.map((row) => (
-                        <tr key={row.id} className="border-b hover:bg-muted/50 transition-colors">
+                        <tr key={row.id} className="border-b hover:bg-muted/50 transition-colors h-[50px]">
                             {row.getVisibleCells().map((cell) => (
-                                <td key={cell.id} className="p-1">
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                <td
+                                    key={cell.id}
+                                    className="px-2 py-0 h-[50px]"
+                                    style={{ width: cell.column.getSize() }}
+                                >
+                                    <div className="flex items-center h-full">
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </div>
                                 </td>
                             ))}
                         </tr>

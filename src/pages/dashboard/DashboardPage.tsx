@@ -1,21 +1,28 @@
 import { useProjectsQuery } from "@/api/queries/projects";
+import { useAllTasks } from "@/api/queries/tasks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { LayoutDashboard, CheckCircle2, Clock, FolderKanban, ArrowUpRight } from "lucide-react";
+import { CheckCircle2, Clock, FolderKanban, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export function DashboardPage() {
-    const { data: projects, isLoading } = useProjectsQuery();
+    const { data: projects, isLoading: isLoadingProjects } = useProjectsQuery();
+    const { tasks, isLoading: isLoadingTasks } = useAllTasks();
+
+    const isLoading = isLoadingProjects || isLoadingTasks;
 
     // Calculate high-level metrics
+    // Calculate high-level metrics
     const totalProjects = projects?.length ?? 0;
-    const activeProjects = projects?.filter(p => !p.deleted_at).length ?? 0;
-    // Mocking task data for dashboard summary since we don't have a "getAllTasks" query easily available here without iterating
-    // In a real app, we'd want a dashboard-specific API endpoint.
-    const completedTasks = 12; // Placeholder
-    const pendingTasks = 5;    // Placeholder
+
+    // Safeguard: Ensure tasks are only counted if we have projects
+    // This prevents edge cases where tasks might be stale or mismatched
+    const safeTasks = totalProjects > 0 ? tasks : [];
+
+    const completedTasks = safeTasks.filter(t => t.status === 'done').length;
+    const pendingTasks = safeTasks.filter(t => t.status !== 'done').length;
 
     const chartData = projects?.map(p => ({
         name: p.name,
@@ -68,7 +75,7 @@ export function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{pendingTasks}</div>
-                        <p className="text-xs text-muted-foreground">5 deadlines this week</p>
+                        <p className="text-xs text-muted-foreground">Across all projects</p>
                     </CardContent>
                 </Card>
                 <Card className="glass">

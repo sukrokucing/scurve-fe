@@ -16,10 +16,11 @@ interface GanttViewProps {
     onDeleteTask: (taskId: string) => void;
     onAddDependency: (sourceId: string, targetId: string) => void;
     onDeleteDependency: (dependencyId: string) => void;
+    onDoubleClick: (task: GanttTask) => void;
 }
 
-export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDeleteTask, onAddDependency, onDeleteDependency }: GanttViewProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDeleteTask, onAddDependency, onDeleteDependency, onDoubleClick }: GanttViewProps) {
+    const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
     const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
 
     // Transform API tasks to Gantt tasks
@@ -87,8 +88,8 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
             </div>
 
             <div className="flex flex-1 border rounded-xl overflow-hidden glass shadow-sm">
-                {/* Split View: Table (40%) | Timeline (60%) */}
-                <div className="w-[40%] border-r bg-background overflow-auto">
+                {/* Split View: Table (Fixed 750px) | Timeline (Flex) */}
+                <div className="w-[750px] min-w-[650px] max-w-[850px] border-r bg-background overflow-auto flex-none">
                     <TaskTable
                         tasks={ganttTasks}
                         dependencies={dependencies}
@@ -98,9 +99,9 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
                         onDeleteDependency={onDeleteDependency}
                     />
                 </div>
-                <div className="w-[60%] bg-background overflow-auto">
+                <div className="flex-1 bg-background overflow-auto min-w-0">
                     {ganttTasks.length > 0 ? (
-                        <Timeline tasks={ganttTasks} viewMode={viewMode} onTaskChange={handleTaskChange} />
+                        <Timeline tasks={ganttTasks} viewMode={viewMode} onTaskChange={handleTaskChange} onDoubleClick={onDoubleClick} />
                     ) : (
                         <div className="flex items-center justify-center h-full text-muted-foreground">No tasks to display</div>
                     )}

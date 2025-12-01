@@ -6,9 +6,10 @@ interface TimelineProps {
     tasks: GanttTask[];
     viewMode: ViewMode;
     onTaskChange: (task: GanttTask) => void;
+    onDoubleClick: (task: GanttTask) => void;
 }
 
-export function Timeline({ tasks, viewMode, onTaskChange }: TimelineProps) {
+export function Timeline({ tasks, viewMode, onTaskChange, onDoubleClick }: TimelineProps) {
     const handleTaskChange = (task: Task) => {
         // Cast back to GanttTask to preserve custom fields
         const updatedTask = tasks.find((t) => t.id === task.id);
@@ -22,6 +23,13 @@ export function Timeline({ tasks, viewMode, onTaskChange }: TimelineProps) {
         }
     };
 
+    const handleDoubleClick = (task: Task) => {
+        const originalTask = tasks.find((t) => t.id === task.id);
+        if (originalTask) {
+            onDoubleClick(originalTask);
+        }
+    };
+
     return (
         <div className="w-full h-full min-h-[300px]">
             <Gantt
@@ -29,10 +37,13 @@ export function Timeline({ tasks, viewMode, onTaskChange }: TimelineProps) {
                 viewMode={viewMode}
                 onDateChange={handleTaskChange}
                 onProgressChange={handleTaskChange}
+                onDoubleClick={handleDoubleClick}
                 listCellWidth="" // Hide default list
                 columnWidth={100}
                 barFill={80}
-                ganttHeight={400}
+                ganttHeight={0} // 0 lets it fill the container
+                headerHeight={50}
+                rowHeight={50}
                 barCornerRadius={4}
                 barProgressColor="#14E6AC"
                 barProgressSelectedColor="#10b981"

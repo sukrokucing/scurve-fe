@@ -247,5 +247,41 @@ Current tasks have identical dates (2025-11-28 to 2025-11-29), which may cause d
 - ✅ **Dashboard Vite Import Error**: Fixed by installing missing `react-is` dependency
 - ✅ **Gantt Dependencies**: Fully implemented with Predecessors column and backend integration
 
-## Notes
-- Task Management CRUD operations are functional. Full Edit, Delete, and Gantt view testing can be completed manually.
+### Full Scenario Re-run Execution Log
+**Date**: 2025-11-29
+**Executor**: MCP Agent
+
+#### 1. Authentication
+- **User Registration**: **PASSED**
+  - Registered new user "E2E Test User" (`e2e_test_user_final@example.com`)
+  - Redirected to Dashboard successfully
+
+#### 2. Projects Management
+- **Create Project**: **PASSED**
+  - Created "E2E Test Project"
+- **Edit Project**: **PASSED**
+  - Renamed to "E2E Test Project Updated"
+- **Delete Project**: **PASSED**
+  - Created temporary "Project to Delete"
+  - Deleted successfully
+
+#### 3. Task Management
+- **Create Task**: **PASSED**
+  - Created "E2E Test Task"
+  - Created "Design Phase"
+- **Gantt View & Dependencies**: **PASSED**
+  - Switched to Gantt view
+  - Verified both tasks visible
+  - Added dependency: "Design Phase" -> "E2E Test Task"
+  - Verified dependency badge
+- **View Switching**: **PASSED**
+  - Verified List, Board, and Gantt views
+
+#### 4. Dashboard
+- **Metrics**: **PARTIALLY PASSED**
+  - Dashboard loaded
+  - **Issue**: Metrics showed "Active Tasks: 5" and "Total Projects: 0" immediately after registration/creation. This suggests a potential issue with data freshness or default placeholder values for new users.
+  - "Recent Projects" correctly listed "E2E Test Project Updated".
+
+### Summary
+All core functional scenarios (Auth, CRUD, Gantt, Views) passed. A minor data consistency issue was observed on the Dashboard metrics for a fresh user.

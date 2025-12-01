@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
+import { useProjectsQuery } from "./projects";
 
 import { openapi } from "@/api/openapiClient";
 import type { Task } from "@/types/domain";
@@ -25,6 +26,26 @@ export function useTasksByProject(projectId: string, progress?: boolean) {
         },
         enabled: Boolean(projectId),
     });
+}
+
+export function useAllTasks() {
+    const { data: projects } = useProjectsQuery();
+    const projectIds = projects?.map((p) => p.id) ?? [];
+
+    const taskQueries = useQueries({
+        queries: projectIds.map((projectId) => ({
+            queryKey: tasksKeys.byProject(projectId),
+            queryFn: async () => {
+                return openapi.listTasksByProject(projectId);
+            },
+            enabled: !!projectId,
+        })),
+    });
+
+    const isLoading = taskQueries.some((q) => q.isLoading);
+    const tasks = taskQueries.flatMap((q) => (q.data as Task[]) ?? []);
+
+    return { tasks, isLoading };
 }
 
 export function useTaskMutation(projectId?: string) {
@@ -86,7 +107,13 @@ export function useTaskMutation(projectId?: string) {
 
 export function useUpdateTask() {
     const queryClient = useQueryClient();
-    return useMutation<Task, unknown, { id: string; projectId?: string; payload: Partial<Task> }>({
+
+    type UpdateTaskContext = {
+        previousTasks?: Task[];
+        projectId?: string;
+    };
+
+    return useMutation<Task, unknown, { id: string; projectId?: string; payload: Partial<Task> }, UpdateTaskContext>({
         mutationFn: async (args: { id: string; projectId?: string; payload: Partial<Task> }) => {
             const mapStatusToApi = (s: Task["status"] | undefined) => {
                 switch (s) {
@@ -110,6 +137,18 @@ export function useUpdateTask() {
                 if (args.payload.dueDate === "") body.due_date = null;
                 else body.due_date = args.payload.dueDate as string | null | undefined;
             }
+
+            // Handle Gantt-specific date fields
+            if (args.payload.startDate !== undefined) {
+                body.start_date = args.payload.startDate;
+            }
+            if (args.payload.endDate !== undefined) {
+                body.end_date = args.payload.endDate;
+            }
+            if (args.payload.progress !== undefined) {
+                body.progress = args.payload.progress;
+            }
+
             const mappedStatus = mapStatusToApi(args.payload.status);
             if (mappedStatus !== undefined) body.status = mappedStatus;
 
@@ -117,21 +156,37 @@ export function useUpdateTask() {
             const updated = await openapi.updateTask(args.projectId, args.id, body as TaskUpdateRequest);
             return updated;
         },
-        onSuccess: (_, vars) => {
-            // invalidate project-specific tasks if available
-            if (vars && vars.payload && vars.projectId) {
-                queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(vars.projectId) });
-            } else {
-                queryClient.invalidateQueries({ queryKey: tasksKeys.all });
+        onMutate: async (variables): Promise<UpdateTaskContext> => {
+            // Cancel outgoing refetches to avoid overwriting optimistic update
+            if (variables.projectId) {
+                await queryClient.cancelQueries({ queryKey: tasksKeys.byProject(variables.projectId) });
             }
-            try {
-                // vars may include the updated Task as first arg in some cases, but we don't rely on it
-                toast.success("Updated task");
-            } catch {
-                // ignore
+
+            // Snapshot previous value
+            const previousTasks = variables.projectId
+                ? queryClient.getQueryData<Task[]>(tasksKeys.byProject(variables.projectId))
+                : undefined;
+
+            // Optimistically update the cache
+            if (variables.projectId && previousTasks) {
+                queryClient.setQueryData<Task[]>(
+                    tasksKeys.byProject(variables.projectId),
+                    previousTasks.map(task =>
+                        task.id === variables.id
+                            ? { ...task, ...variables.payload }
+                            : task
+                    )
+                );
             }
+
+            return { previousTasks, projectId: variables.projectId };
         },
-        onError: (err: unknown) => {
+        onError: (err: unknown, _variables, context) => {
+            // Rollback on error
+            if (context?.previousTasks && context.projectId) {
+                queryClient.setQueryData(tasksKeys.byProject(context.projectId), context.previousTasks);
+            }
+
             const message = err instanceof Error ? err.message : String(err);
             let extra = "";
             if (isAxiosError(err) && err.response) {
