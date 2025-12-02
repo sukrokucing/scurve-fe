@@ -74,7 +74,8 @@ export function TaskTable({ tasks, dependencies, onTaskUpdate, onTaskDelete, onA
         }),
         columnHelper.accessor("progress", {
             header: "%",
-            size: 120,
+            minSize: 140,
+            maxSize: 140,
             cell: (info) => (
                 <Input
                     type="number"

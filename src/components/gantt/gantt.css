@@ -1,0 +1,74 @@
+/* Shadcn-style overrides for gantt-task-react */
+
+.gantt-container {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Grid and Background */
+.gantt-vertical-scroll-container {
+    background-color: hsl(var(--background));
+    border-left: 1px solid hsl(var(--border));
+}
+
+.gantt-header {
+    background-color: hsl(var(--background));
+    border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Grid Lines */
+.gantt-horizontal-grid-line {
+    stroke: hsl(var(--border));
+    stroke-width: 1px;
+    stroke-dasharray: 4;
+    /* Optional: make grid lines dashed for a lighter feel */
+    opacity: 0.4;
+}
+
+.gantt-vertical-grid-line {
+    stroke: hsl(var(--border));
+    stroke-width: 1px;
+    opacity: 0.4;
+}
+
+/* Header Text */
+.gantt-header-text {
+    fill: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    /* text-xs */
+    font-weight: 500;
+}
+
+.gantt-header-tick {
+    stroke: hsl(var(--border));
+    opacity: 0.5;
+}
+
+/* Task Bars */
+.gantt-task-bar {
+    fill: hsl(var(--primary));
+    rx: var(--radius);
+    ry: var(--radius);
+}
+
+.gantt-task-bar-progress {
+    fill: hsl(var(--primary-foreground));
+    opacity: 0.3;
+}
+
+/* Today Line */
+.gantt-today-line {
+    stroke: hsl(var(--destructive));
+    stroke-width: 2px;
+}
+
+/* Tooltip */
+.gantt-tooltip {
+    background-color: hsl(var(--popover)) !important;
+    color: hsl(var(--popover-foreground)) !important;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    /* shadow-md */
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}

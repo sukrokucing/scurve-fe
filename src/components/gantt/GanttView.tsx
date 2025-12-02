@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { ViewMode } from "gantt-task-react";
+import { ViewMode } from "@rsagiev/gantt-task-react-19";
 import type { Task as DomainTask } from "@/types/domain";
 import type { Progress, GanttTask } from "./types";
 import { TaskTable } from "./TaskTable";
 import { Timeline } from "./Timeline";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 import type { ApiTaskDependency } from "@/api/openapiClient";
 
@@ -41,6 +42,8 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
                 .filter((d) => d.source_task_id === t.id)
                 .map((d) => d.target_task_id);
 
+            const isMilestone = startDate.getTime() === endDate.getTime();
+
             return {
                 start: startDate,
                 end: endDate,
@@ -48,7 +51,7 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
                 id: t.id,
                 originalId: t.id,
                 progressId: taskProgress?.id,
-                type: "task",
+                type: isMilestone ? "milestone" : "task",
                 // Prefer task's own progress field if available (new backend feature), fallback to separate progress entry
                 progress: t.progress ?? taskProgress?.progress ?? 0,
                 dependencies: taskDependencies,
@@ -69,13 +72,23 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
         onUpdateTask(task);
     };
 
+    const [isTableVisible, setIsTableVisible] = useState(true);
+
     return (
         <div className="flex flex-col gap-4 h-[600px]">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Gantt View</h2>
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsTableVisible(!isTableVisible)}
+                        className="hidden md:flex" // Show on medium screens and up if needed, or remove class to show always
+                    >
+                        {isTableVisible ? "Hide Table" : "Show Table"}
+                    </Button>
                     <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                        <SelectTrigger className="w-[120px]">
+                        <SelectTrigger className="w-[150px]">
                             <SelectValue placeholder="View Mode" />
                         </SelectTrigger>
                         <SelectContent>
@@ -89,19 +102,27 @@ export function GanttView({ tasks, progress, dependencies, onUpdateTask, onDelet
 
             <div className="flex flex-1 border rounded-xl overflow-hidden glass shadow-sm">
                 {/* Split View: Table (Fixed 750px) | Timeline (Flex) */}
-                <div className="w-[750px] min-w-[650px] max-w-[850px] border-r bg-background overflow-auto flex-none">
-                    <TaskTable
-                        tasks={ganttTasks}
-                        dependencies={dependencies}
-                        onTaskUpdate={handleTaskChange}
-                        onTaskDelete={(t) => onDeleteTask(t.originalId)}
-                        onAddDependency={onAddDependency}
-                        onDeleteDependency={onDeleteDependency}
-                    />
-                </div>
+                {isTableVisible && (
+                    <div className="w-[750px] min-w-[650px] max-w-[850px] border-r bg-background overflow-auto flex-none">
+                        <TaskTable
+                            tasks={ganttTasks}
+                            dependencies={dependencies}
+                            onTaskUpdate={handleTaskChange}
+                            onTaskDelete={(t) => onDeleteTask(t.originalId)}
+                            onAddDependency={onAddDependency}
+                            onDeleteDependency={onDeleteDependency}
+                        />
+                    </div>
+                )}
                 <div className="flex-1 bg-background overflow-auto min-w-0">
                     {ganttTasks.length > 0 ? (
-                        <Timeline tasks={ganttTasks} viewMode={viewMode} onTaskChange={handleTaskChange} onDoubleClick={onDoubleClick} />
+                        <Timeline
+                            key={isTableVisible ? "with-table" : "full-width"}
+                            tasks={ganttTasks}
+                            viewMode={viewMode}
+                            onTaskChange={handleTaskChange}
+                            onDoubleClick={onDoubleClick}
+                        />
                     ) : (
                         <div className="flex items-center justify-center h-full text-muted-foreground">No tasks to display</div>
                     )}

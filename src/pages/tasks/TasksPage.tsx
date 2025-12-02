@@ -29,12 +29,38 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
+import { Badge } from "@/components/ui/badge";
 import { Search, Filter, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+
+const KANBAN_COLUMNS = [
+    { id: "todo", title: "To Do" },
+    { id: "in_progress", title: "In Progress" },
+    { id: "blocked", title: "Blocked" },
+    { id: "done", title: "Done" },
+];
+
+// Helper to format ISO date strings for datetime-local input
+function formatDateForInput(isoDate: string | null | undefined): string {
+    if (!isoDate) return "";
+    try {
+        const date = new Date(isoDate);
+        // Format as YYYY-MM-DDTHH:MM for datetime-local input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+        return "";
+    }
+}
 
 export function TasksPage() {
     const { data: projects } = useProjectsQuery();
@@ -124,16 +150,62 @@ export function TasksPage() {
         if (viewMode === "kanban") {
             return (
                 <div className="h-[calc(100vh-280px)]">
-                    <KanbanBoard
-                        tasks={filteredTasks}
-                        onUpdateTask={(taskId, newStatus) => {
+                    <KanbanProvider
+                        columns={KANBAN_COLUMNS}
+                        data={filteredTasks.map(t => ({ ...t, column: t.status }))}
+                        onColumnChange={(taskId, newColumnId) => {
                             updateMutation.mutate({
                                 id: taskId,
                                 projectId: selectedProject,
-                                payload: { status: newStatus }
+                                payload: { status: newColumnId }
                             });
                         }}
-                    />
+                    >
+                        {(column) => (
+                            <KanbanBoard id={column.id} key={column.id}>
+                                <KanbanHeader>
+                                    {column.title}
+                                    <Badge variant="secondary" className="ml-2">
+                                        {filteredTasks.filter(t => t.status === column.id).length}
+                                    </Badge>
+                                </KanbanHeader>
+                                <KanbanCards id={column.id}>
+                                    {(task) => (
+                                        <KanbanCard
+                                            key={task.id}
+                                            item={task}
+                                            onDoubleClick={(t) => {
+                                                setEditing(t);
+                                                editForm.reset({
+                                                    title: t.name,
+                                                    start_date: formatDateForInput(t.startDate),
+                                                    end_date: formatDateForInput(t.endDate),
+                                                    progress: t.progress ?? 0
+                                                });
+                                            }}
+                                        >
+                                            <div className="font-medium text-sm leading-tight">{task.name}</div>
+                                            {task.description && (
+                                                <div className="text-xs text-muted-foreground line-clamp-2">{task.description}</div>
+                                            )}
+                                            <div className="flex items-center justify-between pt-2">
+                                                {task.assigneeId && (
+                                                    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
+                                                        U
+                                                    </div>
+                                                )}
+                                                {task.dueDate && (
+                                                    <div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                                        {new Date(task.dueDate).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </KanbanCard>
+                                    )}
+                                </KanbanCards>
+                            </KanbanBoard>
+                        )}
+                    </KanbanProvider>
                 </div>
             );
         }
@@ -151,9 +223,9 @@ export function TasksPage() {
                             projectId: selectedProject,
                             payload: {
                                 name: task.name, // Assuming 'name' is the field for task title
-                                start_date: task.start.toISOString(),
-                                end_date: task.end.toISOString(),
-                                due_date: task.end.toISOString(), // Keep due_date synced with end_date for now
+                                startDate: task.start.toISOString(),
+                                endDate: task.end.toISOString(),
+                                dueDate: task.end.toISOString(), // Keep due_date synced with end_date for now
                                 progress: task.progress, // Update progress directly on task
                             },
                         });
@@ -184,8 +256,9 @@ export function TasksPage() {
                             setEditing(taskToEdit);
                             editForm.reset({
                                 title: taskToEdit.name,
-                                due_date: taskToEdit.dueDate ?? "",
-                                status: taskToEdit.status
+                                start_date: formatDateForInput(taskToEdit.startDate),
+                                end_date: formatDateForInput(taskToEdit.endDate),
+                                progress: taskToEdit.progress ?? 0,
                             });
                         }
                     }}
@@ -233,7 +306,19 @@ export function TasksPage() {
                 </TableHeader>
                 <TableBody>
                     {(filteredTasks as Task[]).map((task) => (
-                        <TableRow key={task.id}>
+                        <TableRow
+                            key={task.id}
+                            onDoubleClick={() => {
+                                setEditing(task);
+                                editForm.reset({
+                                    title: task.name,
+                                    start_date: formatDateForInput(task.startDate),
+                                    end_date: formatDateForInput(task.endDate),
+                                    progress: task.progress ?? 0
+                                });
+                            }}
+                            className="cursor-pointer hover:bg-muted/50"
+                        >
                             <TableCell className="font-medium">{task.name}</TableCell>
                             <TableCell className="capitalize">{task.status.replace(/_/g, " ")}</TableCell>
                             <TableCell>{task.assigneeId ?? "—"}</TableCell>
@@ -243,7 +328,12 @@ export function TasksPage() {
                                 <div className="flex items-center justify-end gap-2">
                                     <Button size="sm" variant="ghost" onClick={() => {
                                         setEditing(task);
-                                        editForm.reset({ title: task.name, due_date: task.dueDate ?? "", status: task.status });
+                                        editForm.reset({
+                                            title: task.name,
+                                            start_date: formatDateForInput(task.startDate),
+                                            end_date: formatDateForInput(task.endDate),
+                                            progress: task.progress ?? 0
+                                        });
                                     }}>
                                         Edit
                                     </Button>
@@ -570,10 +660,23 @@ export function TasksPage() {
                                     });
                                     return;
                                 }
-                                const dueDate = parsed.data.due_date
-                                    ? new Date(parsed.data.due_date).toISOString()
-                                    : null;
-                                updateMutation.mutateAsync({ id: editing.id, projectId: selectedProject, payload: { name: parsed.data.title, dueDate, status: parsed.data.status } })
+                                const startDate = parsed.data.start_date
+                                    ? new Date(parsed.data.start_date).toISOString()
+                                    : undefined;
+                                const endDate = parsed.data.end_date
+                                    ? new Date(parsed.data.end_date).toISOString()
+                                    : undefined;
+
+                                updateMutation.mutateAsync({
+                                    id: editing.id,
+                                    projectId: selectedProject,
+                                    payload: {
+                                        name: parsed.data.title,
+                                        startDate,
+                                        endDate,
+                                        progress: parsed.data.progress
+                                    }
+                                })
                                     .then(() => {
                                         setEditing(null);
                                     })
@@ -596,6 +699,7 @@ export function TasksPage() {
                                     <FormControl>
                                         <Input
                                             {...field}
+                                            placeholder="Enter task name..."
                                             className={editForm.formState.errors.title ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""}
                                         />
                                     </FormControl>
@@ -603,30 +707,51 @@ export function TasksPage() {
                                 </FormItem>
                             )} />
 
-                            <FormField control={editForm.control} name="due_date" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Due date</FormLabel>
-                                    <FormControl>
-                                        <Input {...field} type="datetime-local" className={editForm.formState.errors.due_date ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={editForm.control} name="start_date" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Start Date</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} type="datetime-local" className={editForm.formState.errors.start_date ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
 
-                            <FormField control={editForm.control} name="status" render={({ field }) => (
+                                <FormField control={editForm.control} name="end_date" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>End Date</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} type="datetime-local" className={editForm.formState.errors.end_date ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+
+                            <FormField control={editForm.control} name="progress" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Status</FormLabel>
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel>Progress</FormLabel>
+                                        <span className="text-sm font-medium">{field.value ?? 0}%</span>
+                                    </div>
                                     <FormControl>
-                                        <Select value={field.value} onValueChange={field.onChange}>
-                                            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="todo">To do</SelectItem>
-                                                <SelectItem value="in_progress">In progress</SelectItem>
-                                                <SelectItem value="blocked">Blocked</SelectItem>
-                                                <SelectItem value="done">Done</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Slider
+                                            min={0}
+                                            max={100}
+                                            step={5}
+                                            value={[field.value ?? 0]}
+                                            onValueChange={(vals) => field.onChange(vals[0])}
+                                            className="py-4"
+                                        />
                                     </FormControl>
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>0%</span>
+                                        <span>25%</span>
+                                        <span>50%</span>
+                                        <span>75%</span>
+                                        <span>100%</span>
+                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )} />

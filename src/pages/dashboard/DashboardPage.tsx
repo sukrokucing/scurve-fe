@@ -2,7 +2,8 @@ import { useProjectsQuery } from "@/api/queries/projects";
 import { useAllTasks } from "@/api/queries/tasks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CheckCircle2, Clock, FolderKanban, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,15 @@ export function DashboardPage() {
     const chartData = projects?.map(p => ({
         name: p.name,
         progress: typeof p.progress === 'number' ? p.progress : 0,
-        color: p.theme_color ?? "#14E6AC"
+        fill: p.theme_color ?? "hsl(var(--chart-1))"
     })) ?? [];
+
+    const chartConfig = {
+        progress: {
+            label: "Progress",
+            color: "hsl(var(--chart-1))",
+        },
+    } satisfies ChartConfig;
 
     if (isLoading) {
         return (
@@ -110,47 +118,30 @@ export function DashboardPage() {
                         <CardDescription>Real-time progress tracking across active projects.</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
-                        <div className="h-[300px] w-full">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                                        <XAxis
-                                            dataKey="name"
-                                            stroke="#888888"
-                                            fontSize={12}
-                                            tickLine={false}
-                                            axisLine={false}
-                                        />
-                                        <YAxis
-                                            stroke="#888888"
-                                            fontSize={12}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            tickFormatter={(value) => `${value}%`}
-                                        />
-                                        <Tooltip
-                                            cursor={{ fill: 'hsl(var(--accent))', opacity: 0.2 }}
-                                            contentStyle={{
-                                                backgroundColor: 'hsl(var(--popover))',
-                                                border: '1px solid hsl(var(--border))',
-                                                borderRadius: 'var(--radius)',
-                                                color: 'hsl(var(--popover-foreground))'
-                                            }}
-                                        />
-                                        <Bar dataKey="progress" radius={[4, 4, 0, 0]}>
-                                            {chartData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color || "hsl(var(--primary))"} />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex h-full items-center justify-center text-muted-foreground">
-                                    No project data available
-                                </div>
-                            )}
-                        </div>
+                        {chartData.length > 0 ? (
+                            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                                <BarChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        tickLine={false}
+                                        tickMargin={10}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(value) => `${value}%`}
+                                    />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <Bar dataKey="progress" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ChartContainer>
+                        ) : (
+                            <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                                No project data available
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

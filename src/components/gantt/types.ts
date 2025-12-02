@@ -1,13 +1,13 @@
-import type { Task as GanttLibTask } from "gantt-task-react";
+import type { Task as GanttLibTask } from "@rsagiev/gantt-task-react-19";
 import type { components } from "@/types/api";
 
 export type Progress = components["schemas"]["Progress"];
 
-export interface GanttTask extends GanttLibTask {
+export type GanttTask = GanttLibTask & {
     originalId: string; // The original UUID from the API
     progressId?: string; // ID of the progress entry if it exists
     assignee?: string;
-}
+};
 
 import type { ApiTaskDependency } from "@/api/openapiClient";
 
