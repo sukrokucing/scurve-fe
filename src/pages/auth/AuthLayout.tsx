@@ -39,7 +39,7 @@ export function AuthLayout({ title, description, form, footer, className }: Auth
                     // Slightly tighter spacing between the card and footer for a more compact auth layout
                     <footer className="pb-8 mt-6 text-sm text-center text-muted-foreground">
                         {footer.prompt}{" "}
-                        <Link className="font-medium text-primary-foreground hover:underline" to={footer.linkTo}>
+                        <Link className="font-medium text-primary hover:underline" to={footer.linkTo}>
                             {footer.linkLabel}
                         </Link>
                     </footer>

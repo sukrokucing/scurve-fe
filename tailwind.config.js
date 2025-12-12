@@ -39,11 +39,46 @@ module.exports = {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
                 },
+                success: {
+                    DEFAULT: "hsl(var(--success))",
+                    foreground: "hsl(var(--success-foreground))",
+                },
+                warning: {
+                    DEFAULT: "hsl(var(--warning))",
+                    foreground: "hsl(var(--warning-foreground))",
+                },
+                info: {
+                    DEFAULT: "hsl(var(--info))",
+                    foreground: "hsl(var(--info-foreground))",
+                },
+                error: {
+                    DEFAULT: "hsl(var(--error))",
+                    foreground: "hsl(var(--error-foreground))",
+                },
+                gray: {
+                    50: "hsl(var(--gray-50))",
+                    100: "hsl(var(--gray-100))",
+                    200: "hsl(var(--gray-200))",
+                    300: "hsl(var(--gray-300))",
+                    400: "hsl(var(--gray-400))",
+                    500: "hsl(var(--gray-500))",
+                    600: "hsl(var(--gray-600))",
+                    700: "hsl(var(--gray-700))",
+                    800: "hsl(var(--gray-800))",
+                    900: "hsl(var(--gray-900))",
+                },
             },
             borderRadius: {
                 lg: "var(--radius)",
                 md: "calc(var(--radius) - 2px)",
                 sm: "calc(var(--radius) - 4px)",
+            },
+            boxShadow: {
+                xs: "var(--shadow-xs)",
+                sm: "var(--shadow-sm)",
+                md: "var(--shadow-md)",
+                lg: "var(--shadow-lg)",
+                xl: "var(--shadow-xl)",
             },
             keyframes: {
                 "accordion-down": {

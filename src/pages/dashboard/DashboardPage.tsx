@@ -66,7 +66,7 @@ export function DashboardPage() {
 
             {/* Metrics Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="glass">
+                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
                         <FolderKanban className="h-4 w-4 text-muted-foreground" />
@@ -76,7 +76,7 @@ export function DashboardPage() {
                         <p className="text-xs text-muted-foreground">+2 from last month</p>
                     </CardContent>
                 </Card>
-                <Card className="glass">
+                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Tasks</CardTitle>
                         <Clock className="h-4 w-4 text-muted-foreground" />
@@ -86,7 +86,7 @@ export function DashboardPage() {
                         <p className="text-xs text-muted-foreground">Across all projects</p>
                     </CardContent>
                 </Card>
-                <Card className="glass">
+                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Completed</CardTitle>
                         <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
@@ -96,7 +96,7 @@ export function DashboardPage() {
                         <p className="text-xs text-muted-foreground">+12% completion rate</p>
                     </CardContent>
                 </Card>
-                <Card className="glass">
+                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Efficiency</CardTitle>
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -146,7 +146,7 @@ export function DashboardPage() {
                 </Card>
 
                 {/* Recent Activity / Projects List */}
-                <Card className="col-span-3 glass">
+                <Card className="col-span-3 glass shadow-sm hover:shadow-md transition-shadow">
                     <CardHeader>
                         <CardTitle>Recent Projects</CardTitle>
                         <CardDescription>Quick access to your latest work.</CardDescription>
@@ -154,7 +154,11 @@ export function DashboardPage() {
                     <CardContent>
                         <div className="space-y-8">
                             {projects?.slice(0, 5).map((project) => (
-                                <div key={project.id} className="flex items-center">
+                                <div
+                                    key={project.id}
+                                    className="flex items-center p-3 rounded-lg border-l-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                    style={{ borderLeftColor: project.theme_color ?? "hsl(var(--primary))" }}
+                                >
                                     <div className="h-9 w-9 rounded-full border flex items-center justify-center bg-background">
                                         <div className="h-4 w-4 rounded-full" style={{ backgroundColor: project.theme_color ?? "hsl(var(--primary))" }} />
                                     </div>

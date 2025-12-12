@@ -24,6 +24,7 @@ import {
     arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
     createContext,
     type HTMLAttributes,
@@ -31,6 +32,7 @@ import {
     useContext,
     useState,
     useMemo,
+    useRef,
 } from "react";
 import { createPortal } from "react-dom";
 import tunnel from "tunnel-rat";
@@ -128,11 +130,40 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
 
     const itemIds = useMemo(() => columnItems.map((item) => item.id), [columnItems]);
 
+    const viewportRef = useRef<HTMLDivElement>(null);
+
+    const rowVirtualizer = useVirtualizer({
+        count: columnItems.length,
+        getScrollElement: () => viewportRef.current,
+        estimateSize: () => 100, // Approximate height of a card + margin
+        overscan: 5,
+    });
+
     return (
-        <ScrollArea className="flex-1 px-3 pb-3">
+        <ScrollArea className="flex-1 px-3 pb-3" viewportRef={viewportRef}>
             <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-                <div className={cn("flex flex-col gap-3", className)} {...props}>
-                    {columnItems.map(children)}
+                <div className={cn("flex flex-col", className)} {...props}>
+                    {rowVirtualizer.getVirtualItems().length > 0 && (
+                        <div style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} />
+                    )}
+
+                    {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                        const item = columnItems[virtualItem.index];
+                        return (
+                            <div
+                                key={item.id}
+                                data-index={virtualItem.index}
+                                ref={rowVirtualizer.measureElement}
+                                className="mb-3"
+                            >
+                                {children(item)}
+                            </div>
+                        );
+                    })}
+
+                    {rowVirtualizer.getVirtualItems().length > 0 && (
+                        <div style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} />
+                    )}
                 </div>
             </SortableContext>
             <ScrollBar orientation="vertical" />

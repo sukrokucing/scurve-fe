@@ -4,75 +4,188 @@
 
 @layer base {
     :root {
-        /* Premium Light Mode */
+        /* Base - Slate-50 / Slate-950 */
         --background: 210 40% 98%;
-        /* Slightly off-white for depth */
         --foreground: 222.2 84% 4.9%;
 
+        /* Primary: Teal-600 */
+        --primary: 175 77% 31%;
+        --primary-foreground: 210 40% 98%;
+        --primary-dark: 175 80% 24%;
+        /* Teal-700 */
+
+        /* Secondary: Slate-100 */
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+
+        /* Accent: Indigo-100 (Harmony Upgrade) */
+        --accent: 226 70% 94%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+
+        /* Card & Popover - Solid backgrounds for dropdowns */
         --card: 0 0% 100%;
         --card-foreground: 222.2 84% 4.9%;
-
         --popover: 0 0% 100%;
         --popover-foreground: 222.2 84% 4.9%;
 
-        /* Refined Primary (Emerald/Teal) */
-        --primary: 168 84% 39%;
-        /* Slightly darker for better contrast/premium feel */
-        --primary-foreground: 210 40% 98%;
-        --primary-dark: 168 100% 25%;
+        /* Destructive: Red-600 */
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 210 40% 98%;
 
+        /* Muted: Slate-100 */
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+
+        /* Borders */
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 175 77% 31%;
+
+        --radius: 0.5rem;
+
+        /* Chart Colors (Preserved) */
+        --chart-1: oklch(0.646 0.222 41.116);
+        --chart-2: oklch(0.6 0.118 184.704);
+        --chart-3: oklch(0.398 0.07 227.392);
+        --chart-4: oklch(0.828 0.189 84.429);
+        --chart-5: oklch(0.769 0.188 70.08);
+
+        /* Shadow System */
+        --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+        /* Functional Colors */
+        --success: 142 76% 36%;
+        /* Green-600 */
+        --success-foreground: 210 40% 98%;
+
+        --warning: 38 92% 50%;
+        /* Amber-500 */
+        --warning-foreground: 48 96% 89%;
+
+        --info: 221 83% 53%;
+        /* Blue-500 */
+        --info-foreground: 210 40% 98%;
+
+        --error: 0 72% 51%;
+        /* Red-600 */
+        --error-foreground: 210 40% 98%;
+
+        /* Gray Scale (Slate) */
+        --gray-50: 210 40% 98%;
+        --gray-100: 210 40% 96.1%;
+        --gray-200: 214.3 31.8% 91.4%;
+        --gray-300: 212.7 26.8% 83.9%;
+        --gray-400: 215 20.2% 65.1%;
+        --gray-500: 215.4 16.3% 46.9%;
+        --gray-600: 215.3 19.3% 34.5%;
+        --gray-700: 215.3 25% 26.7%;
+        --gray-800: 217.2 32.6% 17.5%;
+        --gray-900: 222.2 47.4% 11.2%;
+    }
+
+    .dark {
+        /* Background: Slate-950 */
+        --background: 222.2 47% 11%;
+        --foreground: 210 40% 98%;
+
+        /* Primary: Teal-400 (Lighter for dark mode visibility) */
+        --primary: 175 77% 45%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+
+        /* Secondary: Slate-800 */
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 210 40% 98%;
+
+        /* Accent: Indigo-900 (Subtle tint) */
+        --accent: 226 70% 20%;
+        --accent-foreground: 210 40% 98%;
+
+        /* Card & Popover - Solid backgrounds for dropdowns */
+        --card: 222.2 47% 11%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 47% 15%;
+        --popover-foreground: 210 40% 98%;
+
+        /* Destructive: Red-500 */
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+
+        /* Muted: Slate-800 */
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20.2% 65.1%;
+
+        --border: 217 33% 17%;
+        --input: 217 33% 17%;
+        --ring: 175 77% 45%;
+
+        /* Chart colors for dark mode */
+        --chart-1: oklch(0.488 0.243 264.376);
+        --chart-2: oklch(0.696 0.17 162.48);
+        --chart-3: oklch(0.769 0.188 70.08);
+        --chart-4: oklch(0.627 0.265 303.9);
+        --chart-5: oklch(0.645 0.246 16.439);
+
+        /* Shadow System - Dark Mode */
+        --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+        --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.6);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7);
+    }
+
+    /* Glass Theme - Distinct from Light Mode */
+    .theme-glass {
+        /* Cooler, slightly darker background for glass effect contrast */
+        --background: 210 50% 95%;
+        --foreground: 222.2 84% 4.9%;
+
+        /* Solid backgrounds for readability in dropdowns/cards */
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+
+        /* Primary: Teal-600 (Same as Light) */
+        --primary: 175 77% 31%;
+        --primary-foreground: 210 40% 98%;
+
+        /* Secondary: White with opacity for glass feel */
         --secondary: 210 40% 96.1%;
         --secondary-foreground: 222.2 47.4% 11.2%;
+
+        /* Accent: Indigo-100 */
+        --accent: 226 70% 94%;
+        --accent-foreground: 222.2 47.4% 11.2%;
 
         --muted: 210 40% 96.1%;
         --muted-foreground: 215.4 16.3% 46.9%;
 
-        --accent: 210 40% 96.1%;
-        --accent-foreground: 222.2 47.4% 11.2%;
-
-        --destructive: 0 84.2% 60.2%;
+        --destructive: 0 72% 51%;
         --destructive-foreground: 210 40% 98%;
 
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
-        --ring: 168 84% 39%;
-
-        --radius: 0.75rem;
+        --ring: 175 77% 31%;
     }
 
-    .dark {
-        /* Premium Dark Mode (Rich Slate) */
-        --background: 222.2 47% 11%;
-        --foreground: 210 40% 98%;
-
-        --card: 217 33% 17%;
-        --card-foreground: 210 40% 98%;
-
-        --popover: 217 33% 17%;
-        --popover-foreground: 210 40% 98%;
-
-        --primary: 168 70% 50%;
-        /* Vibrant but not neon */
-        --primary-foreground: 168 88% 10%;
-        --primary-dark: 168 70% 40%;
-
-        --secondary: 217.2 32.6% 17.5%;
-        --secondary-foreground: 210 40% 98%;
-
-        --muted: 217.2 32.6% 17.5%;
-        --muted-foreground: 215 20.2% 65.1%;
-
-        --accent: 217.2 32.6% 17.5%;
-        --accent-foreground: 210 40% 98%;
-
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 210 40% 98%;
-
-        --border: 217.2 32.6% 17.5%;
-        --input: 217.2 32.6% 17.5%;
-        --ring: 168 70% 50%;
+    /* Glassmorphism Utility (Migrated from theme.css) */
+    .glass {
+        @apply bg-background/80 backdrop-blur-md border border-border/50;
     }
 
+    .glass-panel {
+        background-color: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(8px) saturate(110%);
+        -webkit-backdrop-filter: blur(8px) saturate(110%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+}
+
+@layer base {
     * {
         @apply border-border;
     }
@@ -80,11 +193,6 @@
     body {
         @apply bg-background text-foreground antialiased;
         font-family: 'Inter', sans-serif;
-    }
-
-    /* Glassmorphism Utility */
-    .glass {
-        @apply bg-background/80 backdrop-blur-md border border-border/50;
     }
 
     /* Gantt Chart Interactivity */

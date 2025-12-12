@@ -4,10 +4,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 import { queryClient } from "@/lib/queryClient";
 import { useAuthStore } from "@/store/authStore";
+import { usePermissionStore } from "@/store/permissionStore";
 
 import App from "./App.tsx";
 import "./index.css";
-import "./styles/theme.css";
+
 
 // Import Inter font weights
 import "@fontsource/inter/400.css";
@@ -47,6 +48,22 @@ async function bootstrap() {
                     if (res.ok) {
                         const data = await res.json();
                         useAuthStore.getState().setUser(data);
+
+                        // Fetch permissions
+                        try {
+                            const permRes = await fetch(`${apiBase.replace(/\/$/, "")}/rbac/users/${data.id}/effective-permissions`, {
+                                headers: { Authorization: `Bearer ${token}` },
+                            });
+                            if (permRes.ok) {
+                                const permData = await permRes.json();
+                                // API returns: { user_id, roles, permissions: [...] }
+                                if (permData.permissions) {
+                                    usePermissionStore.getState().setPermissions(permData.permissions);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Failed to fetch permissions", e);
+                        }
                     } else if (res.status === 401) {
                         // token invalid/expired
                         useAuthStore.getState().reset();

@@ -349,16 +349,3 @@ Use a human `element` description for logging/permission and a precise `ref` sel
 If you have a snapshot element `ref` identifier (returned by `browser_snapshot`), pass that `ref` instead of a CSS selector for more deterministic clicks.
 
 ---
-
-### 4) browser_run_code — run Playwright snippet (JS)
-
-This runs an arbitrary Playwright-friendly snippet that can use the `page` object. Example: navigate, click, and return the title.
-
-```js
-// payload for browser_run_code
-{
-	code: "await page.goto('http://localhost:3001/login'); await page.getByRole('textbox', { name: /email/i }).fill('jimmy@dwp.co.id'); await page.getByRole('button', { name: /sign in/i }).click(); await page.waitForNavigation({ waitUntil: 'networkidle' }); return await page.title();"
-}
-```
-
-The response will be whatever the snippet returns (e.g., the page title string).

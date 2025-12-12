@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { addDays, differenceInCalendarDays, format, isSameDay } from "date-fns";
 
 import { useProjectsQuery } from "@/api/queries/projects";
 import { useTasksByProject, useTaskMutation, useDeleteTask, useUpdateTask, useDependencies, useDependencyMutation, useDeleteDependency } from "@/api/queries/tasks";
@@ -11,6 +13,7 @@ type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +40,9 @@ import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } fr
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { DateInput } from "@/components/ui/date-input";
+import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const KANBAN_COLUMNS = [
     { id: "todo", title: "To Do" },
@@ -46,32 +52,63 @@ const KANBAN_COLUMNS = [
 ];
 
 // Helper to format ISO date strings for datetime-local input
+// Helper to format ISO date strings for datetime-local input
 function formatDateForInput(isoDate: string | null | undefined): string {
     if (!isoDate) return "";
     try {
         const date = new Date(isoDate);
         // Format as YYYY-MM-DDTHH:MM for datetime-local input
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+        return format(date, "yyyy-MM-dd'T'HH:mm");
     } catch {
         return "";
     }
 }
 
+function getStatusColor(status: string): string {
+    switch (status) {
+        case "todo":
+            return "bg-gray-100 text-gray-800";
+        case "in_progress":
+            return "bg-blue-100 text-blue-800";
+        case "blocked":
+            return "bg-red-100 text-red-800";
+        case "done":
+            return "bg-green-100 text-green-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+}
+
+function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
+    switch (status) {
+        case "todo":
+            return "secondary";
+        case "in_progress":
+            return "info";
+        case "blocked":
+            return "error";
+        case "done":
+            return "success";
+        default:
+            return "secondary";
+    }
+}
+// Types
+type TaskFormMode = 'today' | 'plan' | 'range';
+
 export function TasksPage() {
     const { data: projects } = useProjectsQuery();
     const [selectedProject, setSelectedProject] = useState<string>("");
+    const [createMode, setCreateMode] = useState<'plan' | 'range' | 'today'>('plan');
+    const [editMode, setEditMode] = useState<'plan' | 'range' | 'today'>('plan');
 
     useEffect(() => {
         if (!projects || projects.length === 0) return;
         setSelectedProject((current) => (current ? current : projects[0]?.id ?? ""));
     }, [projects]);
-    const [showProgress, setShowProgress] = useState(false);
-    const [viewMode, setViewMode] = useState<"list" | "gantt" | "kanban">("list");
+    const [view, setView] = useState<"list" | "gantt" | "kanban">("list");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -92,7 +129,7 @@ export function TasksPage() {
 
     const tasks = (tasksData as Task[]) ?? [];
     const progress = (progressData as Progress[]) ?? [];
-    const isLoading = isLoadingTasks || (viewMode === "gantt" && isLoadingProgress);
+    const isLoading = isLoadingTasks || (view === "gantt" && isLoadingProgress);
 
     // Filter tasks
     const filteredTasks = tasks.filter(task => {
@@ -100,18 +137,28 @@ export function TasksPage() {
         const matchesStatus = statusFilter === "all" || task.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    // Virtualizer for List View
+    const parentRef = useRef<HTMLDivElement>(null);
+    const rowVirtualizer = useVirtualizer({
+        count: filteredTasks.slice((page - 1) * pageSize, page * pageSize).length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 53, // Approximate height of a table row
+        overscan: 5,
+    });
+
     const isRefetching = isRefetchingTasks;
 
     // Re-run query when toggling progress view
     useEffect(() => {
         void refetchTasks();
-    }, [showProgress, refetchTasks]);
+    }, [view, refetchTasks]);
 
-    const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", due_date: "", status: "todo" } });
+    const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
     const [createOpen, setCreateOpen] = useState(false);
     const createRef = useRef<HTMLInputElement | null>(null);
     const [editing, setEditing] = useState<Task | null>(null);
-    const editForm = useForm<TaskFormValues>({ defaultValues: { title: "", due_date: "", status: "todo" } });
+    const editForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
 
     const createMutation = useTaskMutation(selectedProject);
     const deleteMutation = useDeleteTask(selectedProject);
@@ -147,7 +194,7 @@ export function TasksPage() {
             </div>
         );
 
-        if (viewMode === "kanban") {
+        if (view === "kanban") {
             return (
                 <div className="h-[calc(100vh-280px)]">
                     <KanbanProvider
@@ -176,11 +223,26 @@ export function TasksPage() {
                                             item={task}
                                             onDoubleClick={(t) => {
                                                 setEditing(t);
+                                                const start = new Date(t.startDate);
+                                                const end = new Date(t.endDate);
+                                                const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                                let mode: 'plan' | 'range' | 'today' = 'range';
+
+                                                if (isSameDay(start, end)) {
+                                                    mode = 'today';
+                                                } else if (t.durationDays && diffDays === t.durationDays) {
+                                                    mode = 'plan';
+                                                }
+
+                                                setEditMode(mode);
                                                 editForm.reset({
                                                     title: t.name,
+                                                    plan: t.durationDays ?? 1,
                                                     start_date: formatDateForInput(t.startDate),
                                                     end_date: formatDateForInput(t.endDate),
-                                                    progress: t.progress ?? 0
+                                                    progress: typeof t.progress === 'number' ? t.progress : 0,
+                                                    status: t.status,
+                                                    projectId: t.projectId
                                                 });
                                             }}
                                         >
@@ -210,7 +272,7 @@ export function TasksPage() {
             );
         }
 
-        if (viewMode === "gantt") {
+        if (view === "gantt") {
             return (
                 <GanttView
                     tasks={filteredTasks}
@@ -254,11 +316,26 @@ export function TasksPage() {
                         const taskToEdit = (filteredTasks as Task[]).find(t => t.id === ganttTask.originalId);
                         if (taskToEdit) {
                             setEditing(taskToEdit);
+                            const start = new Date(taskToEdit.startDate);
+                            const end = new Date(taskToEdit.endDate);
+                            const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                            let mode: 'plan' | 'range' | 'today' = 'range';
+
+                            if (isSameDay(start, end)) {
+                                mode = 'today';
+                            } else if (taskToEdit.durationDays && diffDays === taskToEdit.durationDays) {
+                                mode = 'plan';
+                            }
+
+                            setEditMode(mode);
                             editForm.reset({
                                 title: taskToEdit.name,
+                                plan: taskToEdit.durationDays ?? 1,
                                 start_date: formatDateForInput(taskToEdit.startDate),
                                 end_date: formatDateForInput(taskToEdit.endDate),
-                                progress: taskToEdit.progress ?? 0,
+                                progress: typeof taskToEdit.progress === 'number' ? taskToEdit.progress : 0,
+                                status: taskToEdit.status,
+                                projectId: taskToEdit.projectId
                             });
                         }
                     }}
@@ -267,7 +344,7 @@ export function TasksPage() {
         }
 
         // tasks present
-        if (showProgress) {
+        if (view === "progress") { // Assuming "progress" is a view mode now
             return (
                 <Table>
                     <TableHeader>
@@ -293,62 +370,146 @@ export function TasksPage() {
         }
 
         return (
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Assignee</TableHead>
-                        <TableHead>Due date</TableHead>
-                        <TableHead className="text-right">Progress</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {(filteredTasks as Task[]).map((task) => (
-                        <TableRow
-                            key={task.id}
-                            onDoubleClick={() => {
-                                setEditing(task);
-                                editForm.reset({
-                                    title: task.name,
-                                    start_date: formatDateForInput(task.startDate),
-                                    end_date: formatDateForInput(task.endDate),
-                                    progress: task.progress ?? 0
-                                });
-                            }}
-                            className="cursor-pointer hover:bg-muted/50"
-                        >
-                            <TableCell className="font-medium">{task.name}</TableCell>
-                            <TableCell className="capitalize">{task.status.replace(/_/g, " ")}</TableCell>
-                            <TableCell>{task.assigneeId ?? "—"}</TableCell>
-                            <TableCell>{task.dueDate ?? "—"}</TableCell>
-                            <TableCell className="text-right">{typeof task.progress === "number" ? `${task.progress}%` : "—"}</TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                    <Button size="sm" variant="ghost" onClick={() => {
+            <div
+                ref={parentRef}
+                style={{
+                    height: `calc(100vh - 280px)`,
+                    overflow: 'auto',
+                }}
+            >
+                <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                        <TableRow>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Assignee</TableHead>
+                            <TableHead>Plan</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rowVirtualizer.getVirtualItems().length === 0 && (
+                            <TableRow key="no-tasks">
+                                <TableCell colSpan={6} className="h-24 text-center">
+                                    No tasks found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+
+                        {rowVirtualizer.getVirtualItems().length > 0 && (
+                            <TableRow key={`spacer-start-${rowVirtualizer.getVirtualItems()[0].index}`} style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }}>
+                                <TableCell colSpan={6} style={{ padding: 0 }} />
+                            </TableRow>
+                        )}
+
+                        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                            const task = filteredTasks.slice((page - 1) * pageSize, page * pageSize)[virtualItem.index];
+                            if (!task) return null; // Safety check
+                            return (
+                                <TableRow
+                                    key={task.id}
+                                    data-index={virtualItem.index}
+                                    ref={rowVirtualizer.measureElement}
+                                    onDoubleClick={() => {
                                         setEditing(task);
+                                        const start = new Date(task.startDate);
+                                        const end = new Date(task.endDate);
+                                        const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                        let mode: 'plan' | 'range' | 'today' = 'range';
+
+                                        if (isSameDay(start, end)) {
+                                            mode = 'today';
+                                        } else if (task.durationDays && diffDays === task.durationDays) {
+                                            mode = 'plan';
+                                        }
+
+                                        setEditMode(mode);
                                         editForm.reset({
                                             title: task.name,
+                                            plan: task.durationDays ?? 1,
                                             start_date: formatDateForInput(task.startDate),
                                             end_date: formatDateForInput(task.endDate),
-                                            progress: task.progress ?? 0
+                                            progress: typeof task.progress === 'number' ? task.progress : 0,
+                                            status: task.status,
+                                            projectId: task.projectId
                                         });
-                                    }}>
-                                        Edit
-                                    </Button>
-                                    <Button size="sm" variant="destructive" onClick={() => {
-                                        setTaskToDelete(task);
-                                        setConfirmOpen(true);
-                                    }}>
-                                        Delete
-                                    </Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                                    }}
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                >
+                                    <TableCell className="text-center text-muted-foreground">{virtualItem.index + 1}</TableCell>
+                                    <TableCell className="font-medium">{task.name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(task.status)}>
+                                            {task.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{task.assigneeId ?? "—"}</TableCell>
+                                    <TableCell>{task.durationDays ? `${task.durationDays}d` : "—"}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setEditing(task);
+                                                    const start = new Date(task.startDate);
+                                                    const end = new Date(task.endDate);
+                                                    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                                    let mode: 'plan' | 'range' | 'today' = 'range';
+
+                                                    if (isSameDay(start, end)) {
+                                                        mode = 'today';
+                                                    } else if (task.durationDays && diffDays === task.durationDays) {
+                                                        mode = 'plan';
+                                                    }
+
+                                                    setEditMode(mode);
+                                                    editForm.reset({
+                                                        title: task.name,
+                                                        plan: task.durationDays ?? 1,
+                                                        start_date: formatDateForInput(task.startDate),
+                                                        end_date: formatDateForInput(task.endDate),
+                                                        progress: typeof task.progress === 'number' ? task.progress : 0,
+                                                        status: task.status,
+                                                        projectId: task.projectId
+                                                    });
+                                                }}
+                                            >
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="destructive-outline"
+                                                onClick={() => {
+                                                    setTaskToDelete(task);
+                                                    setConfirmOpen(true);
+                                                }}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+
+                        {rowVirtualizer.getVirtualItems().length > 0 && (
+                            <TableRow key={`spacer-end-${rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].index}`} style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }}>
+                                <TableCell colSpan={6} style={{ padding: 0 }} />
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+                <DataTablePagination
+                    currentPage={page}
+                    totalPages={Math.ceil(filteredTasks.length / pageSize)}
+                    pageSize={pageSize}
+                    setPage={setPage}
+                    setPageSize={setPageSize}
+                    totalItems={filteredTasks.length}
+                />
+            </div>
         );
     })();
 
@@ -417,6 +578,12 @@ export function TasksPage() {
                                         const dueDate = parsed.data.due_date
                                             ? new Date(parsed.data.due_date).toISOString()
                                             : null;
+                                        const startDate = parsed.data.start_date
+                                            ? new Date(parsed.data.start_date).toISOString()
+                                            : null;
+                                        const endDate = parsed.data.end_date
+                                            ? new Date(parsed.data.end_date).toISOString()
+                                            : null;
 
                                         // Use openapi client directly for flexible project support
                                         import("@/api/openapiClient").then(({ openapi }) => {
@@ -426,9 +593,12 @@ export function TasksPage() {
                                                 const payload: Partial<import("@/api/openapiClient").TaskCreateRequest> = {
                                                     title: parsed.data.title,
                                                     due_date: dueDate,
+                                                    start_date: startDate,
+                                                    end_date: endDate,
                                                     status: parsed.data.status ?? "todo",
                                                     progress: parsed.data.progress ?? 0,
-                                                };
+                                                    duration_days: parsed.data.plan, // Map plan -> duration_days
+                                                } as any; // Cast to any to allow duration_days field
 
                                                 openapi.createTaskForProject(targetProjectId, payload)
                                                     .then(() => {
@@ -453,7 +623,7 @@ export function TasksPage() {
                                             });
                                         });
                                     })}
-                                    className="space-y-4"
+                                    className="space-y-6"
                                 >
                                     {/* Project Selector - always show for clarity */}
                                     <FormField
@@ -511,65 +681,193 @@ export function TasksPage() {
                                         )}
                                     />
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField
-                                            control={createForm.control}
-                                            name="due_date"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Due date</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            {...field}
-                                                            type="datetime-local"
-                                                            className={
-                                                                createForm.formState.errors.due_date
-                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                    : ""
-                                                            }
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                    {/* Schedule Mode Toggle - Horizontal Layout */}
+                                    <div className="space-y-2">
+                                        <Label>Duration</Label>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <ToggleGroup
+                                                type="single"
+                                                value={createMode}
+                                                onValueChange={(value: TaskFormMode) => {
+                                                    if (!value) return;
+                                                    if (value === 'today') {
+                                                        setCreateMode('today');
+                                                        const now = new Date();
+                                                        const endOfDay = new Date(now);
+                                                        endOfDay.setHours(23, 59, 59, 999);
+                                                        createForm.setValue("start_date", now.toISOString());
+                                                        createForm.setValue("end_date", endOfDay.toISOString());
+                                                        createForm.setValue("due_date", endOfDay.toISOString());
+                                                        createForm.setValue("plan", 1);
+                                                    } else if (value === 'plan') {
+                                                        setCreateMode('plan');
+                                                        const plan = createForm.getValues("plan") || 1;
+                                                        const now = new Date();
+                                                        const end = addDays(now, plan);
+                                                        createForm.setValue("start_date", now.toISOString());
+                                                        createForm.setValue("end_date", end.toISOString());
+                                                        createForm.setValue("due_date", end.toISOString());
+                                                    } else if (value === 'range') {
+                                                        setCreateMode('range');
+                                                        const start = createForm.getValues("start_date");
+                                                        if (!start) {
+                                                            const now = new Date();
+                                                            const plan = createForm.getValues("plan") || 1;
+                                                            const end = addDays(now, plan);
+                                                            createForm.setValue("start_date", now.toISOString());
+                                                            createForm.setValue("end_date", end.toISOString());
+                                                            createForm.setValue("due_date", end.toISOString());
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                <ToggleGroupItem value="today">Today</ToggleGroupItem>
+                                                <ToggleGroupItem value="plan">Duration</ToggleGroupItem>
+                                                <ToggleGroupItem value="range">Custom</ToggleGroupItem>
+                                            </ToggleGroup>
 
-                                        <FormField
-                                            control={createForm.control}
-                                            name="progress"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="flex items-center justify-between">
-                                                        <span>Progress</span>
-                                                        <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
-                                                            {field.value ?? 0}%
-                                                        </span>
-                                                    </FormLabel>
-                                                    <FormControl>
-                                                        <div className="space-y-2">
-                                                            <Input
-                                                                type="range"
-                                                                min="0"
-                                                                max="100"
-                                                                step="5"
-                                                                value={field.value ?? 0}
-                                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
-                                                            />
-                                                            <div className="flex justify-between text-xs text-muted-foreground">
-                                                                <span>0%</span>
-                                                                <span>25%</span>
-                                                                <span>50%</span>
-                                                                <span>75%</span>
-                                                                <span>100%</span>
-                                                            </div>
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
+                                            {createMode === 'today' && (
+                                                <Input
+                                                    type="time"
+                                                    className="w-28"
+                                                    value={createForm.watch("start_date") ? format(new Date(createForm.watch("start_date")!), "HH:mm") : format(new Date(), "HH:mm")}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (val) {
+                                                            const [hours, minutes] = val.split(':').map(Number);
+                                                            const today = new Date();
+                                                            today.setHours(hours, minutes, 0, 0);
+                                                            const endOfDay = new Date(today);
+                                                            endOfDay.setHours(23, 59, 59, 999);
+                                                            createForm.setValue("start_date", today.toISOString());
+                                                            createForm.setValue("end_date", endOfDay.toISOString());
+                                                            createForm.setValue("due_date", endOfDay.toISOString());
+                                                            createForm.setValue("plan", 1);
+                                                        }
+                                                    }}
+                                                />
                                             )}
-                                        />
+
+                                            {createMode === 'plan' && (
+                                                <Select
+                                                    value={String(createForm.watch("plan") || 1)}
+                                                    onValueChange={(val) => {
+                                                        const newPlan = parseInt(val) || 1;
+                                                        createForm.setValue("plan", newPlan);
+                                                        const now = new Date();
+                                                        const newEndDate = addDays(now, newPlan);
+                                                        createForm.setValue("start_date", now.toISOString());
+                                                        createForm.setValue("end_date", newEndDate.toISOString());
+                                                        createForm.setValue("due_date", newEndDate.toISOString());
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-28">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="1">1 day</SelectItem>
+                                                        <SelectItem value="2">2 days</SelectItem>
+                                                        <SelectItem value="3">3 days</SelectItem>
+                                                        <SelectItem value="4">4 days</SelectItem>
+                                                        <SelectItem value="5">5 days</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </div>
+
+                                        {/* Date Range Inputs - Show below when range mode */}
+                                        {createMode === 'range' && (
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Start</Label>
+                                                    <Input
+                                                        type="datetime-local"
+                                                        value={formatDateForInput(createForm.watch("start_date"))}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val) {
+                                                                const date = new Date(val);
+                                                                createForm.setValue("start_date", date.toISOString());
+                                                                const endStr = createForm.getValues("end_date");
+                                                                if (endStr) {
+                                                                    const end = new Date(endStr);
+                                                                    const days = Math.max(1, Math.ceil((end.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)));
+                                                                    createForm.setValue("plan", days);
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">End</Label>
+                                                    <Input
+                                                        type="datetime-local"
+                                                        value={formatDateForInput(createForm.watch("end_date"))}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val) {
+                                                                const date = new Date(val);
+                                                                createForm.setValue("end_date", date.toISOString());
+                                                                createForm.setValue("due_date", date.toISOString());
+                                                                const startStr = createForm.getValues("start_date");
+                                                                if (startStr) {
+                                                                    const start = new Date(startStr);
+                                                                    const days = Math.max(1, Math.ceil((date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                                                                    createForm.setValue("plan", days);
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Live Preview */}
+                                        <p className="text-xs text-muted-foreground pt-1">
+                                            {createMode === 'today' && (
+                                                <>
+                                                    Today {createForm.watch("start_date") ? format(new Date(createForm.watch("start_date")!), "HH:mm") : format(new Date(), "HH:mm")} → 23:59
+                                                </>
+                                            )}
+                                            {createMode === 'plan' && createForm.watch("start_date") && createForm.watch("end_date") && (
+                                                <>
+                                                    {format(new Date(createForm.watch("start_date")!), "MMM d")} → {format(new Date(createForm.watch("end_date")!), "MMM d")} ({createForm.watch("plan")} day{(createForm.watch("plan") || 1) > 1 ? 's' : ''})
+                                                </>
+                                            )}
+                                            {createMode === 'range' && createForm.watch("start_date") && createForm.watch("end_date") && (
+                                                <>
+                                                    {format(new Date(createForm.watch("start_date")!), "MMM d, HH:mm")} → {format(new Date(createForm.watch("end_date")!), "MMM d, HH:mm")}
+                                                </>
+                                            )}
+                                        </p>
                                     </div>
+
+                                    {/* Progress - Optional */}
+                                    <FormField
+                                        control={createForm.control}
+                                        name="progress"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="flex items-center justify-between text-muted-foreground">
+                                                    <span>Progress (Optional)</span>
+                                                    <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
+                                                        {field.value ?? 0}%
+                                                    </span>
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        step="5"
+                                                        value={field.value ?? 0}
+                                                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                        className="w-full"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
 
                                     <div className="flex justify-end">
                                         <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -584,7 +882,7 @@ export function TasksPage() {
                     </Dialog>
                 </div>
             </div>
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
                     <CardTitle>{currentProject?.name ?? "Select a project"}</CardTitle>
                     <CardDescription>
@@ -620,16 +918,16 @@ export function TasksPage() {
                         </div>
 
                         {/* View Toggle */}
-                        <div className="flex items-center gap-3">
-                            <Button variant={viewMode === "list" ? "default" : "outline"} onClick={() => setViewMode("list")} className="h-10">
+                        <div className="flex items-center gap-2">
+                            <Button variant={view === "list" ? "default" : "outline"} onClick={() => setView("list")} className="h-10">
                                 <List className="mr-2 h-4 w-4" />
                                 List
                             </Button>
-                            <Button variant={viewMode === "kanban" ? "default" : "outline"} onClick={() => setViewMode("kanban")} className="h-10">
+                            <Button variant={view === "kanban" ? "default" : "outline"} onClick={() => setView("kanban")} className="h-10">
                                 <Kanban className="mr-2 h-4 w-4" />
                                 Board
                             </Button>
-                            <Button variant={viewMode === "gantt" ? "default" : "outline"} onClick={() => setViewMode("gantt")} className="h-10">
+                            <Button variant={view === "gantt" ? "default" : "outline"} onClick={() => setView("gantt")} className="h-10">
                                 <CalendarRange className="mr-2 h-4 w-4" />
                                 Gantt
                             </Button>
@@ -674,7 +972,8 @@ export function TasksPage() {
                                         name: parsed.data.title,
                                         startDate,
                                         endDate,
-                                        progress: parsed.data.progress
+                                        progress: parsed.data.progress,
+                                        duration_days: parsed.data.plan // Map plan -> duration_days for update
                                     }
                                 })
                                     .then(() => {
@@ -691,7 +990,7 @@ export function TasksPage() {
                                         // otherwise hook shows toast
                                     });
                             })}
-                            className="space-y-4"
+                            className="space-y-6"
                         >
                             <FormField control={editForm.control} name="title" render={({ field }) => (
                                 <FormItem>
@@ -707,52 +1006,187 @@ export function TasksPage() {
                                 </FormItem>
                             )} />
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={editForm.control} name="start_date" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Start Date</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="datetime-local" className={editForm.formState.errors.start_date ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                            {/* Schedule Mode Toggle - Horizontal Layout */}
+                            <div className="space-y-2">
+                                <Label>Duration</Label>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <ToggleGroup
+                                        type="single"
+                                        value={editMode}
+                                        onValueChange={(value: TaskFormMode) => {
+                                            if (!value) return;
+                                            if (value === 'today') {
+                                                setEditMode('today');
+                                                const now = new Date();
+                                                const endOfDay = new Date(now);
+                                                endOfDay.setHours(23, 59, 59, 999);
+                                                editForm.setValue("start_date", now.toISOString());
+                                                editForm.setValue("end_date", endOfDay.toISOString());
+                                                editForm.setValue("due_date", endOfDay.toISOString());
+                                                editForm.setValue("plan", 1);
+                                            } else if (value === 'plan') {
+                                                setEditMode('plan');
+                                                const plan = editForm.getValues("plan") || 1;
+                                                const now = new Date();
+                                                const end = addDays(now, plan);
+                                                editForm.setValue("start_date", now.toISOString());
+                                                editForm.setValue("end_date", end.toISOString());
+                                                editForm.setValue("due_date", end.toISOString());
+                                            } else if (value === 'range') {
+                                                setEditMode('range');
+                                                const start = editForm.getValues("start_date");
+                                                if (!start) {
+                                                    const now = new Date();
+                                                    const plan = editForm.getValues("plan") || 1;
+                                                    const end = addDays(now, plan);
+                                                    editForm.setValue("start_date", now.toISOString());
+                                                    editForm.setValue("end_date", end.toISOString());
+                                                    editForm.setValue("due_date", end.toISOString());
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <ToggleGroupItem value="today">Today</ToggleGroupItem>
+                                        <ToggleGroupItem value="plan">Duration</ToggleGroupItem>
+                                        <ToggleGroupItem value="range">Custom</ToggleGroupItem>
+                                    </ToggleGroup>
 
-                                <FormField control={editForm.control} name="end_date" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>End Date</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="datetime-local" className={editForm.formState.errors.end_date ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                                    {editMode === 'today' && (
+                                        <Input
+                                            type="time"
+                                            className="w-28"
+                                            value={editForm.watch("start_date") ? format(new Date(editForm.watch("start_date")!), "HH:mm") : format(new Date(), "HH:mm")}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val) {
+                                                    const [hours, minutes] = val.split(':').map(Number);
+                                                    const today = new Date();
+                                                    today.setHours(hours, minutes, 0, 0);
+                                                    const endOfDay = new Date(today);
+                                                    endOfDay.setHours(23, 59, 59, 999);
+                                                    editForm.setValue("start_date", today.toISOString());
+                                                    editForm.setValue("end_date", endOfDay.toISOString());
+                                                    editForm.setValue("due_date", endOfDay.toISOString());
+                                                    editForm.setValue("plan", 1);
+                                                }
+                                            }}
+                                        />
+                                    )}
+
+                                    {editMode === 'plan' && (
+                                        <Select
+                                            value={String(editForm.watch("plan") || 1)}
+                                            onValueChange={(val) => {
+                                                const newPlan = parseInt(val) || 1;
+                                                editForm.setValue("plan", newPlan);
+                                                const now = new Date();
+                                                const newEndDate = addDays(now, newPlan);
+                                                editForm.setValue("start_date", now.toISOString());
+                                                editForm.setValue("end_date", newEndDate.toISOString());
+                                                editForm.setValue("due_date", newEndDate.toISOString());
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-28">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="1">1 day</SelectItem>
+                                                <SelectItem value="2">2 days</SelectItem>
+                                                <SelectItem value="3">3 days</SelectItem>
+                                                <SelectItem value="4">4 days</SelectItem>
+                                                <SelectItem value="5">5 days</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </div>
+
+                                {/* Date Range Inputs - Show below when range mode */}
+                                {editMode === 'range' && (
+                                    <div className="grid grid-cols-2 gap-3 pt-2">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">Start</Label>
+                                            <Input
+                                                type="datetime-local"
+                                                value={formatDateForInput(editForm.watch("start_date"))}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val) {
+                                                        const date = new Date(val);
+                                                        editForm.setValue("start_date", date.toISOString());
+                                                        const endStr = editForm.getValues("end_date");
+                                                        if (endStr) {
+                                                            const end = new Date(endStr);
+                                                            const days = Math.max(1, Math.ceil((end.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)));
+                                                            editForm.setValue("plan", days);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">End</Label>
+                                            <Input
+                                                type="datetime-local"
+                                                value={formatDateForInput(editForm.watch("end_date"))}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val) {
+                                                        const date = new Date(val);
+                                                        editForm.setValue("end_date", date.toISOString());
+                                                        editForm.setValue("due_date", date.toISOString());
+                                                        const startStr = editForm.getValues("start_date");
+                                                        if (startStr) {
+                                                            const start = new Date(startStr);
+                                                            const days = Math.max(1, Math.ceil((date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                                                            editForm.setValue("plan", days);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Live Preview */}
+                                <p className="text-xs text-muted-foreground pt-1">
+                                    {editMode === 'today' && (
+                                        <>
+                                            Today {editForm.watch("start_date") ? format(new Date(editForm.watch("start_date")!), "HH:mm") : format(new Date(), "HH:mm")} → 23:59
+                                        </>
+                                    )}
+                                    {editMode === 'plan' && editForm.watch("start_date") && editForm.watch("end_date") && (
+                                        <>
+                                            {format(new Date(editForm.watch("start_date")!), "MMM d")} → {format(new Date(editForm.watch("end_date")!), "MMM d")} ({editForm.watch("plan")} day{(editForm.watch("plan") || 1) > 1 ? 's' : ''})
+                                        </>
+                                    )}
+                                    {editMode === 'range' && editForm.watch("start_date") && editForm.watch("end_date") && (
+                                        <>
+                                            {format(new Date(editForm.watch("start_date")!), "MMM d, HH:mm")} → {format(new Date(editForm.watch("end_date")!), "MMM d, HH:mm")}
+                                        </>
+                                    )}
+                                </p>
                             </div>
 
+                            {/* Progress - Optional */}
                             <FormField control={editForm.control} name="progress" render={({ field }) => (
                                 <FormItem>
-                                    <div className="flex items-center justify-between">
-                                        <FormLabel>Progress</FormLabel>
-                                        <span className="text-sm font-medium">{field.value ?? 0}%</span>
-                                    </div>
+                                    <FormLabel className="flex items-center justify-between text-muted-foreground">
+                                        <span>Progress (Optional)</span>
+                                        <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
+                                            {field.value ?? 0}%
+                                        </span>
+                                    </FormLabel>
                                     <FormControl>
-                                        <Slider
-                                            min={0}
-                                            max={100}
-                                            step={5}
-                                            value={[field.value ?? 0]}
-                                            onValueChange={(vals) => field.onChange(vals[0])}
-                                            className="py-4"
+                                        <Input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="5"
+                                            value={field.value ?? 0}
+                                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                            className="w-full"
                                         />
                                     </FormControl>
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>0%</span>
-                                        <span>25%</span>
-                                        <span>50%</span>
-                                        <span>75%</span>
-                                        <span>100%</span>
-                                    </div>
-                                    <FormMessage />
                                 </FormItem>
                             )} />
 

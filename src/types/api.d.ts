@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -13,58 +29,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "email": "ada@example.com",
-                     *       "password": "S3cureP@ssw0rd"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["LoginRequest"];
-                };
-            };
-            responses: {
-                /** @description Login successful */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "token": "eyJhbGciOiJIUzI1Ni...",
-                         *       "user": {
-                         *         "created_at": "2025-10-01T10:00:00Z",
-                         *         "deleted_at": null,
-                         *         "email": "ada@example.com",
-                         *         "id": "00000000-0000-0000-0000-000000000000",
-                         *         "name": "Ada Lovelace",
-                         *         "provider": "local",
-                         *         "provider_id": null,
-                         *         "updated_at": "2025-10-01T10:00:00Z"
-                         *       }
-                         *     }
-                         */
-                        "application/json": components["schemas"]["AuthResponse"];
-                    };
-                };
-                /** @description Invalid credentials */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        post: operations["login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -80,24 +45,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Logout acknowledged */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -111,38 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current user */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "email": "ada@example.com",
-                         *       "id": "00000000-0000-0000-0000-000000000000",
-                         *       "name": "Ada Lovelace",
-                         *       "provider": "local",
-                         *       "provider_id": null,
-                         *       "updated_at": "2025-10-01T10:00:00Z"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["User"];
-                    };
-                };
-            };
-        };
+        get: operations["me"];
         put?: never;
         post?: never;
         delete?: never;
@@ -160,59 +77,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "email": "ada@example.com",
-                     *       "name": "Ada Lovelace",
-                     *       "password": "S3cureP@ssw0rd"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["RegisterRequest"];
-                };
-            };
-            responses: {
-                /** @description User registered */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "token": "eyJhbGciOiJIUzI1Ni...",
-                         *       "user": {
-                         *         "created_at": "2025-10-01T10:00:00Z",
-                         *         "deleted_at": null,
-                         *         "email": "ada@example.com",
-                         *         "id": "00000000-0000-0000-0000-000000000000",
-                         *         "name": "Ada Lovelace",
-                         *         "provider": "local",
-                         *         "provider_id": null,
-                         *         "updated_at": "2025-10-01T10:00:00Z"
-                         *       }
-                         *     }
-                         */
-                        "application/json": components["schemas"]["AuthResponse"];
-                    };
-                };
-                /** @description Email already in use */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        post: operations["register"];
         delete?: never;
         options?: never;
         head?: never;
@@ -226,84 +91,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description List projects */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example [
-                         *       {
-                         *         "created_at": "2025-10-01T10:00:00Z",
-                         *         "deleted_at": null,
-                         *         "description": "Prepare milestones for the product launch.",
-                         *         "id": "00000000-0000-0000-0000-000000000000",
-                         *         "name": "Launch Planning",
-                         *         "theme_color": "#3498db",
-                         *         "updated_at": "2025-10-01T10:00:00Z",
-                         *         "user_id": "11111111-1111-1111-1111-111111111111"
-                         *       }
-                         *     ]
-                         */
-                        "application/json": components["schemas"]["Project"][];
-                    };
-                };
-            };
-        };
+        get: operations["list_projects"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "description": "Prepare milestones for the product launch.",
-                     *       "name": "Launch Planning",
-                     *       "theme_color": "#3498db"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ProjectCreateRequest"];
-                };
-            };
-            responses: {
-                /** @description Project created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "description": "Prepare milestones for the product launch.",
-                         *       "id": "00000000-0000-0000-0000-000000000000",
-                         *       "name": "Launch Planning",
-                         *       "theme_color": "#3498db",
-                         *       "updated_at": "2025-10-01T10:00:00Z",
-                         *       "user_id": "11111111-1111-1111-1111-111111111111"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-            };
-        };
+        post: operations["create_project"];
         delete?: never;
         options?: never;
         head?: never;
@@ -317,201 +107,48 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @example 00000000-0000-0000-0000-000000000000 */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Project detail */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "description": "Prepare milestones for the product launch.",
-                         *       "id": "00000000-0000-0000-0000-000000000000",
-                         *       "name": "Launch Planning",
-                         *       "theme_color": "#3498db",
-                         *       "updated_at": "2025-10-01T10:00:00Z",
-                         *       "user_id": "11111111-1111-1111-1111-111111111111"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-            };
-        };
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @example 00000000-0000-0000-0000-000000000000 */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "description": "Updated description",
-                     *       "name": "Launch Planning - Updated",
-                     *       "theme_color": "#2ecc71"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ProjectUpdateRequest"];
-                };
-            };
-            responses: {
-                /** @description Project updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "description": "Prepare milestones for the product launch.",
-                         *       "id": "00000000-0000-0000-0000-000000000000",
-                         *       "name": "Launch Planning",
-                         *       "theme_color": "#3498db",
-                         *       "updated_at": "2025-10-01T10:00:00Z",
-                         *       "user_id": "11111111-1111-1111-1111-111111111111"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["Project"];
-                    };
-                };
-            };
-        };
+        get: operations["get_project"];
+        put: operations["update_project"];
         post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @example 00000000-0000-0000-0000-000000000000 */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Project soft deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        delete: operations["delete_project"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/tasks": {
+    "/projects/{id}/critical-path": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Set to true to list progress entries instead of tasks */
-                    progress?: boolean;
-                    /** @description Optional task id to filter progress */
-                    task_id?: string;
-                };
-                header?: never;
-                path: {
-                    project_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description List tasks or progress entries */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Task"][] | components["schemas"]["Progress"][];
-                    };
-                };
-            };
-        };
+        get: operations["get_project_critical_path"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "due_date": "2025-10-10T10:00:00Z",
-                     *       "status": "pending",
-                     *       "title": "Define launch checklist"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["TaskCreateRequest"];
-                };
-            };
-            responses: {
-                /** @description Task created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "due_date": "2025-10-10T10:00:00Z",
-                         *       "id": "22222222-2222-2222-2222-222222222222",
-                         *       "project_id": "00000000-0000-0000-0000-000000000000",
-                         *       "status": "pending",
-                         *       "title": "Define launch checklist",
-                         *       "updated_at": "2025-10-01T10:00:00Z"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["Task"];
-                    };
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/projects/{project_id}/tasks/{id}": {
+    "/projects/{id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_project_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/plan": {
         parameters: {
             query?: never;
             header?: never;
@@ -519,76 +156,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                    /** @example 00000000-0000-0000-0000-000000000000 */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    /**
-                     * @example {
-                     *       "due_date": "2025-11-01T10:00:00Z",
-                     *       "status": "in_progress",
-                     *       "title": "Refine checklist"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["TaskUpdateRequest"];
-                };
-            };
-            responses: {
-                /** @description Task updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        /**
-                         * @example {
-                         *       "created_at": "2025-10-01T10:00:00Z",
-                         *       "deleted_at": null,
-                         *       "due_date": "2025-10-10T10:00:00Z",
-                         *       "id": "22222222-2222-2222-2222-222222222222",
-                         *       "project_id": "00000000-0000-0000-0000-000000000000",
-                         *       "status": "pending",
-                         *       "title": "Define launch checklist",
-                         *       "updated_at": "2025-10-01T10:00:00Z"
-                         *     }
-                         */
-                        "application/json": components["schemas"]["Task"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                    /** @example 00000000-0000-0000-0000-000000000000 */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Task soft deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        put?: never;
+        post: operations["update_project_plan"];
+        delete: operations["clear_project_plan"];
         options?: never;
         head?: never;
         patch?: never;
@@ -601,62 +171,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description List dependencies */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TaskDependency"][];
-                    };
-                };
-            };
-        };
+        get: operations["list_dependencies"];
         put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        source_task_id: string;
-                        /** Format: uuid */
-                        target_task_id: string;
-                        /** @example finish-to-start */
-                        type_: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Dependency created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TaskDependency"];
-                    };
-                };
-            };
-        };
+        post: operations["create_dependency"];
         delete?: never;
         options?: never;
         head?: never;
@@ -673,27 +190,229 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    project_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Dependency deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
+        delete: operations["delete_dependency"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
+        get: operations["list_tasks"];
+        put?: never;
+        post: operations["create_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["batch_update_tasks"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_task"];
+        put: operations["update_task"];
+        post?: never;
+        delete: operations["delete_task"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{task_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_progress"];
+        put?: never;
+        post: operations["create_progress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{task_id}/progress/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_progress"];
+        put: operations["update_progress"];
+        post?: never;
+        delete: operations["delete_progress"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all permissions */
+        get: operations["list_permissions"];
+        put?: never;
+        /** Create a new permission */
+        post: operations["create_permission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all roles */
+        get: operations["list_roles"];
+        put?: never;
+        /** Create a new role */
+        post: operations["create_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/roles/{role_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a role by ID */
+        get: operations["get_role"];
+        put?: never;
+        post?: never;
+        /** Delete a role */
+        delete: operations["delete_role"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/roles/{role_id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get permissions assigned to a role */
+        get: operations["get_role_permissions"];
+        put?: never;
+        /** Assign a permission to a role */
+        post: operations["assign_permission_to_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/users/{user_id}/effective-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get computed effective permissions for a user */
+        get: operations["get_effective_permissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/users/{user_id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get direct permissions granted to a user */
+        get: operations["get_user_permissions"];
+        put?: never;
+        /** Grant a permission directly to a user */
+        post: operations["grant_permission_to_user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/users/{user_id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get roles assigned to a user */
+        get: operations["get_user_roles"];
+        put?: never;
+        /** Assign a role to a user */
+        post: operations["assign_role_to_user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rbac/users/{user_id}/roles/{role_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a role from a user */
+        delete: operations["revoke_role_from_user"];
         options?: never;
         head?: never;
         patch?: never;
@@ -703,15 +422,85 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ActualPoint: {
+            /** Format: int32 */
+            actual: number;
+            date: string;
+        };
+        AssignPermissionToRoleRequest: {
+            /** Format: uuid */
+            permission_id: string;
+        };
+        AssignRoleRequest: {
+            /** Format: uuid */
+            role_id: string;
+        };
         AuthResponse: {
             token: string;
             user: components["schemas"]["User"];
+        };
+        CriticalPathResponse: string[];
+        DashboardResponse: {
+            actual: components["schemas"]["ActualPoint"][];
+            plan: components["schemas"]["ProjectPlanPoint"][];
+            project: components["schemas"]["Project"];
+        };
+        DependencyCreateRequest: {
+            /** Format: uuid */
+            source_task_id: string;
+            /** Format: uuid */
+            target_task_id: string;
+            type_?: string;
+        };
+        EffectivePermission: {
+            name: string;
+            /** @description Name of the role if source is "role" */
+            role_name?: string | null;
+            scope?: Record<string, never>;
+            /**
+             * @description Source of the permission: "role" or "direct"
+             * @example role
+             */
+            source: string;
+        };
+        EffectivePermissions: {
+            permissions: components["schemas"]["EffectivePermission"][];
+            roles: string[];
+            /** Format: uuid */
+            user_id: string;
+        };
+        GrantPermissionRequest: {
+            /** Format: uuid */
+            permission_id: string;
+            /** @description Optional scope JSON, e.g. {"project_id": "..."} */
+            scope?: Record<string, never>;
+        };
+        HealthResponse: {
+            db_error?: string | null;
+            db_ok: boolean;
+            status: string;
         };
         LoginRequest: {
             /** @example ada@example.com */
             email: string;
             /** @example S3cureP@ssw0rd */
             password: string;
+        };
+        Permission: {
+            /** Format: date-time */
+            created_at: string;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PermissionCreateRequest: {
+            /** @example Archive completed projects */
+            description?: string | null;
+            /** @example project.archive */
+            name: string;
         };
         Progress: {
             /** Format: date-time */
@@ -767,6 +556,32 @@ export interface components {
             /** @example #3498db */
             theme_color?: string | null;
         };
+        ProjectPlanCreateRequest: {
+            /**
+             * Format: date-time
+             * @example 2025-12-01T00:00:00Z
+             */
+            date: string;
+            /**
+             * Format: int32
+             * @example 10
+             */
+            planned_progress: number;
+        };
+        ProjectPlanPoint: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            date: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            planned_progress: number;
+            /** Format: uuid */
+            project_id: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         ProjectUpdateRequest: {
             /** @example Updated description */
             description?: string | null;
@@ -782,6 +597,30 @@ export interface components {
             name: string;
             /** @example S3cureP@ssw0rd */
             password: string;
+        };
+        Role: {
+            /** Format: date-time */
+            created_at: string;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        RoleCreateRequest: {
+            /** @example Can manage all aspects of projects */
+            description?: string | null;
+            /** @example project_admin */
+            name: string;
+        };
+        RolePermission: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            permission_id: string;
+            /** Format: uuid */
+            role_id: string;
         };
         Task: {
             /** Format: uuid */
@@ -817,6 +656,36 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        TaskBatchUpdatePayload: {
+            tasks: components["schemas"]["TaskBatchUpdateRequest"][];
+        };
+        TaskBatchUpdateRequest: {
+            /** Format: uuid */
+            assignee?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-11-01T10:00:00Z
+             */
+            due_date?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            end_date?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+            /** Format: int32 */
+            progress?: number | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            start_date?: string | null;
+            status?: string | null;
+            title?: string | null;
+        };
         TaskCreateRequest: {
             /** Format: uuid */
             assignee?: string | null;
@@ -847,6 +716,17 @@ export interface components {
             /** @example Define launch checklist */
             title: string;
         };
+        TaskDependency: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            source_task_id: string;
+            /** Format: uuid */
+            target_task_id: string;
+            type_: string;
+        };
         TaskUpdateRequest: {
             /** Format: uuid */
             assignee?: string | null;
@@ -872,17 +752,6 @@ export interface components {
             status?: string | null;
             title?: string | null;
         };
-        TaskDependency: {
-            /** Format: date-time */
-            created_at: string;
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            source_task_id: string;
-            /** Format: uuid */
-            target_task_id: string;
-            type_: string;
-        };
         User: {
             /** Format: date-time */
             created_at: string;
@@ -897,6 +766,26 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        UserPermission: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            permission_id: string;
+            /** @description Scope as JSON for resource-level permissions */
+            scope?: Record<string, never>;
+            /** Format: uuid */
+            user_id: string;
+        };
+        UserRole: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            role_id: string;
+            /** Format: uuid */
+            user_id: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -905,4 +794,1475 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Health check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "user@example.com",
+                 *       "password": "password123"
+                 *     }
+                 */
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Login successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "eyJhbGciOiJIUzI1Ni...",
+                     *       "user": {
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "email": "ada@example.com",
+                     *         "id": "00000000-0000-0000-0000-000000000000",
+                     *         "name": "Ada Lovelace",
+                     *         "provider": "local",
+                     *         "provider_id": null,
+                     *         "updated_at": "2025-10-01T10:00:00Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logout acknowledged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-01T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "email": "ada@example.com",
+                     *       "id": "00000000-0000-0000-0000-000000000000",
+                     *       "name": "Ada Lovelace",
+                     *       "provider": "local",
+                     *       "provider_id": null,
+                     *       "updated_at": "2025-10-01T10:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "test@example.com",
+                 *       "name": "Test User",
+                 *       "password": "password123"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description User registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "eyJhbGciOiJIUzI1Ni...",
+                     *       "user": {
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "email": "ada@example.com",
+                     *         "id": "00000000-0000-0000-0000-000000000000",
+                     *         "name": "Ada Lovelace",
+                     *         "provider": "local",
+                     *         "provider_id": null,
+                     *         "updated_at": "2025-10-01T10:00:00Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Email already in use */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_projects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List projects */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "description": "Prepare milestones for the product launch.",
+                     *         "id": "00000000-0000-0000-0000-000000000000",
+                     *         "name": "Launch Planning",
+                     *         "theme_color": "#3498db",
+                     *         "updated_at": "2025-10-01T10:00:00Z",
+                     *         "user_id": "11111111-1111-1111-1111-111111111111"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Project"][];
+                };
+            };
+        };
+    };
+    create_project: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "My Project"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProjectCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Project created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-01T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "description": "Prepare milestones for the product launch.",
+                     *       "id": "00000000-0000-0000-0000-000000000000",
+                     *       "name": "Launch Planning",
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-10-01T10:00:00Z",
+                     *       "user_id": "11111111-1111-1111-1111-111111111111"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+        };
+    };
+    get_project: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-01T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "description": "Prepare milestones for the product launch.",
+                     *       "id": "00000000-0000-0000-0000-000000000000",
+                     *       "name": "Launch Planning",
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-10-01T10:00:00Z",
+                     *       "user_id": "11111111-1111-1111-1111-111111111111"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+        };
+    };
+    update_project: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "Launch Planning - Updated"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProjectUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Project updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-01T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "description": "Prepare milestones for the product launch.",
+                     *       "id": "00000000-0000-0000-0000-000000000000",
+                     *       "name": "Launch Planning",
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-10-01T10:00:00Z",
+                     *       "user_id": "11111111-1111-1111-1111-111111111111"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+        };
+    };
+    delete_project: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_project_critical_path: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Critical path task ids */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CriticalPathResponse"];
+                };
+            };
+        };
+    };
+    get_project_dashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project dashboard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "actual": [
+                     *         {
+                     *           "actual": 50,
+                     *           "date": "2025-10-05"
+                     *         }
+                     *       ],
+                     *       "plan": [
+                     *         {
+                     *           "created_at": "2025-10-01T10:00:00Z",
+                     *           "date": "2025-12-01T00:00:00Z",
+                     *           "id": "44444444-4444-4444-4444-444444444444",
+                     *           "planned_progress": 10,
+                     *           "project_id": "00000000-0000-0000-0000-000000000000",
+                     *           "updated_at": "2025-10-01T10:00:00Z"
+                     *         }
+                     *       ],
+                     *       "project": {
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "description": "Prepare milestones for the product launch.",
+                     *         "id": "00000000-0000-0000-0000-000000000000",
+                     *         "name": "Launch Planning",
+                     *         "theme_color": "#3498db",
+                     *         "updated_at": "2025-10-01T10:00:00Z",
+                     *         "user_id": "11111111-1111-1111-1111-111111111111"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DashboardResponse"];
+                };
+            };
+        };
+    };
+    update_project_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example [
+                 *       {
+                 *         "date": "2025-12-01T00:00:00Z",
+                 *         "planned_progress": 10
+                 *       },
+                 *       {
+                 *         "date": "2025-12-15T00:00:00Z",
+                 *         "planned_progress": 30
+                 *       },
+                 *       {
+                 *         "date": "2026-01-01T00:00:00Z",
+                 *         "planned_progress": 60
+                 *       }
+                 *     ]
+                 */
+                "application/json": components["schemas"]["ProjectPlanCreateRequest"][];
+            };
+        };
+        responses: {
+            /** @description Project plan updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPlanPoint"][];
+                };
+            };
+        };
+    };
+    clear_project_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project plan cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_dependencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List dependencies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "id": "55555555-5555-5555-5555-555555555555",
+                     *         "source_task_id": "22222222-2222-2222-2222-222222222222",
+                     *         "target_task_id": "66666666-6666-6666-6666-666666666666",
+                     *         "type": "finish_to_start"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["TaskDependency"][];
+                };
+            };
+        };
+    };
+    create_dependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "source_task_id": "22222222-2222-2222-2222-222222222222",
+                 *       "target_task_id": "66666666-6666-6666-6666-666666666666",
+                 *       "type": "finish_to_start"
+                 *     }
+                 */
+                "application/json": components["schemas"]["DependencyCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Dependency created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-01T10:00:00Z",
+                     *       "id": "55555555-5555-5555-5555-555555555555",
+                     *       "source_task_id": "22222222-2222-2222-2222-222222222222",
+                     *       "target_task_id": "66666666-6666-6666-6666-666666666666",
+                     *       "type": "finish_to_start"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TaskDependency"];
+                };
+            };
+        };
+    };
+    delete_dependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /**
+                 * @description Dependency id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dependency deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_tasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       [
+                     *         {
+                     *           "assignee": null,
+                     *           "created_at": "2025-10-01T10:00:00Z",
+                     *           "deleted_at": null,
+                     *           "due_date": "2025-10-10T10:00:00Z",
+                     *           "duration_days": 9,
+                     *           "end_date": "2025-10-10T17:00:00Z",
+                     *           "id": "22222222-2222-2222-2222-222222222222",
+                     *           "parent_id": null,
+                     *           "progress": 0,
+                     *           "project_id": "00000000-0000-0000-0000-000000000000",
+                     *           "start_date": "2025-10-01T09:00:00Z",
+                     *           "status": "pending",
+                     *           "title": "Define launch checklist",
+                     *           "updated_at": "2025-10-01T10:00:00Z"
+                     *         }
+                     *       ]
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Task"][];
+                };
+            };
+        };
+    };
+    create_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "title": "Quick task"
+                 *     }
+                 */
+                "application/json": components["schemas"]["TaskCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Task created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "assignee": null,
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "due_date": "2025-10-10T10:00:00Z",
+                     *         "duration_days": 9,
+                     *         "end_date": "2025-10-10T17:00:00Z",
+                     *         "id": "22222222-2222-2222-2222-222222222222",
+                     *         "parent_id": null,
+                     *         "progress": 0,
+                     *         "project_id": "00000000-0000-0000-0000-000000000000",
+                     *         "start_date": "2025-10-01T09:00:00Z",
+                     *         "status": "pending",
+                     *         "title": "Define launch checklist",
+                     *         "updated_at": "2025-10-01T10:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    batch_update_tasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "tasks": [
+                 *         {
+                 *           "id": "22222222-2222-2222-2222-222222222222",
+                 *           "progress": 50,
+                 *           "status": "in_progress"
+                 *         },
+                 *         {
+                 *           "end_date": "2025-11-05T17:00:00Z",
+                 *           "id": "66666666-6666-6666-6666-666666666666",
+                 *           "start_date": "2025-11-01T09:00:00Z"
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["TaskBatchUpdatePayload"];
+            };
+        };
+        responses: {
+            /** @description Tasks updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       [
+                     *         {
+                     *           "assignee": null,
+                     *           "created_at": "2025-10-01T10:00:00Z",
+                     *           "deleted_at": null,
+                     *           "due_date": "2025-10-10T10:00:00Z",
+                     *           "duration_days": 9,
+                     *           "end_date": "2025-10-10T17:00:00Z",
+                     *           "id": "22222222-2222-2222-2222-222222222222",
+                     *           "parent_id": null,
+                     *           "progress": 0,
+                     *           "project_id": "00000000-0000-0000-0000-000000000000",
+                     *           "start_date": "2025-10-01T09:00:00Z",
+                     *           "status": "pending",
+                     *           "title": "Define launch checklist",
+                     *           "updated_at": "2025-10-01T10:00:00Z"
+                     *         }
+                     *       ]
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Task"][];
+                };
+            };
+        };
+    };
+    get_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "assignee": null,
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "due_date": "2025-10-10T10:00:00Z",
+                     *         "duration_days": 9,
+                     *         "end_date": "2025-10-10T17:00:00Z",
+                     *         "id": "22222222-2222-2222-2222-222222222222",
+                     *         "parent_id": null,
+                     *         "progress": 0,
+                     *         "project_id": "00000000-0000-0000-0000-000000000000",
+                     *         "start_date": "2025-10-01T09:00:00Z",
+                     *         "status": "pending",
+                     *         "title": "Define launch checklist",
+                     *         "updated_at": "2025-10-01T10:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    update_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "status": "in_progress"
+                 *     }
+                 */
+                "application/json": components["schemas"]["TaskUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Task updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "assignee": null,
+                     *         "created_at": "2025-10-01T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "due_date": "2025-10-10T10:00:00Z",
+                     *         "duration_days": 9,
+                     *         "end_date": "2025-10-10T17:00:00Z",
+                     *         "id": "22222222-2222-2222-2222-222222222222",
+                     *         "parent_id": null,
+                     *         "progress": 0,
+                     *         "project_id": "00000000-0000-0000-0000-000000000000",
+                     *         "start_date": "2025-10-01T09:00:00Z",
+                     *         "status": "pending",
+                     *         "title": "Define launch checklist",
+                     *         "updated_at": "2025-10-01T10:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    delete_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /** @description Task id */
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List progress entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-10-05T10:00:00Z",
+                     *         "deleted_at": null,
+                     *         "id": "33333333-3333-3333-3333-333333333333",
+                     *         "note": "Halfway done",
+                     *         "progress": 50,
+                     *         "project_id": "00000000-0000-0000-0000-000000000000",
+                     *         "task_id": "22222222-2222-2222-2222-222222222222",
+                     *         "updated_at": "2025-10-05T10:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Progress"][];
+                };
+            };
+        };
+    };
+    create_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /** @description Task id */
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "progress": 10
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProgressCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Progress created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-05T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "id": "33333333-3333-3333-3333-333333333333",
+                     *       "note": "Halfway done",
+                     *       "progress": 50,
+                     *       "project_id": "00000000-0000-0000-0000-000000000000",
+                     *       "task_id": "22222222-2222-2222-2222-222222222222",
+                     *       "updated_at": "2025-10-05T10:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+        };
+    };
+    get_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /** @description Task id */
+                task_id: string;
+                /**
+                 * @description Progress id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-05T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "id": "33333333-3333-3333-3333-333333333333",
+                     *       "note": "Halfway done",
+                     *       "progress": 50,
+                     *       "project_id": "00000000-0000-0000-0000-000000000000",
+                     *       "task_id": "22222222-2222-2222-2222-222222222222",
+                     *       "updated_at": "2025-10-05T10:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+        };
+    };
+    update_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /** @description Task id */
+                task_id: string;
+                /**
+                 * @description Progress id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "progress": 75
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProgressUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Progress updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-10-05T10:00:00Z",
+                     *       "deleted_at": null,
+                     *       "id": "33333333-3333-3333-3333-333333333333",
+                     *       "note": "Halfway done",
+                     *       "progress": 50,
+                     *       "project_id": "00000000-0000-0000-0000-000000000000",
+                     *       "task_id": "22222222-2222-2222-2222-222222222222",
+                     *       "updated_at": "2025-10-05T10:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+        };
+    };
+    delete_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id */
+                project_id: string;
+                /** @description Task id */
+                task_id: string;
+                /**
+                 * @description Progress id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Permission"][];
+                };
+            };
+        };
+    };
+    create_permission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermissionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Permission created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Permission"];
+                };
+            };
+            /** @description Permission name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"][];
+                };
+            };
+        };
+    };
+    create_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Role created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Role name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Role ID */
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Role not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Role ID */
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_role_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Role ID */
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of assigned permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Permission"][];
+                };
+            };
+        };
+    };
+    assign_permission_to_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Role ID */
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignPermissionToRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Permission assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_effective_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EffectivePermissions"];
+                };
+            };
+        };
+    };
+    get_user_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of direct permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermission"][];
+                };
+            };
+        };
+    };
+    grant_permission_to_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Permission granted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_user_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of assigned roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"][];
+                };
+            };
+        };
+    };
+    assign_role_to_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Role assigned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_role_from_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User ID */
+                user_id: string;
+                /** @description Role ID */
+                role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+}

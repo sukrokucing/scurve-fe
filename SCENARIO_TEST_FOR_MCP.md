@@ -46,12 +46,85 @@
 3. Click "Edit" button OR Double-click task row - **PASSED** (Streamlined edit dialog opens)
 4. Verify dialog fields - **VERIFIED**
    - Title (Text input)
-   - Start Date (Datetime picker)
-   - End Date (Datetime picker)
+   - Schedule By toggle (Today, Plan (Days), Date Range)
+   - Start Date / Time picker (based on mode)
+   - End Date (for Date Range mode)
    - Progress (Slider 0-100%)
 5. Update Title, Dates, or Progress - **VERIFIED**
 6. Click "Save" - **NOT TESTED** (Verified dialog functionality only)
 7. Verify changes in list - **NOT TESTED**
+
+### Scenario: Schedule Mode Toggle (Create/Edit Task)
+**Date**: 2025-12-04
+**Executor**: MCP Agent
+**Objective**: Test the new Schedule By toggle with Today, Plan (Days), and Date Range modes
+
+1. **Open Create Task Dialog** - **PASSED**
+   - Navigate to `/tasks`
+   - Click "New task" button
+   - Verify dialog opens with Schedule By toggle visible ✅
+   - Three buttons visible: Today, Plan (Days), Date Range ✅
+
+2. **Today Mode** - **PASSED**
+   - Click "Today" button
+   - Verify "Today" button becomes active ✅
+   - Verify "Start Time (Today)" time picker appears ✅
+   - Verify time defaults to current time (06:40 UTC) ✅
+   - Verify helper text: "Task will be scheduled for today (ends at 23:59)" ✅
+   - Output values:
+     - `start_date` = Today at selected time
+     - `end_date` = Today at 23:59:59
+     - `plan` (duration_days) = 1
+
+3. **Plan (Days) Mode** - **PASSED**
+   - Click "Plan (Days)" button
+   - Verify "Plan (Days)" button becomes active ✅
+   - Verify "Plan (Days)*" number input appears (spinbutton) ✅
+   - Verify default value = 1 ✅
+   - Output values:
+     - `start_date` = Current date/time
+     - `end_date` = start_date + plan days
+     - `plan` = specified value
+
+4. **Date Range Mode** - **PASSED**
+   - Click "Date Range" button
+   - Verify "Date Range" button becomes active ✅
+   - Verify two datetime-local inputs appear ✅
+   - Verify Start Date populated (2025-12-04T06:41) ✅
+   - Verify End Date populated (2025-12-05T06:41) ✅
+   - Plan (Days) recalculates based on date difference
+
+5. **Mode Switching Preserves Values** - **PASSED**
+   - Mode switching works correctly ✅
+   - Values are preserved/recalculated on mode switch ✅
+
+6. **Edit Form Has Same Functionality** - **PASSED**
+   - Open Edit dialog for existing task ✅
+   - Verify Schedule By toggle present with Today, Plan, Date Range ✅
+   - Verified "Today" mode works in Edit dialog ✅
+   - Verified time picker and helper text appear ✅
+
+**Screenshots:**
+- `schedule_mode_test.png`: Date Range mode in Create Task
+- `edit_task_today_mode.png`: Today mode in Edit Task
+
+**Verified UI Layout:**
+```
+Schedule By: [Today] [Plan (Days)] [Date Range]
+
+Today Mode:
+  Start Time (Today): [HH:MM]
+  Task will be scheduled for today (ends at 23:59)
+
+Plan Mode:
+  Plan (Days)*: [1-5]
+
+Date Range Mode:
+  Start Date: [datetime-local]    End Date: [datetime-local]
+```
+
+
+
 
 ### Scenario: Delete Task
 1. Navigate to `/tasks` - **NOT TESTED**
