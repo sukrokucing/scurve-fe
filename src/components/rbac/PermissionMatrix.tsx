@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Info, AlertCircle } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
+
 import { toast } from "sonner";
 import clsx from "clsx";
 
@@ -13,7 +14,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import {
     Tooltip,
     TooltipContent,
@@ -21,7 +22,10 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { rbacApi, type Role, type Permission } from "@/api/rbac";
+import { rbacApi } from "@/api/rbac";
+import type { Permission } from "@/api/rbac";
+
+
 
 export const PermissionMatrix = () => {
     const queryClient = useQueryClient();

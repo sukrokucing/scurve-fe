@@ -13,7 +13,10 @@ interface TimelineProps {
 
 const StandardTooltipContent = ({ task, fontSize, fontFamily }: { task: Task; fontSize: string; fontFamily: string }) => {
     return (
-        <div className="bg-popover text-popover-foreground border rounded-md shadow-md p-3 text-xs z-50 min-w-[150px]">
+        <div
+            className="bg-popover text-popover-foreground border rounded-md shadow-md p-3 text-xs z-50 min-w-[150px]"
+            style={{ fontSize, fontFamily }}
+        >
             <div className="font-semibold mb-2 text-sm">{task.name}</div>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
                 <span>Start:</span>
@@ -26,6 +29,7 @@ const StandardTooltipContent = ({ task, fontSize, fontFamily }: { task: Task; fo
         </div>
     );
 };
+
 
 export function Timeline({ tasks, viewMode, onTaskChange, onDoubleClick }: TimelineProps) {
     const handleTaskChange = (task: Task) => {

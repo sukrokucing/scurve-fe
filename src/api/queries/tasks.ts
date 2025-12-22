@@ -17,14 +17,14 @@ export const tasksKeys = {
     byProject: (projectId: string, progress?: boolean) => [...TASKS_QUERY_KEY, "project", projectId, progress ? "progress" : "tasks"] as const,
 };
 
-export function useTasksByProject(projectId: string, progress?: boolean) {
+export function useTasksByProject(projectId: string, progress?: boolean, options?: { enabled?: boolean }) {
     return useQuery<Task[] | Progress[]>({
         queryKey: tasksKeys.byProject(projectId, progress),
         queryFn: async () => {
             if (!projectId) return [];
             return openapi.listTasksByProject(projectId, { progress });
         },
-        enabled: Boolean(projectId),
+        enabled: Boolean(projectId) && (options?.enabled ?? true),
     });
 }
 
@@ -73,8 +73,12 @@ export function useTaskMutation(projectId?: string) {
                 title: payload.name ?? "",
                 // don't send empty string for due_date — convert empty to undefined so the server treats it as omitted
                 ...(payload.dueDate !== undefined && payload.dueDate !== "" ? { due_date: payload.dueDate } : {}),
+                ...(payload.startDate !== undefined && payload.startDate !== "" ? { start_date: payload.startDate } : {}),
+                ...(payload.endDate !== undefined && payload.endDate !== "" ? { end_date: payload.endDate } : {}),
+                ...(payload.progress !== undefined ? { progress: payload.progress } : {}),
                 status: mapStatusToApi(payload.status),
             };
+
             const created = await openapi.createTaskForProject(projectId, body);
             return created;
         },
@@ -148,6 +152,10 @@ export function useUpdateTask() {
             if (args.payload.progress !== undefined) {
                 body.progress = args.payload.progress;
             }
+            if (args.payload.dueDate !== undefined) {
+                body.due_date = args.payload.dueDate as string | null | undefined;
+            }
+
 
             const mappedStatus = mapStatusToApi(args.payload.status);
             if (mappedStatus !== undefined) body.status = mappedStatus;
@@ -280,6 +288,26 @@ export function useDeleteDependency(projectId?: string) {
         onError: (err: unknown) => {
             const message = err instanceof Error ? err.message : String(err);
             toast.error(`Failed to delete dependency: ${message}`);
+        },
+    });
+}
+
+export function useBatchUpdateTasks(projectId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (payload: import("@/api/openapiClient").TaskBatchUpdatePayload) => {
+            if (!projectId) throw new Error("projectId is required for batch update");
+            return openapi.batchUpdateTasks(projectId, payload);
+        },
+        onSuccess: () => {
+            if (projectId) {
+                queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId) });
+            }
+            toast.success("Updated tasks");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to batch update tasks: ${message}`);
         },
     });
 }

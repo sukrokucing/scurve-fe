@@ -35,15 +35,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 import { rbacApi, type Role } from "@/api/rbac";
 
@@ -125,22 +119,14 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                                     name="permissionId"
                                     render={({ field }) => (
                                         <FormItem className="flex-1 space-y-0">
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Add Permission..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {availablePerms.length === 0 ? (
-                                                        <SelectItem value="none" disabled>No unassigned permissions</SelectItem>
-                                                    ) : (
-                                                        availablePerms.map(p => (
-                                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                                        ))
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
+                                            <Combobox
+                                                options={availablePerms.map(p => ({ value: p.id, label: p.name }))}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                placeholder="Add Permission..."
+                                                searchPlaceholder="Search permissions..."
+                                                emptyText={availablePerms.length === 0 ? "No unassigned permissions" : "No permission found."}
+                                            />
                                         </FormItem>
                                     )}
                                 />

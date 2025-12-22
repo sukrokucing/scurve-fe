@@ -1,8 +1,12 @@
 // Drag hooks for task movement and resizing
-import { useState, useCallback, useRef, useEffect } from 'react';
+// Drag hooks for task movement and resizing
+import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
+
 import type { GanttTask, ViewMode, DateRange } from '../types';
-import { xToDate, dateToX, getColumnWidth } from '../utils/positionUtils';
-import { addDays, differenceInDays } from 'date-fns';
+import { getColumnWidth } from '../utils/positionUtils';
+
+import { addDays } from 'date-fns';
+
 
 export type DragHandle = 'move' | 'left' | 'right';
 
@@ -15,24 +19,23 @@ interface DragState {
 }
 
 interface UseTaskDragProps {
+    tasks: GanttTask[];
     dateRange: DateRange;
     viewMode: ViewMode;
-    onTaskUpdate: (task: GanttTask) => void;
+    onTasksUpdate: (tasks: GanttTask[]) => void;
     snapToGrid?: boolean;
 }
 
 interface UseTaskDragReturn {
     dragState: DragState;
     handleDragStart: (task: GanttTask, handle: DragHandle, e: React.PointerEvent) => void;
-    handleDragMove: (e: PointerEvent) => void;
-    handleDragEnd: () => void;
-    previewTask: GanttTask | null;
+    ghostRef: RefObject<HTMLDivElement | null>;
 }
 
 export function useTaskDrag({
-    dateRange,
+    tasks,
     viewMode,
-    onTaskUpdate,
+    onTasksUpdate,
     snapToGrid = true,
 }: UseTaskDragProps): UseTaskDragReturn {
     const [dragState, setDragState] = useState<DragState>({
@@ -43,7 +46,15 @@ export function useTaskDrag({
         startTask: null,
     });
 
-    const [previewTask, setPreviewTask] = useState<GanttTask | null>(null);
+    // Ref for the ghost element - direct DOM manipulation
+    const ghostRef = useRef<HTMLDivElement>(null);
+
+    // Mutable state to track current drag without re-renders
+    const currentDrag = useRef<{
+        deltaX: number;
+        originalTask: GanttTask | null;
+    }>({ deltaX: 0, originalTask: null });
+
     const columnWidth = getColumnWidth(viewMode);
 
     const handleDragStart = useCallback((
@@ -57,6 +68,18 @@ export function useTaskDrag({
         // Capture pointer for tracking outside element
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
+        // Initialize mutable state
+        currentDrag.current = {
+            deltaX: 0,
+            originalTask: { ...task },
+        };
+
+        // Reset ghost transform
+        if (ghostRef.current) {
+            ghostRef.current.style.transform = 'translate3d(0, 0, 0)';
+            ghostRef.current.style.willChange = 'transform';
+        }
+
         setDragState({
             isDragging: true,
             task,
@@ -64,60 +87,81 @@ export function useTaskDrag({
             startX: e.clientX,
             startTask: { ...task },
         });
-        setPreviewTask({ ...task });
     }, []);
 
     const handleDragMove = useCallback((e: PointerEvent) => {
-        if (!dragState.isDragging || !dragState.startTask) return;
+        if (!dragState.isDragging || !currentDrag.current.originalTask) return;
 
         const deltaX = e.clientX - dragState.startX;
+        currentDrag.current.deltaX = deltaX;
 
-        // Convert pixel delta to days
-        let deltaDays = Math.round(deltaX / columnWidth);
-
-        if (!snapToGrid) {
-            deltaDays = deltaX / columnWidth;
+        // Direct DOM update - Zero React commits
+        if (ghostRef.current) {
+            ghostRef.current.style.transform = `translate3d(${deltaX}px, 0, 0)`;
         }
-
-        const originalTask = dragState.startTask;
-        let newStart = originalTask.start;
-        let newEnd = originalTask.end;
-        const duration = differenceInDays(originalTask.end, originalTask.start);
-
-        switch (dragState.handle) {
-            case 'move':
-                // Move both start and end
-                newStart = addDays(originalTask.start, deltaDays);
-                newEnd = addDays(originalTask.end, deltaDays);
-                break;
-            case 'left':
-                // Resize from left (change start only)
-                newStart = addDays(originalTask.start, deltaDays);
-                // Ensure start doesn't go past end
-                if (newStart >= originalTask.end) {
-                    newStart = addDays(originalTask.end, -1);
-                }
-                break;
-            case 'right':
-                // Resize from right (change end only)
-                newEnd = addDays(originalTask.end, deltaDays);
-                // Ensure end doesn't go before start
-                if (newEnd <= originalTask.start) {
-                    newEnd = addDays(originalTask.start, 1);
-                }
-                break;
-        }
-
-        setPreviewTask({
-            ...originalTask,
-            start: newStart,
-            end: newEnd,
-        });
-    }, [dragState, columnWidth, snapToGrid]);
+    }, [dragState.isDragging, dragState.startX]);
 
     const handleDragEnd = useCallback(() => {
-        if (previewTask && dragState.isDragging) {
-            onTaskUpdate(previewTask);
+        if (dragState.isDragging && currentDrag.current.originalTask) {
+            const { deltaX, originalTask } = currentDrag.current;
+
+            // Calculate final dates based on total delta
+            // Convert pixel delta to days
+            let deltaDays = Math.round(deltaX / columnWidth);
+
+            if (!snapToGrid) {
+                deltaDays = deltaX / columnWidth;
+            }
+
+            let newStart = originalTask.start;
+            let newEnd = originalTask.end;
+
+            switch (dragState.handle) {
+                case 'move':
+                    newStart = addDays(originalTask.start, deltaDays);
+                    newEnd = addDays(originalTask.end, deltaDays);
+                    break;
+                case 'left':
+                    newStart = addDays(originalTask.start, deltaDays);
+                    if (newStart >= originalTask.end) {
+                        newStart = addDays(originalTask.end, -1);
+                    }
+                    break;
+                case 'right':
+                    newEnd = addDays(originalTask.end, deltaDays);
+                    if (newEnd <= originalTask.start) {
+                        newEnd = addDays(originalTask.start, 1);
+                    }
+                    break;
+            }
+
+            // Only update if changed
+            if (newStart.getTime() !== originalTask.start.getTime() ||
+                newEnd.getTime() !== originalTask.end.getTime()) {
+
+                const updates: GanttTask[] = [];
+
+                // Main task update
+                updates.push({
+                    ...originalTask,
+                    start: newStart,
+                    end: newEnd,
+                });
+
+                // If moving entire task, move descendants too
+                if (dragState.handle === 'move') {
+                    const descendants = findDescendants(originalTask.id, tasks);
+                    descendants.forEach(d => {
+                        updates.push({
+                            ...d,
+                            start: addDays(d.start, deltaDays),
+                            end: addDays(d.end, deltaDays),
+                        });
+                    });
+                }
+
+                onTasksUpdate(updates);
+            }
         }
 
         setDragState({
@@ -127,8 +171,10 @@ export function useTaskDrag({
             startX: 0,
             startTask: null,
         });
-        setPreviewTask(null);
-    }, [previewTask, dragState.isDragging, onTaskUpdate]);
+
+        // Reset mutable state
+        currentDrag.current = { deltaX: 0, originalTask: null };
+    }, [dragState.isDragging, dragState.handle, columnWidth, snapToGrid, onTasksUpdate, tasks]);
 
     // Attach global pointer events when dragging
     useEffect(() => {
@@ -146,8 +192,23 @@ export function useTaskDrag({
     return {
         dragState,
         handleDragStart,
-        handleDragMove,
-        handleDragEnd,
-        previewTask,
+        ghostRef, // Expose ref instead of previewTask
     };
+}
+
+// Helper to find all tasks that depend on this task (recursively)
+function findDescendants(taskId: string, allTasks: GanttTask[], visited = new Set<string>()): GanttTask[] {
+    if (visited.has(taskId)) return [];
+    visited.add(taskId);
+
+    const descendants: GanttTask[] = [];
+    const directChildren = allTasks.filter(t => t.dependencies.includes(taskId));
+
+    for (const child of directChildren) {
+        descendants.push(child);
+        const nested = findDescendants(child.id, allTasks, visited);
+        descendants.push(...nested);
+    }
+
+    return descendants;
 }

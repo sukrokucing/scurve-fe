@@ -38,6 +38,17 @@ async function bootstrap() {
         if (typeof window !== "undefined") {
             const token = window.localStorage.getItem("token");
             if (token) {
+                // Check if we are already hydrated from localStorage (offline-first startup)
+                // This prevents "reload storms" from hitting 429s on strict backends.
+                const { user } = useAuthStore.getState();
+                const { permissions } = usePermissionStore.getState();
+
+                if (user && permissions && permissions.length > 0) {
+                    console.debug("[bootstrap] Hydrated from storage, skipping network");
+                    renderApp();
+                    return;
+                }
+
                 useAuthStore.getState().setToken(token);
                 // Build the auth URL. In dev we proxy API requests under /api.
                 const apiBase = import.meta.env.DEV ? "/api" : (import.meta.env.VITE_API_URL ?? "");

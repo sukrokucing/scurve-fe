@@ -1,5 +1,6 @@
 // Viewport tracking hook for scroll position and visible range
-import { useState, useEffect, useCallback, RefObject } from 'react';
+import { useState, useEffect, useCallback, type RefObject } from 'react';
+
 import type { DateRange, ViewMode } from '../types';
 import { COLUMN_WIDTH } from '../constants';
 import { xToDate } from '../utils/positionUtils';
@@ -24,8 +25,8 @@ interface UseViewportProps {
     containerRef: RefObject<HTMLDivElement>;
     dateRange: DateRange;
     viewMode: ViewMode;
-    taskCount: number;
     rowHeight: number;
+
 }
 
 interface UseViewportReturn {
@@ -40,8 +41,8 @@ export function useViewport({
     containerRef,
     dateRange,
     viewMode,
-    taskCount,
     rowHeight,
+
 }: UseViewportProps): UseViewportReturn {
     const [viewport, setViewport] = useState<Viewport>({
         scrollLeft: 0,

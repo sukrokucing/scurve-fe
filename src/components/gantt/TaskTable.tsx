@@ -10,7 +10,7 @@ import type { GanttTask, GanttDependency } from './types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Trash2, Plus, X } from 'lucide-react';
 import { HEADER_HEIGHT } from './constants';
 import {
@@ -28,7 +28,7 @@ const columnHelper = createColumnHelper<GanttTask>();
 interface TaskTableProps {
     tasks: GanttTask[];
     dependencies: GanttDependency[];
-    onTaskUpdate: (task: GanttTask) => void;
+    onTasksUpdate: (tasks: GanttTask[]) => void;
     onTaskDelete: (task: GanttTask) => void;
     onAddDependency: (sourceId: string, targetId: string) => void;
     onDeleteDependency: (dependencyId: string) => void;
@@ -38,7 +38,7 @@ interface TaskTableProps {
 export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function TaskTable({
     tasks,
     dependencies,
-    onTaskUpdate,
+    onTasksUpdate,
     onTaskDelete,
     onAddDependency,
     onDeleteDependency,
@@ -72,7 +72,7 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                     value={info.getValue()}
                     onChange={(e) => {
                         const updated = { ...info.row.original, name: e.target.value };
-                        onTaskUpdate(updated);
+                        onTasksUpdate([updated]);
                     }}
                     className="h-8 border-none shadow-none focus-visible:ring-1 min-w-0"
                 />
@@ -133,20 +133,19 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                                 </Badge>
                             );
                         })}
-                        <Select onValueChange={(val) => onAddDependency(task.id, val)}>
-                            <SelectTrigger className="h-6 w-6 p-0 border-dashed border-2 rounded-full flex items-center justify-center hover:border-primary hover:text-primary">
+                        <Combobox
+                            onChange={(val) => onAddDependency(task.id, val)}
+                            placeholder="Add Predecessor..."
+                            searchPlaceholder="Search tasks..."
+                            options={tasks
+                                .filter((t) => t.id !== task.id && !currentDeps.includes(t.id))
+                                .map(t => ({ value: t.id, label: t.name }))
+                            }
+                        >
+                            <Button className="h-6 w-6 p-0 border-dashed border-2 rounded-full flex items-center justify-center hover:border-primary hover:text-primary" variant="outline">
                                 <Plus className="h-3 w-3" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {tasks
-                                    .filter((t) => t.id !== task.id && !currentDeps.includes(t.id))
-                                    .map((t) => (
-                                        <SelectItem key={t.id} value={t.id}>
-                                            {t.name}
-                                        </SelectItem>
-                                    ))}
-                            </SelectContent>
-                        </Select>
+                            </Button>
+                        </Combobox>
                     </div>
                 );
             },

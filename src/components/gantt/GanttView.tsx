@@ -5,11 +5,12 @@ import type { GanttTask, GanttDependency, ViewMode } from './types';
 import { TaskTable } from './TaskTable';
 import { GanttChart } from './GanttChart';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import type { ApiTaskDependency } from '@/api/openapiClient';
 import { calculateDateRange } from './utils/dateUtils';
 import { dateToX } from './utils/positionUtils';
+import { useCriticalPath } from '@/api/queries/projects';
 
 // Re-export Progress from API types for compatibility
 export type Progress = {
@@ -19,10 +20,11 @@ export type Progress = {
 };
 
 interface GanttViewProps {
+    projectId: string; // Required for critical path
     tasks: DomainTask[];
     progress: Progress[];
     dependencies: ApiTaskDependency[];
-    onUpdateTask: (task: GanttTask) => void;
+    onUpdateTasks: (tasks: GanttTask[]) => void;
     onDeleteTask: (taskId: string) => void;
     onAddDependency: (sourceId: string, targetId: string) => void;
     onDeleteDependency: (dependencyId: string) => void;
@@ -30,10 +32,11 @@ interface GanttViewProps {
 }
 
 export function GanttView({
+    projectId,
     tasks,
     progress,
     dependencies,
-    onUpdateTask,
+    onUpdateTasks,
     onDeleteTask,
     onAddDependency,
     onDeleteDependency,
@@ -41,6 +44,8 @@ export function GanttView({
 }: GanttViewProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [isTableVisible, setIsTableVisible] = useState(true);
+
+    const { data: criticalPathIds } = useCriticalPath(projectId);
 
     // Scroll synchronization refs
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -105,11 +110,12 @@ export function GanttView({
                 progressId: taskProgress?.id,
                 dependencies: taskDependencies,
                 isDisabled: false,
+                isCritical: criticalPathIds?.includes(t.id),
                 duration: t.durationDays,
                 status: t.status,
             } as GanttTask;
         });
-    }, [tasks, progress, dependencies]);
+    }, [tasks, progress, dependencies, criticalPathIds]);
 
     // Transform dependencies to GanttDependency format
     const ganttDependencies = useMemo<GanttDependency[]>(() => {
@@ -121,8 +127,8 @@ export function GanttView({
         }));
     }, [dependencies]);
 
-    const handleTaskChange = (task: GanttTask) => {
-        onUpdateTask(task);
+    const handleTasksChange = (updatedTasks: GanttTask[]) => {
+        onUpdateTasks(updatedTasks);
     };
 
     // Calculate date range for scroll positioning
@@ -183,16 +189,17 @@ export function GanttView({
 
                     <div className="h-6 w-px bg-border mx-2" />
 
-                    <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                        <SelectTrigger className="w-[100px]">
-                            <SelectValue placeholder="View" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="day">Day</SelectItem>
-                            <SelectItem value="week">Week</SelectItem>
-                            <SelectItem value="month">Month</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        value={viewMode}
+                        onChange={(v) => setViewMode(v as ViewMode)}
+                        className="w-[100px]"
+                        placeholder="View"
+                        options={[
+                            { value: 'day', label: 'Day' },
+                            { value: 'week', label: 'Week' },
+                            { value: 'month', label: 'Month' },
+                        ]}
+                    />
 
                     <Button variant="outline" size="sm" onClick={scrollToToday}>
                         <CalendarDays className="h-4 w-4 mr-1" />
@@ -230,7 +237,7 @@ export function GanttView({
                             ref={tableContainerRef}
                             tasks={ganttTasks}
                             dependencies={ganttDependencies}
-                            onTaskUpdate={handleTaskChange}
+                            onTasksUpdate={handleTasksChange}
                             onTaskDelete={(t) => onDeleteTask(t.originalId)}
                             onAddDependency={onAddDependency}
                             onDeleteDependency={onDeleteDependency}
@@ -246,7 +253,7 @@ export function GanttView({
                             tasks={ganttTasks}
                             dependencies={ganttDependencies}
                             viewMode={viewMode}
-                            onTaskUpdate={handleTaskChange}
+                            onTasksUpdate={handleTasksChange}
                             onTaskDelete={(t) => onDeleteTask(t.originalId)}
                             onAddDependency={onAddDependency}
                             onDeleteDependency={onDeleteDependency}

@@ -12,9 +12,13 @@ const DashboardPage = lazy(() => import("@/pages/dashboard/DashboardPage").then(
 const ProjectsPage = lazy(() => import("@/pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const TasksPage = lazy(() => import("@/pages/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
 const AppLayout = lazy(() => import("@/components/layout/AppLayout").then((m) => ({ default: m.AppLayout })));
+const ProjectDashboard = lazy(() => import("@/components/dashboard/ProjectDashboard").then((m) => ({ default: m.ProjectDashboard })));
+const SettingsLayout = lazy(() => import("@/components/layout/SettingsLayout").then((m) => ({ default: m.SettingsLayout })));
+
 
 // Admin
 const RolesPage = lazy(() => import("@/pages/admin/RolesPage").then((m) => ({ default: m.RolesPage })));
+const UsersPage = lazy(() => import("@/pages/admin/UsersPage").then((m) => ({ default: m.UsersPage })));
 const UserAccessPage = lazy(() => import("@/pages/admin/UserAccessPage").then((m) => ({ default: m.UserAccessPage })));
 const PolicyPage = lazy(() => import("@/pages/admin/PolicyPage").then((module) => ({ default: module.PolicyPage })));
 const AccessFlowPage = lazy(() => import("@/pages/admin/AccessFlowPage").then((module) => ({ default: module.AccessFlowPage })));
@@ -82,12 +86,26 @@ export const router = createBrowserRouter([
                             },
                             {
                                 path: "projects",
-                                element: (
-                                    <Suspense fallback={<LoadingFallback />}>
-                                        <ProjectsPage />
-                                    </Suspense>
-                                ),
+                                children: [
+                                    {
+                                        index: true,
+                                        element: (
+                                            <Suspense fallback={<LoadingFallback />}>
+                                                <ProjectsPage />
+                                            </Suspense>
+                                        ),
+                                    },
+                                    {
+                                        path: ":id/dashboard",
+                                        element: (
+                                            <Suspense fallback={<LoadingFallback />}>
+                                                <ProjectDashboard />
+                                            </Suspense>
+                                        ),
+                                    }
+                                ]
                             },
+
                             {
                                 path: "tasks",
                                 element: (
@@ -97,8 +115,25 @@ export const router = createBrowserRouter([
                                 ),
                             },
                             {
-                                path: "admin",
+                                path: "settings",
+                                element: (
+                                    <Suspense fallback={<LoadingFallback />}>
+                                        <SettingsLayout />
+                                    </Suspense>
+                                ),
                                 children: [
+                                    {
+                                        index: true,
+                                        element: <Navigate to="users" replace />,
+                                    },
+                                    {
+                                        path: "users",
+                                        element: (
+                                            <Suspense fallback={<LoadingFallback />}>
+                                                <UsersPage />
+                                            </Suspense>
+                                        ),
+                                    },
                                     {
                                         path: "roles",
                                         element: (

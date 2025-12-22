@@ -5,20 +5,23 @@ import { useAuth } from "@/auth/useAuth";
 import { router } from "@/routes";
 
 function App() {
-  const { fetchMe, token } = useAuth();
+    const { fetchMe, token, user } = useAuth();
 
-  useEffect(() => {
-    if (!token) return;
-    fetchMe().catch((error) => {
-      console.error("Failed to fetch authenticated user", error);
-    });
-  }, [fetchMe, token]);
+    useEffect(() => {
+        // If we have a token but no user data (unexpected after bootstrap), fetch it.
+        // If we already have user data (from bootstrap), skip the fetch.
+        if (!token || user) return;
 
-  return (
-    <>
-  <RouterProvider router={router} />
-    </>
-  );
+        fetchMe().catch((error) => {
+            console.error("Failed to fetch authenticated user", error);
+        });
+    }, [fetchMe, token, user]);
+
+    return (
+        <>
+            <RouterProvider router={router} />
+        </>
+    );
 }
 
 export default App;

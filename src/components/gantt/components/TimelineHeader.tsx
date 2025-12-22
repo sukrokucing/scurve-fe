@@ -45,7 +45,8 @@ export const TimelineHeader = memo(function TimelineHeader({
         // This logic is complex because 'groups' might start before our visible area.
         // Instead, let's iterate through visible columns and group them dynamically
 
-        let currentGroup: { label: string; startX: number; width: number } | null = null;
+        let currentGroup: any = null;
+
 
         // We need to look at ALL columns to get correct widths, but that's expensive for virtualized.
         // Actually, we can just render the top row based on the virtual columns' data
@@ -87,11 +88,12 @@ export const TimelineHeader = memo(function TimelineHeader({
         // Push last group
         if (currentGroup) {
             items.push({
-                label: currentGroup.label,
-                start: currentGroup.startX,
+                label: (currentGroup as any).label,
+                start: (currentGroup as any).startX,
                 width: (allColumns.length - startIdx) * columnWidth,
                 key: `group-${startIdx}`
             });
+
         }
 
         return items;

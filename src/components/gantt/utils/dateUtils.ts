@@ -5,16 +5,14 @@ import {
     addDays,
     differenceInDays,
     startOfWeek,
-    endOfWeek,
-    startOfMonth,
-    endOfMonth,
     format,
+
     isWeekend,
     isToday,
-    isSameDay,
     min,
     max,
 } from 'date-fns';
+
 import type { GanttTask, ViewMode, DateRange, ViewColumn } from '../types';
 import { DEFAULT_RANGE_BEFORE, DEFAULT_RANGE_AFTER } from '../constants';
 

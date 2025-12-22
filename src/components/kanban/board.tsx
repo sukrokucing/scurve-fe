@@ -130,7 +130,7 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
 
     const itemIds = useMemo(() => columnItems.map((item) => item.id), [columnItems]);
 
-    const viewportRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null as any);
 
     const rowVirtualizer = useVirtualizer({
         count: columnItems.length,
@@ -175,7 +175,6 @@ export type KanbanCardProps<T extends KanbanItemProps = KanbanItemProps> = {
     item: T;
     children?: ReactNode;
     className?: string;
-    isOverlay?: boolean;
     onDoubleClick?: (item: T) => void;
 };
 
@@ -183,7 +182,6 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
     item,
     children,
     className,
-    isOverlay,
     onDoubleClick,
 }: KanbanCardProps<T>) => {
     const {
@@ -251,7 +249,6 @@ export type KanbanProviderProps<
     data: T[];
     onDataChange?: (data: T[]) => void;
     onColumnChange?: (itemId: string, newColumnId: string) => void;
-    renderOverlayCard?: (item: T) => ReactNode;
 };
 
 export const KanbanProvider = <
@@ -267,7 +264,6 @@ export const KanbanProvider = <
     data,
     onDataChange,
     onColumnChange,
-    renderOverlayCard,
     ...props
 }: KanbanProviderProps<T, C>) => {
     const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -401,8 +397,6 @@ export const KanbanProvider = <
 
         onDragEnd?.(event);
     };
-
-    const activeItem = useMemo(() => data.find((i) => i.id === activeItemId), [data, activeItemId]);
 
     return (
         <KanbanContext.Provider value={{ columns, data: optimisticData, activeItemId }}>

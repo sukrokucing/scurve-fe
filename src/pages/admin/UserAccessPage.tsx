@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Shield, Trash2, Plus, User as UserIcon, Loader2, Check } from "lucide-react";
+import { Trash2, Plus, User as UserIcon, Loader2, Check } from "lucide-react";
+
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -40,16 +41,12 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 
-import { rbacApi, type Role } from "@/api/rbac";
+import { rbacApi } from "@/api/rbac";
+
+
 
 // --- Schema ---
 const assignRoleSchema = z.object({
@@ -167,24 +164,14 @@ export const UserAccessPage = () => {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Role</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a role" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {availableRoles.length === 0 ? (
-                                                                <SelectItem value="none" disabled>No roles available</SelectItem>
-                                                            ) : (
-                                                                availableRoles.map(role => (
-                                                                    <SelectItem key={role.id} value={role.id}>
-                                                                        {role.name}
-                                                                    </SelectItem>
-                                                                ))
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <Combobox
+                                                        options={availableRoles.map(role => ({ value: role.id, label: role.name }))}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Select a role"
+                                                        searchPlaceholder="Search roles..."
+                                                        emptyText={availableRoles.length === 0 ? "No roles available" : "No role found."}
+                                                    />
                                                     <FormMessage />
                                                 </FormItem>
                                             )}

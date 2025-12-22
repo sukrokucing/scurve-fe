@@ -13,6 +13,7 @@ export interface GanttTask {
     progressId?: string;
     assignee?: string;
     isDisabled?: boolean;
+    isCritical?: boolean;
     duration?: number;
     status?: string;
     styles?: {
@@ -31,12 +32,15 @@ export interface GanttDependency {
 export interface GanttProps {
     tasks: GanttTask[];
     dependencies: GanttDependency[];
-    onTaskUpdate: (task: GanttTask) => void;
+    onTasksUpdate: (tasks: GanttTask[]) => void;
     onTaskDelete: (task: GanttTask) => void;
     onAddDependency: (sourceId: string, targetId: string) => void;
     onDeleteDependency: (dependencyId: string) => void;
     onTaskDoubleClick?: (task: GanttTask) => void;
+    viewMode: ViewMode;
+    onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
+
 
 export type ViewMode = 'day' | 'week' | 'month';
 

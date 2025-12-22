@@ -1,7 +1,7 @@
 // Dependency arrow component (SVG)
 import { memo, useMemo } from 'react';
 import type { GanttTask, GanttDependency, ViewMode, DateRange } from '../types';
-import { ROW_HEIGHT, TASK_BAR_HEIGHT, TASK_BAR_MARGIN } from '../constants';
+import { TASK_BAR_HEIGHT } from '../constants';
 import { getTaskBarPosition } from '../utils/positionUtils';
 
 interface DependencyArrowProps {
@@ -15,7 +15,6 @@ interface DependencyArrowProps {
 }
 
 export const DependencyArrow = memo(function DependencyArrow({
-    dependency,
     sourceTask,
     targetTask,
     sourceRowIndex,
@@ -36,15 +35,11 @@ export const DependencyArrow = memo(function DependencyArrow({
         const endY = targetPos.y + TASK_BAR_HEIGHT / 2;
 
         // Calculate control points for smooth curve
-        const midX = (startX + endX) / 2;
         const curveOffset = Math.min(50, Math.abs(endX - startX) / 3);
 
         // If target is to the left of source (backwards dependency)
         if (endX < startX) {
             // Go around: right, down/up, left
-            const verticalDirection = endY > startY ? 1 : -1;
-            const turnY = startY + verticalDirection * (ROW_HEIGHT * 0.5);
-
             return `
         M ${startX} ${startY}
         H ${startX + 20}

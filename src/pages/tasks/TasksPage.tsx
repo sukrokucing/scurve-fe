@@ -1,29 +1,24 @@
 import { useEffect, useState, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { addDays, differenceInCalendarDays, format, isSameDay } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 
 import { useProjectsQuery } from "@/api/queries/projects";
-import { useTasksByProject, useTaskMutation, useDeleteTask, useUpdateTask, useDependencies, useDependencyMutation, useDeleteDependency } from "@/api/queries/tasks";
+import { useTasksByProject, useTaskMutation, useDeleteTask, useUpdateTask, useBatchUpdateTasks, useDependencies, useDependencyMutation, useDeleteDependency } from "@/api/queries/tasks";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
-import type { Task } from "@/types/domain";
+import type { Task, TaskStatus } from "@/types/domain";
 import type { components } from "@/types/api";
 
 type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useNetworkStore } from "@/store/networkStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
     Table,
     TableBody,
@@ -32,17 +27,15 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
 
 const KANBAN_COLUMNS = [
     { id: "todo", title: "To Do" },
@@ -64,20 +57,7 @@ function formatDateForInput(isoDate: string | null | undefined): string {
     }
 }
 
-function getStatusColor(status: string): string {
-    switch (status) {
-        case "todo":
-            return "bg-gray-100 text-gray-800";
-        case "in_progress":
-            return "bg-blue-100 text-blue-800";
-        case "blocked":
-            return "bg-red-100 text-red-800";
-        case "done":
-            return "bg-green-100 text-green-800";
-        default:
-            return "bg-gray-100 text-gray-800";
-    }
-}
+
 
 function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
     switch (status) {
@@ -123,7 +103,13 @@ export function TasksPage() {
     const { data: progressData, isLoading: isLoadingProgress } = useTasksByProject(
         selectedProject ?? "",
         true,
+        { enabled: view === "gantt" }
     );
+    // Optimization: We could disable this query if view !== 'gantt'.
+    // However, the hook signature 'useTasksByProject' defines 'enabled: Boolean(projectId)'.
+    // To implement "enabled: view === 'gantt'", we would need to pass options to the hook.
+    // Since we can't change the hook signature easily without affecting other files,
+    // I will modify the HOOK to accept options or modify the call site if possible.
 
     const { data: dependenciesData } = useDependencies(selectedProject ?? "");
 
@@ -163,6 +149,7 @@ export function TasksPage() {
     const createMutation = useTaskMutation(selectedProject);
     const deleteMutation = useDeleteTask(selectedProject);
     const updateMutation = useUpdateTask();
+    const batchUpdateMutation = useBatchUpdateTasks(selectedProject);
     const dependencyMutation = useDependencyMutation(selectedProject);
     const deleteDependencyMutation = useDeleteDependency(selectedProject);
 
@@ -204,9 +191,10 @@ export function TasksPage() {
                             updateMutation.mutate({
                                 id: taskId,
                                 projectId: selectedProject,
-                                payload: { status: newColumnId }
+                                payload: { status: newColumnId as TaskStatus }
                             });
                         }}
+
                     >
                         {(column) => (
                             <KanbanBoard id={column.id} key={column.id}>
@@ -221,10 +209,11 @@ export function TasksPage() {
                                         <KanbanCard
                                             key={task.id}
                                             item={task}
-                                            onDoubleClick={(t) => {
+                                            onDoubleClick={(item) => {
+                                                const t = item as unknown as Task;
                                                 setEditing(t);
-                                                const start = new Date(t.startDate);
-                                                const end = new Date(t.endDate);
+                                                const start = t.startDate ? new Date(t.startDate) : new Date();
+                                                const end = t.endDate ? new Date(t.endDate) : new Date();
                                                 const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                                                 let mode: 'plan' | 'range' | 'today' = 'range';
 
@@ -246,21 +235,26 @@ export function TasksPage() {
                                                 });
                                             }}
                                         >
-                                            <div className="font-medium text-sm leading-tight">{task.name}</div>
-                                            {task.description && (
-                                                <div className="text-xs text-muted-foreground line-clamp-2">{task.description}</div>
+
+                                            <div className="font-medium text-sm leading-tight">{(task as any).name}</div>
+                                            {(task as any).description && (
+                                                <div className="text-xs text-muted-foreground line-clamp-2">{(task as any).description}</div>
                                             )}
+
                                             <div className="flex items-center justify-between pt-2">
-                                                {task.assigneeId && (
+                                                {(task as any).assigneeId && (
                                                     <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
                                                         U
                                                     </div>
                                                 )}
-                                                {task.dueDate && (
+
+                                                {(task as any).dueDate && (
                                                     <div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                                        {new Date(task.dueDate).toLocaleDateString()}
+                                                        {format(new Date((task as any).dueDate), "MMM d")}
                                                     </div>
                                                 )}
+
+
                                             </div>
                                         </KanbanCard>
                                     )}
@@ -275,26 +269,37 @@ export function TasksPage() {
         if (view === "gantt") {
             return (
                 <GanttView
+                    projectId={selectedProject || ""}
                     tasks={filteredTasks}
                     progress={progress}
                     dependencies={dependenciesData ?? []}
-                    onUpdateTask={(task: GanttTask) => {
+                    onUpdateTasks={(updatedTasks: GanttTask[]) => {
                         if (!selectedProject) return;
-                        updateMutation.mutate({
-                            id: task.originalId,
-                            projectId: selectedProject,
-                            payload: {
-                                name: task.name, // Assuming 'name' is the field for task title
-                                startDate: task.start.toISOString(),
-                                endDate: task.end.toISOString(),
-                                dueDate: task.end.toISOString(), // Keep due_date synced with end_date for now
-                                progress: task.progress, // Update progress directly on task
-                            },
-                        });
 
-                        // Also update separate progress entry for backward compatibility if needed
-                        if (task.progressId) {
-                            // update progress logic...
+                        if (updatedTasks.length === 1) {
+                            const task = updatedTasks[0];
+                            updateMutation.mutate({
+                                id: task.originalId,
+                                projectId: selectedProject,
+                                payload: {
+                                    name: task.name,
+                                    startDate: task.start.toISOString(),
+                                    endDate: task.end.toISOString(),
+                                    dueDate: task.end.toISOString(),
+                                    progress: task.progress,
+                                },
+                            });
+                        } else if (updatedTasks.length > 1) {
+                            batchUpdateMutation.mutate({
+                                tasks: updatedTasks.map(t => ({
+                                    id: t.originalId,
+                                    title: t.name,
+                                    start_date: t.start.toISOString(),
+                                    end_date: t.end.toISOString(),
+                                    due_date: t.end.toISOString(),
+                                    progress: t.progress,
+                                }))
+                            });
                         }
                     }}
                     onDeleteTask={(taskId) => {
@@ -316,8 +321,8 @@ export function TasksPage() {
                         const taskToEdit = (filteredTasks as Task[]).find(t => t.id === ganttTask.originalId);
                         if (taskToEdit) {
                             setEditing(taskToEdit);
-                            const start = new Date(taskToEdit.startDate);
-                            const end = new Date(taskToEdit.endDate);
+                            const start = new Date(taskToEdit.startDate || "");
+                            const end = new Date(taskToEdit.endDate || "");
                             const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                             let mode: 'plan' | 'range' | 'today' = 'range';
 
@@ -344,31 +349,6 @@ export function TasksPage() {
         }
 
         // tasks present
-        if (view === "progress") { // Assuming "progress" is a view mode now
-            return (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Task ID</TableHead>
-                            <TableHead>Progress</TableHead>
-                            <TableHead>Note</TableHead>
-                            <TableHead>Created</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {progress.map((p) => (
-                            <TableRow key={p.id}>
-                                <TableCell className="font-medium">{p.task_id}</TableCell>
-                                <TableCell>{typeof p.progress === "number" ? `${p.progress}%` : "—"}</TableCell>
-                                <TableCell>{p.note ?? "—"}</TableCell>
-                                <TableCell>{p.created_at}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            );
-        }
-
         return (
             <div
                 ref={parentRef}
@@ -413,8 +393,8 @@ export function TasksPage() {
                                     ref={rowVirtualizer.measureElement}
                                     onDoubleClick={() => {
                                         setEditing(task);
-                                        const start = new Date(task.startDate);
-                                        const end = new Date(task.endDate);
+                                        const start = new Date(task.startDate || "");
+                                        const end = new Date(task.endDate || "");
                                         const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                                         let mode: 'plan' | 'range' | 'today' = 'range';
 
@@ -453,8 +433,8 @@ export function TasksPage() {
                                                 variant="ghost"
                                                 onClick={() => {
                                                     setEditing(task);
-                                                    const start = new Date(task.startDate);
-                                                    const end = new Date(task.endDate);
+                                                    const start = new Date(task.startDate || "");
+                                                    const end = new Date(task.endDate || "");
                                                     const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                                                     let mode: 'plan' | 'range' | 'today' = 'range';
 
@@ -513,6 +493,8 @@ export function TasksPage() {
         );
     })();
 
+    const isRateLimited = useNetworkStore((state) => state.isRateLimited);
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -523,26 +505,21 @@ export function TasksPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Select value={selectedProject} onValueChange={setSelectedProject}>
-                        {/* Provide an accessible name for the combobox trigger so screen readers can announce it */}
-                        <SelectTrigger className="w-56" aria-label="Select project">
-                            <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {projects?.map((project) => (
-                                <SelectItem key={project.id} value={project.id}>
-                                    {project.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={projects?.map(p => ({ label: p.name, value: p.id })) ?? []}
+                        value={selectedProject}
+                        onChange={setSelectedProject}
+                        className="w-56"
+                        placeholder="Select project"
+                        searchPlaceholder="Search projects..."
+                    />
                     <Button
                         type="button"
                         variant="outline"
                         onClick={() => refetchTasks()}
-                        disabled={!selectedProject || isRefetching}
+                        disabled={!selectedProject || isRefetching || isRateLimited}
                     >
-                        {isRefetching ? "Refreshing…" : "Refresh"}
+                        {isRateLimited ? "Cooling down..." : (isRefetching ? "Refreshing…" : "Refresh")}
                     </Button>
                     <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                         <DialogTrigger asChild>
@@ -585,71 +562,48 @@ export function TasksPage() {
                                             ? new Date(parsed.data.end_date).toISOString()
                                             : null;
 
-                                        // Use openapi client directly for flexible project support
-                                        import("@/api/openapiClient").then(({ openapi }) => {
-                                            import("@tanstack/react-query").then(({ useQueryClient }) => {
-                                                // Can't use hook here, so we'll use a different approach
-                                                // We'll use the mutation if selectedProject matches, otherwise direct call
-                                                const payload: Partial<import("@/api/openapiClient").TaskCreateRequest> = {
-                                                    title: parsed.data.title,
-                                                    due_date: dueDate,
-                                                    start_date: startDate,
-                                                    end_date: endDate,
-                                                    status: parsed.data.status ?? "todo",
-                                                    progress: parsed.data.progress ?? 0,
-                                                    duration_days: parsed.data.plan, // Map plan -> duration_days
-                                                } as any; // Cast to any to allow duration_days field
+                                        const finalEndDate = endDate || (startDate && parsed.data.plan
+                                            ? addDays(new Date(startDate), parsed.data.plan).toISOString()
+                                            : null);
 
-                                                openapi.createTaskForProject(targetProjectId, payload)
-                                                    .then(() => {
-                                                        setCreateOpen(false);
-                                                        createForm.reset();
-                                                        // Refetch tasks for the target project
-                                                        if (targetProjectId === selectedProject) {
-                                                            void refetchTasks();
-                                                        }
-                                                    })
-                                                    .catch((err: unknown) => {
-                                                        const fieldErrors = extractFieldErrorsFromAxios(err);
-                                                        if (fieldErrors) {
-                                                            Object.entries(fieldErrors).forEach(([k, v]) => {
-                                                                if (v && v.length) createForm.setError(k as keyof TaskFormValues, { type: "server", message: v.join(", ") });
-                                                            });
-                                                            return;
-                                                        }
-                                                        // otherwise show generic error
-                                                        console.error("Failed to create task:", err);
+                                        createMutation.mutateAsync({
+                                            name: parsed.data.title,
+                                            dueDate: dueDate,
+                                            startDate: startDate,
+                                            endDate: finalEndDate,
+                                            status: (parsed.data.status as any) || "todo",
+                                            progress: parsed.data.progress || 0,
+                                        })
+                                            .then(() => {
+                                                setCreateOpen(false);
+                                                createForm.reset();
+                                            })
+                                            .catch((err: unknown) => {
+                                                const fieldErrors = extractFieldErrorsFromAxios(err);
+                                                if (fieldErrors) {
+                                                    Object.entries(fieldErrors).forEach(([k, v]) => {
+                                                        if (v && v.length) createForm.setError(k as keyof TaskFormValues, { type: "server", message: v.join(", ") });
                                                     });
+                                                    return;
+                                                }
                                             });
-                                        });
                                     })}
                                     className="space-y-6"
                                 >
-                                    {/* Project Selector - always show for clarity */}
                                     <FormField
                                         control={createForm.control}
                                         name="projectId"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className="flex flex-col">
                                                 <FormLabel>Project</FormLabel>
-                                                <Select
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value || selectedProject}
+                                                <Combobox
+                                                    options={projects?.map(p => ({ label: p.name, value: p.id })) ?? []}
                                                     value={field.value || selectedProject}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a project" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {projects?.map((project) => (
-                                                            <SelectItem key={project.id} value={project.id}>
-                                                                {project.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                    onChange={field.onChange}
+                                                    placeholder="Select a project"
+                                                    searchPlaceholder="Search projects..."
+                                                    className="w-full"
+                                                />
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -749,9 +703,9 @@ export function TasksPage() {
                                             )}
 
                                             {createMode === 'plan' && (
-                                                <Select
+                                                <Combobox
                                                     value={String(createForm.watch("plan") || 1)}
-                                                    onValueChange={(val) => {
+                                                    onChange={(val) => {
                                                         const newPlan = parseInt(val) || 1;
                                                         createForm.setValue("plan", newPlan);
                                                         const now = new Date();
@@ -760,18 +714,17 @@ export function TasksPage() {
                                                         createForm.setValue("end_date", newEndDate.toISOString());
                                                         createForm.setValue("due_date", newEndDate.toISOString());
                                                     }}
-                                                >
-                                                    <SelectTrigger className="w-28">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="1">1 day</SelectItem>
-                                                        <SelectItem value="2">2 days</SelectItem>
-                                                        <SelectItem value="3">3 days</SelectItem>
-                                                        <SelectItem value="4">4 days</SelectItem>
-                                                        <SelectItem value="5">5 days</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                    options={[
+                                                        { value: "1", label: "1 day" },
+                                                        { value: "2", label: "2 days" },
+                                                        { value: "3", label: "3 days" },
+                                                        { value: "4", label: "4 days" },
+                                                        { value: "5", label: "5 days" },
+                                                    ]}
+                                                    placeholder="Duration"
+                                                    searchPlaceholder="Search days..."
+                                                    className="w-28"
+                                                />
                                             )}
                                         </div>
 
@@ -902,19 +855,20 @@ export function TasksPage() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px]">
-                                    <Filter className="mr-2 h-4 w-4" />
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="todo">To Do</SelectItem>
-                                    <SelectItem value="in_progress">In Progress</SelectItem>
-                                    <SelectItem value="blocked">Blocked</SelectItem>
-                                    <SelectItem value="done">Done</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Combobox
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                options={[
+                                    { value: "all", label: "All Status" },
+                                    { value: "todo", label: "To Do" },
+                                    { value: "in_progress", label: "In Progress" },
+                                    { value: "blocked", label: "Blocked" },
+                                    { value: "done", label: "Done" },
+                                ]}
+                                placeholder="Status"
+                                searchPlaceholder="Search status..."
+                                className="w-[140px]"
+                            />
                         </div>
 
                         {/* View Toggle */}
@@ -965,17 +919,22 @@ export function TasksPage() {
                                     ? new Date(parsed.data.end_date).toISOString()
                                     : undefined;
 
+                                const finalEndDate = endDate || (startDate && parsed.data.plan
+                                    ? addDays(new Date(startDate), parsed.data.plan).toISOString()
+                                    : undefined);
+
                                 updateMutation.mutateAsync({
                                     id: editing.id,
                                     projectId: selectedProject,
                                     payload: {
                                         name: parsed.data.title,
                                         startDate,
-                                        endDate,
+                                        endDate: finalEndDate,
                                         progress: parsed.data.progress,
-                                        duration_days: parsed.data.plan // Map plan -> duration_days for update
+                                        durationDays: parsed.data.plan
                                     }
                                 })
+
                                     .then(() => {
                                         setEditing(null);
                                     })
@@ -1074,9 +1033,9 @@ export function TasksPage() {
                                     )}
 
                                     {editMode === 'plan' && (
-                                        <Select
+                                        <Combobox
                                             value={String(editForm.watch("plan") || 1)}
-                                            onValueChange={(val) => {
+                                            onChange={(val) => {
                                                 const newPlan = parseInt(val) || 1;
                                                 editForm.setValue("plan", newPlan);
                                                 const now = new Date();
@@ -1085,18 +1044,17 @@ export function TasksPage() {
                                                 editForm.setValue("end_date", newEndDate.toISOString());
                                                 editForm.setValue("due_date", newEndDate.toISOString());
                                             }}
-                                        >
-                                            <SelectTrigger className="w-28">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="1">1 day</SelectItem>
-                                                <SelectItem value="2">2 days</SelectItem>
-                                                <SelectItem value="3">3 days</SelectItem>
-                                                <SelectItem value="4">4 days</SelectItem>
-                                                <SelectItem value="5">5 days</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                            options={[
+                                                { value: "1", label: "1 day" },
+                                                { value: "2", label: "2 days" },
+                                                { value: "3", label: "3 days" },
+                                                { value: "4", label: "4 days" },
+                                                { value: "5", label: "5 days" },
+                                            ]}
+                                            placeholder="Duration"
+                                            searchPlaceholder="Search days..."
+                                            className="w-28"
+                                        />
                                     )}
                                 </div>
 

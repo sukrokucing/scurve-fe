@@ -1,11 +1,13 @@
 // Task bar component with progress indicator
-import { memo, useState, useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import type { GanttTask, ViewMode, DateRange } from '../types';
-import { ROW_HEIGHT, TASK_BAR_HEIGHT, TASK_BAR_RADIUS, TASK_BAR_MARGIN } from '../constants';
+import { TASK_BAR_HEIGHT, TASK_BAR_RADIUS, TASK_BAR_MARGIN } from '../constants';
+
 import { dateToX, getColumnWidth } from '../utils/positionUtils';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
+
 
 interface TaskBarProps {
     task: GanttTask;
@@ -28,7 +30,8 @@ export const TaskBar = memo(function TaskBar({
     onDoubleClick,
     onDragStart,
 }: TaskBarProps) {
-    const [isHovered, setIsHovered] = useState(false);
+    // Remove unused state
+    // const [isHovered, setIsHovered] = useState(false);
 
     // Calculate position
     const startX = dateToX(task.start, dateRange.start, viewMode);
@@ -75,9 +78,8 @@ export const TaskBar = memo(function TaskBar({
                     <TooltipTrigger asChild>
                         <div
                             className={cn(
-                                "absolute cursor-pointer transition-transform",
-                                isSelected && "ring-2 ring-ring ring-offset-1",
-                                isHovered && "scale-110"
+                                "absolute cursor-pointer transition-transform hover:scale-110",
+                                isSelected && "ring-2 ring-ring ring-offset-1"
                             )}
                             style={{
                                 left: startX - 10,
@@ -90,8 +92,6 @@ export const TaskBar = memo(function TaskBar({
                             }}
                             onPointerDown={handlePointerDown}
                             onDoubleClick={handleDoubleClick}
-                            onMouseEnter={() => setIsHovered(true)}
-                            onMouseLeave={() => setIsHovered(false)}
                         />
                     </TooltipTrigger>
                     <TooltipContent>
@@ -109,7 +109,10 @@ export const TaskBar = memo(function TaskBar({
                     <div
                         className={cn(
                             "absolute cursor-move group",
-                            "bg-primary hover:bg-primary/90 transition-colors",
+                            task.isCritical
+                                ? "bg-orange-600 hover:bg-orange-700 shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-orange-400"
+                                : "bg-primary hover:bg-primary/90",
+                            "transition-all duration-200",
                             isSelected && "ring-2 ring-ring ring-offset-1"
                         )}
                         style={{
@@ -121,8 +124,6 @@ export const TaskBar = memo(function TaskBar({
                         }}
                         onPointerDown={handlePointerDown}
                         onDoubleClick={handleDoubleClick}
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
                     >
                         {/* Progress fill */}
                         <div

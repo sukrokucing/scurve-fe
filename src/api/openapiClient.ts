@@ -17,6 +17,16 @@ type DependencyCreateRequest = {
     type_: string;
 };
 
+type TaskBatchUpdatePayload = components["schemas"]["TaskBatchUpdatePayload"];
+type ProjectPlanCreateRequest = {
+    date: string;
+    planned_progress: number;
+}[];
+
+type ApiDashboardResponse = components["schemas"]["DashboardResponse"];
+type ApiProjectPlanPoint = components["schemas"]["ProjectPlanPoint"];
+
+
 import type { Task as DomainTask } from "@/types/domain";
 
 function mapApiTaskToDomain(t: ApiTask): DomainTask {
@@ -116,6 +126,10 @@ export const openapi = {
         await api.delete(`/projects/${projectId}/tasks/${id}`);
     },
 
+    async batchUpdateTasks(projectId: string, payload: TaskBatchUpdatePayload): Promise<void> {
+        await api.put(`/projects/${projectId}/tasks/batch`, payload);
+    },
+
     // Dependencies
     async getDependencies(projectId: string): Promise<ApiTaskDependency[]> {
         const { data } = await api.get<ApiTaskDependency[]>(`/projects/${projectId}/dependencies`);
@@ -130,6 +144,25 @@ export const openapi = {
     async deleteDependency(projectId: string, id: string): Promise<void> {
         await api.delete(`/projects/${projectId}/dependencies/${id}`);
     },
+
+    // Dashboard & Plan
+    async getProjectDashboard(id: string): Promise<ApiDashboardResponse> {
+        const { data } = await api.get<ApiDashboardResponse>(`/projects/${id}/dashboard`);
+        return data;
+    },
+
+    async updateProjectPlan(id: string, plan: ProjectPlanCreateRequest): Promise<void> {
+        await api.post(`/projects/${id}/plan`, plan);
+    },
+
+    async clearProjectPlan(id: string): Promise<void> {
+        await api.delete(`/projects/${id}/plan`);
+    },
+
+    async getProjectCriticalPath(id: string): Promise<string[]> {
+        const { data } = await api.get<{ task_ids: string[] }>(`/projects/${id}/critical-path`);
+        return data.task_ids;
+    },
 };
 
-export type { ProjectCreateRequest, ProjectUpdateRequest, TaskCreateRequest, TaskUpdateRequest, DependencyCreateRequest, ApiTaskDependency };
+export type { ProjectCreateRequest, ProjectUpdateRequest, TaskCreateRequest, TaskUpdateRequest, DependencyCreateRequest, ApiTaskDependency, TaskBatchUpdatePayload, ApiDashboardResponse, ApiProjectPlanPoint };

@@ -1,4 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
+
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useForm } from "react-hook-form";
 import { projectSchema, type ProjectFormValues } from "@/schemas/project";
@@ -459,6 +461,16 @@ function VirtualizedProjectsTable({
                                     <div className="flex items-center justify-end gap-2">
                                         <span className="mr-4">{typeof project.progress === "number" ? `${project.progress}%` : "—"}</span>
                                         <Button
+                                            size="sm"
+                                            variant="outline"
+                                            asChild
+                                        >
+                                            <Link to={`/projects/${project.id}/dashboard`}>
+                                                Dashboard
+                                            </Link>
+                                        </Button>
+                                        <Button
+
                                             size="sm"
                                             variant="ghost"
                                             onClick={() => {

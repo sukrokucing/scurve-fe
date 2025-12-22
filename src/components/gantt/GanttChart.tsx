@@ -1,28 +1,22 @@
 // Main Gantt Chart Component - Fully Virtualized
-import { forwardRef, useState, useMemo, useCallback, useImperativeHandle, useRef } from 'react';
-import type { GanttTask, GanttProps, ViewMode } from './types';
-import { ROW_HEIGHT, HEADER_HEIGHT, COLUMN_WIDTH } from './constants';
+import { forwardRef, useState, useMemo, useImperativeHandle, useRef } from 'react';
+import type { GanttProps } from './types';
+
+import { HEADER_HEIGHT } from './constants';
+
 import { calculateDateRange, generateColumns } from './utils/dateUtils';
 import { useTimelineVirtualizer } from './hooks/useTimelineVirtualizer';
 import { useTaskDrag } from './hooks/useTaskDrag';
 import { TimelineHeader } from './components/TimelineHeader';
-import { TimelineGrid } from './components/TimelineGrid';
-import { TodayLine } from './components/TodayLine';
+import { TimelineGrid as Grid } from './components/TimelineGrid';
+
 import { TaskBar } from './components/TaskBar';
 import { DependencyLayer } from './components/DependencyArrow';
 
-interface GanttChartProps extends GanttProps {
-    viewMode: ViewMode;
-    onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
-}
-
-export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(function GanttChart({
+export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttChart({
     tasks,
     dependencies,
-    onTaskUpdate,
-    onTaskDelete,
-    onAddDependency,
-    onDeleteDependency,
+    onTasksUpdate,
     onTaskDoubleClick,
     viewMode,
     onScroll,
@@ -49,29 +43,36 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(function G
         virtualColumns,
         totalWidth,
     } = useTimelineVirtualizer({
-        containerRef: localRef,
+        containerRef: localRef as any,
         tasks,
         dateRange,
         viewMode,
     });
 
     // Drag handling
-    const { handleDragStart, previewTask, dragState } = useTaskDrag({
+    const { handleDragStart, dragState, ghostRef } = useTaskDrag({
+        tasks,
         dateRange,
         viewMode,
-        onTaskUpdate,
+        onTasksUpdate,
     });
 
+
+
     return (
-        <div className="flex flex-col h-full">
-            {/* Timeline Container */}
+        <div
+            ref={localRef}
+            className="relative flex-1 overflow-auto bg-background/50"
+            onScroll={onScroll}
+        >
             <div
-                ref={localRef}
-                className="flex-1 overflow-auto relative"
-                style={{ contain: 'strict' }}
-                onScroll={onScroll}
+                className="relative"
+                style={{
+                    width: totalWidth,
+                    height: totalHeight + HEADER_HEIGHT,
+                }}
             >
-                {/* Header - sticky at top */}
+                {/* Header */}
                 <TimelineHeader
                     virtualColumns={virtualColumns}
                     allColumns={allColumns}
@@ -79,32 +80,26 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(function G
                     totalWidth={totalWidth}
                 />
 
-                {/* Main timeline area */}
+                {/* Content Area */}
                 <div
                     className="relative"
                     style={{
-                        width: totalWidth,
                         height: totalHeight,
+                        marginTop: HEADER_HEIGHT,
                     }}
                 >
-                    {/* Background grid */}
-                    <TimelineGrid
-                        virtualColumns={virtualColumns}
+                    {/* Grid Lines */}
+                    <Grid
                         virtualRows={virtualRows}
+                        virtualColumns={virtualColumns}
                         allColumns={allColumns}
-                        viewMode={viewMode}
                         totalWidth={totalWidth}
                         totalHeight={totalHeight}
-                    />
-
-                    {/* Today line */}
-                    <TodayLine
-                        dateRange={dateRange}
                         viewMode={viewMode}
-                        totalHeight={totalHeight}
                     />
 
-                    {/* Dependency arrows */}
+
+                    {/* Dependency Layer */}
                     <DependencyLayer
                         tasks={tasks}
                         dependencies={dependencies}
@@ -114,31 +109,47 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttChartProps>(function G
                         totalHeight={totalHeight}
                     />
 
-                    {/* Task bars - use absolute positioning based on virtualRow.start */}
+                    {/* Task Bars */}
                     {virtualRows.map((virtualRow) => {
                         const task = tasks[virtualRow.index];
-                        if (!task) return null;
-
-                        // Use preview task if this task is being dragged
-                        const displayTask =
-                            dragState.isDragging && previewTask && previewTask.id === task.id
-                                ? previewTask
-                                : task;
+                        const isSelected = selectedTaskId === task.id;
 
                         return (
                             <TaskBar
                                 key={task.id}
-                                task={displayTask}
+                                task={task}
                                 rowStart={virtualRow.start}
                                 dateRange={dateRange}
                                 viewMode={viewMode}
-                                isSelected={selectedTaskId === task.id}
+                                isSelected={isSelected}
+                                onDragStart={handleDragStart}
                                 onSelect={(t) => setSelectedTaskId(t.id)}
                                 onDoubleClick={onTaskDoubleClick}
-                                onDragStart={handleDragStart}
                             />
                         );
                     })}
+
+                    {/* Drag Preview - Direct DOM Manipulation */}
+                    {dragState.isDragging && dragState.task && (
+                        <div
+                            ref={ghostRef}
+                            className="absolute z-50 pointer-events-none will-change-transform"
+                            style={{
+                                top: 0, // We need to calculate the top offset or use the same logic as TaskBar
+                                left: 0,
+                                width: '100%',
+                                height: 0, // Wrapper doesn't need height, just used for transform
+                            }}
+                        >
+                            <TaskBar
+                                task={dragState.task}
+                                rowStart={virtualRows.find(r => r.index === tasks.findIndex(t => t.id === dragState.task?.id))?.start || 0}
+                                dateRange={dateRange}
+                                viewMode={viewMode}
+                                isSelected={true}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

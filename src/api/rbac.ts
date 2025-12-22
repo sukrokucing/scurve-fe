@@ -10,8 +10,21 @@ export type EffectivePermission = components["schemas"]["EffectivePermission"];
 export type EffectivePermissionsResponse = components["schemas"]["EffectivePermissions"];
 export type AssignRoleRequest = components["schemas"]["AssignRoleRequest"];
 export type AssignPermissionToRoleRequest = components["schemas"]["AssignPermissionToRoleRequest"];
+export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
+export type AuditLogResponse = {
+    items: AuditLogEntry[];
+    total: number;
+    page: number;
+    per_page: number;
+};
 
 export const rbacApi = {
+    // Audit Logs
+    async listAuditLogs(params?: { page?: number; per_page?: number; action?: string; from?: string; to?: string }): Promise<AuditLogResponse> {
+        const { data } = await api.get<AuditLogResponse>("/rbac/audit-logs", { params });
+        return data;
+    },
+
     // Roles
     async listRoles(): Promise<Role[]> {
         const { data } = await api.get<Role[]>("/rbac/roles");

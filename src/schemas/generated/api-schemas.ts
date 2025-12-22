@@ -14,9 +14,28 @@ export const AssignRoleRequestSchema = z.object({
     role_id: z.string(),
   });
 
+export const AuditLogEntrySchema = z.object({
+    action: z.string(),
+    actor_id: z.string().nullable().optional(),
+    actor_name: z.string().nullable().optional(),
+    created_at: z.string().datetime(),
+    details: z.object({
+
+  }),
+    id: z.string(),
+    target_user_id: z.string().nullable().optional(),
+    target_user_name: z.string().nullable().optional(),
+  });
+
 export const AuthResponseSchema = z.object({
     token: z.string(),
     user: z.lazy(() => UserSchema),
+  });
+
+export const CreateUserRequestSchema = z.object({
+    email: z.string(), // example: "newadmin@example.com"
+    name: z.string(), // example: "New Admin"
+    password: z.string(), // example: "SecureP@ss123"
   });
 
 export const CriticalPathResponseSchema = z.object({
@@ -27,6 +46,10 @@ export const DashboardResponseSchema = z.object({
     actual: z.array(z.lazy(() => ActualPointSchema)),
     plan: z.array(z.lazy(() => ProjectPlanPointSchema)),
     project: z.lazy(() => ProjectSchema),
+  });
+
+export const DeletedResponseSchema = z.object({
+    message: z.string(),
   });
 
 export const DependencyCreateRequestSchema = z.object({
@@ -50,6 +73,10 @@ export const EffectivePermissionsSchema = z.object({
     user_id: z.string(),
   });
 
+export const ForgotPasswordRequestSchema = z.object({
+    email: z.string(), // example: "user@example.com"
+  });
+
 export const GrantPermissionRequestSchema = z.object({
     permission_id: z.string(),
     scope: z.object({
@@ -66,6 +93,17 @@ export const HealthResponseSchema = z.object({
 export const LoginRequestSchema = z.object({
     email: z.string(), // example: "ada@example.com"
     password: z.string(), // example: "S3cureP@ssw0rd"
+  });
+
+export const MessageResponseSchema = z.object({
+    message: z.string(),
+  });
+
+export const PaginatedAuditLogsSchema = z.object({
+    items: z.array(z.lazy(() => AuditLogEntrySchema)),
+    page: z.number(),
+    per_page: z.number(),
+    total: z.number(),
   });
 
 export const PermissionSchema = z.object({
@@ -143,6 +181,11 @@ export const RegisterRequestSchema = z.object({
     email: z.string(), // example: "ada@example.com"
     name: z.string(), // example: "Ada Lovelace"
     password: z.string(), // example: "S3cureP@ssw0rd"
+  });
+
+export const ResetPasswordRequestSchema = z.object({
+    new_password: z.string(), // example: "NewSecureP@ss456"
+    token: z.string(), // example: "abc123token"
   });
 
 export const RoleSchema = z.object({
@@ -227,6 +270,12 @@ export const TaskUpdateRequestSchema = z.object({
     title: z.string().nullable().optional(),
   });
 
+export const UpdateUserRequestSchema = z.object({
+    email: z.string().nullable().optional(), // example: "updated@example.com"
+    name: z.string().nullable().optional(), // example: "Updated Name"
+    password: z.string().nullable().optional(), // example: "NewP@ssword456"
+  });
+
 export const UserSchema = z.object({
     created_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable().optional(),
@@ -258,15 +307,21 @@ export const components = { schemas: {
   ActualPoint: ActualPointSchema,
   AssignPermissionToRoleRequest: AssignPermissionToRoleRequestSchema,
   AssignRoleRequest: AssignRoleRequestSchema,
+  AuditLogEntry: AuditLogEntrySchema,
   AuthResponse: AuthResponseSchema,
+  CreateUserRequest: CreateUserRequestSchema,
   CriticalPathResponse: CriticalPathResponseSchema,
   DashboardResponse: DashboardResponseSchema,
+  DeletedResponse: DeletedResponseSchema,
   DependencyCreateRequest: DependencyCreateRequestSchema,
   EffectivePermission: EffectivePermissionSchema,
   EffectivePermissions: EffectivePermissionsSchema,
+  ForgotPasswordRequest: ForgotPasswordRequestSchema,
   GrantPermissionRequest: GrantPermissionRequestSchema,
   HealthResponse: HealthResponseSchema,
   LoginRequest: LoginRequestSchema,
+  MessageResponse: MessageResponseSchema,
+  PaginatedAuditLogs: PaginatedAuditLogsSchema,
   Permission: PermissionSchema,
   PermissionCreateRequest: PermissionCreateRequestSchema,
   Progress: ProgressSchema,
@@ -278,6 +333,7 @@ export const components = { schemas: {
   ProjectPlanPoint: ProjectPlanPointSchema,
   ProjectUpdateRequest: ProjectUpdateRequestSchema,
   RegisterRequest: RegisterRequestSchema,
+  ResetPasswordRequest: ResetPasswordRequestSchema,
   Role: RoleSchema,
   RoleCreateRequest: RoleCreateRequestSchema,
   RolePermission: RolePermissionSchema,
@@ -287,6 +343,7 @@ export const components = { schemas: {
   TaskCreateRequest: TaskCreateRequestSchema,
   TaskDependency: TaskDependencySchema,
   TaskUpdateRequest: TaskUpdateRequestSchema,
+  UpdateUserRequest: UpdateUserRequestSchema,
   User: UserSchema,
   UserPermission: UserPermissionSchema,
   UserRole: UserRoleSchema,

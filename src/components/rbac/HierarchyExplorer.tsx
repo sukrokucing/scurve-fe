@@ -1,37 +1,41 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, Search, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 import { usersApi, type User } from "@/api/users";
-import { type Role } from "@/api/rbac";
+import { rbacApi, type Role } from "@/api/rbac";
 
 export const HierarchyExplorer = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const navigate = useNavigate();
 
-    // --- Column 1: Users ---
-    const { data: users, isLoading: loadingUsers } = useQuery({
-        queryKey: ["users"],
-        queryFn: usersApi.listUsers,
+    // --- Column 1: Users (from real backend) ---
+    const { data: usersData, isLoading: loadingUsers } = useQuery({
+        queryKey: ["users", searchQuery],
+        queryFn: () => usersApi.listUsers({ q: searchQuery || undefined }),
     });
 
-    // --- Column 2: User Roles ---
+    const users = usersData?.users ?? [];
+
+    // --- Column 2: User Roles (from real RBAC API) ---
     const { data: userRoles, isLoading: loadingUserRoles } = useQuery({
         queryKey: ["user-roles", selectedUser?.id],
-        // Use mock API because users are mocks
-        queryFn: () => selectedUser ? usersApi.getMockUserRoles(selectedUser.id) : Promise.resolve([]),
+        queryFn: () => selectedUser ? rbacApi.getUserRoles(selectedUser.id) : Promise.resolve([]),
         enabled: !!selectedUser,
     });
 
-    // --- Column 3: Role Permissions ---
+    // --- Column 3: Role Permissions (from real RBAC API) ---
     const { data: rolePermissions, isLoading: loadingRolePerms } = useQuery({
         queryKey: ["role-permissions", selectedRole?.id],
-        // Use mock API because roles are mocks
-        queryFn: () => selectedRole ? usersApi.getMockRolePermissions(selectedRole.id) : Promise.resolve([]),
+        queryFn: () => selectedRole ? rbacApi.getRolePermissions(selectedRole.id) : Promise.resolve([]),
         enabled: !!selectedRole,
     });
 
@@ -62,10 +66,22 @@ export const HierarchyExplorer = () => {
                     <UserIcon className="h-4 w-4" />
                     Users
                 </div>
+                {/* Search Input */}
+                <div className="p-2 border-b">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by name or email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8 h-8 text-sm"
+                        />
+                    </div>
+                </div>
                 <ScrollArea className="flex-1">
                     {loadingUsers ? <ColumnLoading /> : (
                         <div className="p-2 space-y-1">
-                            {!users || users.length === 0 ? <ColumnEmpty msg="No users found" /> : (
+                            {users.length === 0 ? <ColumnEmpty msg="No users found" /> : (
                                 users.map(user => (
                                     <button
                                         key={user.id}
@@ -94,16 +110,35 @@ export const HierarchyExplorer = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        {selectedUser?.id === user.id && <ChevronRight className="h-4 w-4 opacity-50" />}
+                                        <div className="flex items-center gap-1">
+                                            {selectedUser?.id === user.id && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className={clsx(
+                                                        "h-7 w-7 rounded-sm transition-colors",
+                                                        selectedUser?.id === user.id ? "hover:bg-primary-foreground/20 text-primary-foreground" : "hover:bg-muted"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/settings/users/${user.id}`);
+                                                    }}
+                                                    title="Manage Access"
+                                                >
+                                                    <ShieldCheck className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                            {selectedUser?.id === user.id && <ChevronRight className="h-4 w-4 opacity-50" />}
+                                        </div>
                                     </button>
                                 ))
                             )}
                         </div>
                     )}
                 </ScrollArea>
-                {/* Note about Mock Data */}
+                {/* User count */}
                 <div className="p-2 text-[10px] text-muted-foreground text-center border-t bg-muted/10">
-                    Preview Mode (Using Mock Data)
+                    {usersData?.total ?? 0} users found
                 </div>
             </div>
 

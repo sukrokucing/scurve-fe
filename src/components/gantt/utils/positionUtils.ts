@@ -1,6 +1,7 @@
 // Position utilities for converting dates to pixels and vice versa
-import { differenceInDays, differenceInHours, addDays } from 'date-fns';
-import type { GanttTask, ViewMode, DateRange } from '../types';
+import { differenceInDays, addDays } from 'date-fns';
+import type { GanttTask, ViewMode } from '../types';
+
 import { COLUMN_WIDTH, ROW_HEIGHT, TASK_BAR_HEIGHT, TASK_BAR_MARGIN } from '../constants';
 
 /**
@@ -83,7 +84,7 @@ export function getTaskBarPosition(
     width: number;
     height: number;
 } {
-    const columnWidth = getColumnWidth(viewMode);
+
     const startX = dateToX(task.start, rangeStart, viewMode);
     const endX = dateToX(task.end, rangeStart, viewMode);
 

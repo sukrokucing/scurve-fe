@@ -1,6 +1,8 @@
-import { Shield, Lock, History } from "lucide-react";
+import { Lock, History } from "lucide-react";
+
 import { PermissionMatrix } from "@/components/rbac/PermissionMatrix";
-import { Button } from "@/components/ui/button";
+import { AuditLogDialog } from "@/components/rbac/AuditLogDialog";
+
 
 export const PolicyPage = () => {
     return (
@@ -16,10 +18,7 @@ export const PolicyPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <History className="mr-2 h-4 w-4" />
-                        Audit Log
-                    </Button>
+                    <AuditLogDialog />
                 </div>
             </div>
 

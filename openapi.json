@@ -41,6 +41,56 @@
                 ],
                 "type": "object"
             },
+            "AuditLogEntry": {
+                "description": "A single audit log entry",
+                "properties": {
+                    "action": {
+                        "description": "Action/event name (e.g., \"role.assign\", \"permission.grant\")",
+                        "type": "string"
+                    },
+                    "actor_id": {
+                        "description": "ID of the user who performed the action",
+                        "format": "uuid",
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "actor_name": {
+                        "description": "Display name of the actor",
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "description": "When the action occurred",
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "details": {
+                        "description": "Action-specific metadata (role_id, permission_id, etc.)",
+                        "type": "object"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "target_user_id": {
+                        "description": "ID of the target user (if applicable)",
+                        "format": "uuid",
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "target_user_name": {
+                        "description": "Display name of the target user",
+                        "nullable": true,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "action",
+                    "details",
+                    "created_at"
+                ],
+                "type": "object"
+            },
             "AuthResponse": {
                 "properties": {
                     "token": {
@@ -53,6 +103,28 @@
                 "required": [
                     "token",
                     "user"
+                ],
+                "type": "object"
+            },
+            "CreateUserRequest": {
+                "properties": {
+                    "email": {
+                        "example": "newadmin@example.com",
+                        "type": "string"
+                    },
+                    "name": {
+                        "example": "New Admin",
+                        "type": "string"
+                    },
+                    "password": {
+                        "example": "SecureP@ss123",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "email",
+                    "password"
                 ],
                 "type": "object"
             },
@@ -93,6 +165,17 @@
                     "project",
                     "plan",
                     "actual"
+                ],
+                "type": "object"
+            },
+            "DeletedResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message"
                 ],
                 "type": "object"
             },
@@ -167,6 +250,18 @@
                 ],
                 "type": "object"
             },
+            "ForgotPasswordRequest": {
+                "properties": {
+                    "email": {
+                        "example": "user@example.com",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email"
+                ],
+                "type": "object"
+            },
             "GrantPermissionRequest": {
                 "properties": {
                     "permission_id": {
@@ -216,6 +311,47 @@
                 "required": [
                     "email",
                     "password"
+                ],
+                "type": "object"
+            },
+            "MessageResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message"
+                ],
+                "type": "object"
+            },
+            "PaginatedAuditLogs": {
+                "description": "Paginated response for audit logs",
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/AuditLogEntry"
+                        },
+                        "type": "array"
+                    },
+                    "page": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "per_page": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "total": {
+                        "format": "int64",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "per_page"
                 ],
                 "type": "object"
             },
@@ -505,6 +641,23 @@
                     "name",
                     "email",
                     "password"
+                ],
+                "type": "object"
+            },
+            "ResetPasswordRequest": {
+                "properties": {
+                    "new_password": {
+                        "example": "NewSecureP@ss456",
+                        "type": "string"
+                    },
+                    "token": {
+                        "example": "abc123token",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "token",
+                    "new_password"
                 ],
                 "type": "object"
             },
@@ -849,6 +1002,26 @@
                 },
                 "type": "object"
             },
+            "UpdateUserRequest": {
+                "properties": {
+                    "email": {
+                        "example": "updated@example.com",
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "name": {
+                        "example": "Updated Name",
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "password": {
+                        "example": "NewP@ssword456",
+                        "nullable": true,
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "User": {
                 "properties": {
                     "created_at": {
@@ -987,6 +1160,47 @@
                 ]
             }
         },
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Generates a password reset token and returns it. In production, this should send an email.",
+                "operationId": "forgot_password",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "email": "user@example.com"
+                            },
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Operation successful"
+                                },
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        },
+                        "description": "Reset token generated (for dev; in prod would send email)"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "summary": "Request password reset",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
         "/auth/login": {
             "post": {
                 "operationId": "login",
@@ -1011,14 +1225,9 @@
                                 "example": {
                                     "token": "eyJhbGciOiJIUzI1Ni...",
                                     "user": {
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "email": "ada@example.com",
-                                        "id": "00000000-0000-0000-0000-000000000000",
-                                        "name": "Ada Lovelace",
-                                        "provider": "local",
-                                        "provider_id": null,
-                                        "updated_at": "2025-10-01T10:00:00Z"
+                                        "email": "ada@eg.com",
+                                        "id": "0000-0000...",
+                                        "name": "Ada"
                                     }
                                 },
                                 "schema": {
@@ -1045,6 +1254,11 @@
                         "description": "Logout acknowledged"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Auth"
                 ]
@@ -1057,16 +1271,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "created_at": "2025-10-01T10:00:00Z",
-                                    "deleted_at": null,
-                                    "email": "ada@example.com",
-                                    "id": "00000000-0000-0000-0000-000000000000",
-                                    "name": "Ada Lovelace",
-                                    "provider": "local",
-                                    "provider_id": null,
-                                    "updated_at": "2025-10-01T10:00:00Z"
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/User"
                                 }
@@ -1075,6 +1279,11 @@
                         "description": "Current user"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Auth"
                 ]
@@ -1105,14 +1314,9 @@
                                 "example": {
                                     "token": "eyJhbGciOiJIUzI1Ni...",
                                     "user": {
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "email": "ada@example.com",
-                                        "id": "00000000-0000-0000-0000-000000000000",
-                                        "name": "Ada Lovelace",
-                                        "provider": "local",
-                                        "provider_id": null,
-                                        "updated_at": "2025-10-01T10:00:00Z"
+                                        "email": "ada@eg.com",
+                                        "id": "0000-0000...",
+                                        "name": "Ada"
                                     }
                                 },
                                 "schema": {
@@ -1131,6 +1335,48 @@
                 ]
             }
         },
+        "/auth/reset-password": {
+            "post": {
+                "description": "Validates the reset token and sets a new password.",
+                "operationId": "reset_password",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "new_password": "NewSecurePassword456!",
+                                "token": "raw-token-from-email"
+                            },
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "Operation successful"
+                                },
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        },
+                        "description": "Password reset successful"
+                    },
+                    "400": {
+                        "description": "Invalid or expired token"
+                    }
+                },
+                "summary": "Reset password with token",
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
         "/projects": {
             "get": {
                 "operationId": "list_projects",
@@ -1140,14 +1386,9 @@
                             "application/json": {
                                 "example": [
                                     {
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "description": "Prepare milestones for the product launch.",
-                                        "id": "00000000-0000-0000-0000-000000000000",
+                                        "id": "uuid",
                                         "name": "Launch Planning",
-                                        "theme_color": "#3498db",
-                                        "updated_at": "2025-10-01T10:00:00Z",
-                                        "user_id": "11111111-1111-1111-1111-111111111111"
+                                        "theme_color": "#3498db"
                                     }
                                 ],
                                 "schema": {
@@ -1161,6 +1402,11 @@
                         "description": "List projects"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1171,7 +1417,9 @@
                     "content": {
                         "application/json": {
                             "example": {
-                                "name": "My Project"
+                                "description": "Prepare milestones.",
+                                "name": "Launch Planning",
+                                "theme_color": "#3498db"
                             },
                             "schema": {
                                 "$ref": "#/components/schemas/ProjectCreateRequest"
@@ -1185,14 +1433,9 @@
                         "content": {
                             "application/json": {
                                 "example": {
-                                    "created_at": "2025-10-01T10:00:00Z",
-                                    "deleted_at": null,
-                                    "description": "Prepare milestones for the product launch.",
-                                    "id": "00000000-0000-0000-0000-000000000000",
+                                    "id": "uuid",
                                     "name": "Launch Planning",
-                                    "theme_color": "#3498db",
-                                    "updated_at": "2025-10-01T10:00:00Z",
-                                    "user_id": "11111111-1111-1111-1111-111111111111"
+                                    "theme_color": "#3498db"
                                 },
                                 "schema": {
                                     "$ref": "#/components/schemas/Project"
@@ -1202,6 +1445,11 @@
                         "description": "Project created"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1228,6 +1476,11 @@
                         "description": "Project soft deleted"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1252,14 +1505,9 @@
                         "content": {
                             "application/json": {
                                 "example": {
-                                    "created_at": "2025-10-01T10:00:00Z",
-                                    "deleted_at": null,
-                                    "description": "Prepare milestones for the product launch.",
-                                    "id": "00000000-0000-0000-0000-000000000000",
+                                    "id": "uuid",
                                     "name": "Launch Planning",
-                                    "theme_color": "#3498db",
-                                    "updated_at": "2025-10-01T10:00:00Z",
-                                    "user_id": "11111111-1111-1111-1111-111111111111"
+                                    "theme_color": "#3498db"
                                 },
                                 "schema": {
                                     "$ref": "#/components/schemas/Project"
@@ -1269,6 +1517,11 @@
                         "description": "Project detail"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1291,9 +1544,6 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "example": {
-                                "name": "Launch Planning - Updated"
-                            },
                             "schema": {
                                 "$ref": "#/components/schemas/ProjectUpdateRequest"
                             }
@@ -1306,14 +1556,9 @@
                         "content": {
                             "application/json": {
                                 "example": {
-                                    "created_at": "2025-10-01T10:00:00Z",
-                                    "deleted_at": null,
-                                    "description": "Prepare milestones for the product launch.",
-                                    "id": "00000000-0000-0000-0000-000000000000",
+                                    "id": "uuid",
                                     "name": "Launch Planning",
-                                    "theme_color": "#3498db",
-                                    "updated_at": "2025-10-01T10:00:00Z",
-                                    "user_id": "11111111-1111-1111-1111-111111111111"
+                                    "theme_color": "#3498db"
                                 },
                                 "schema": {
                                     "$ref": "#/components/schemas/Project"
@@ -1323,6 +1568,11 @@
                         "description": "Project updated"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1356,6 +1606,11 @@
                         "description": "Critical path task ids"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1381,34 +1636,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "actual": [
-                                        {
-                                            "actual": 50,
-                                            "date": "2025-10-05"
-                                        }
-                                    ],
-                                    "plan": [
-                                        {
-                                            "created_at": "2025-10-01T10:00:00Z",
-                                            "date": "2025-12-01T00:00:00Z",
-                                            "id": "44444444-4444-4444-4444-444444444444",
-                                            "planned_progress": 10,
-                                            "project_id": "00000000-0000-0000-0000-000000000000",
-                                            "updated_at": "2025-10-01T10:00:00Z"
-                                        }
-                                    ],
-                                    "project": {
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "description": "Prepare milestones for the product launch.",
-                                        "id": "00000000-0000-0000-0000-000000000000",
-                                        "name": "Launch Planning",
-                                        "theme_color": "#3498db",
-                                        "updated_at": "2025-10-01T10:00:00Z",
-                                        "user_id": "11111111-1111-1111-1111-111111111111"
-                                    }
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/DashboardResponse"
                                 }
@@ -1417,6 +1644,11 @@
                         "description": "Project dashboard"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1443,6 +1675,11 @@
                         "description": "Project plan cleared"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1465,20 +1702,6 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "example": [
-                                {
-                                    "date": "2025-12-01T00:00:00Z",
-                                    "planned_progress": 10
-                                },
-                                {
-                                    "date": "2025-12-15T00:00:00Z",
-                                    "planned_progress": 30
-                                },
-                                {
-                                    "date": "2026-01-01T00:00:00Z",
-                                    "planned_progress": 60
-                                }
-                            ],
                             "schema": {
                                 "items": {
                                     "$ref": "#/components/schemas/ProjectPlanCreateRequest"
@@ -1504,6 +1727,11 @@
                         "description": "Project plan updated"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Projects"
                 ]
@@ -1515,6 +1743,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1528,15 +1757,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": [
-                                    {
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "id": "55555555-5555-5555-5555-555555555555",
-                                        "source_task_id": "22222222-2222-2222-2222-222222222222",
-                                        "target_task_id": "66666666-6666-6666-6666-666666666666",
-                                        "type": "finish_to_start"
-                                    }
-                                ],
                                 "schema": {
                                     "items": {
                                         "$ref": "#/components/schemas/TaskDependency"
@@ -1548,6 +1768,11 @@
                         "description": "List dependencies"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Dependencies"
                 ]
@@ -1557,6 +1782,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1570,8 +1796,8 @@
                     "content": {
                         "application/json": {
                             "example": {
-                                "source_task_id": "22222222-2222-2222-2222-222222222222",
-                                "target_task_id": "66666666-6666-6666-6666-666666666666",
+                                "source_task_id": "0000-...",
+                                "target_task_id": "1111-...",
                                 "type": "finish_to_start"
                             },
                             "schema": {
@@ -1585,13 +1811,6 @@
                     "201": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "created_at": "2025-10-01T10:00:00Z",
-                                    "id": "55555555-5555-5555-5555-555555555555",
-                                    "source_task_id": "22222222-2222-2222-2222-222222222222",
-                                    "target_task_id": "66666666-6666-6666-6666-666666666666",
-                                    "type": "finish_to_start"
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/TaskDependency"
                                 }
@@ -1600,6 +1819,11 @@
                         "description": "Dependency created"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Dependencies"
                 ]
@@ -1611,6 +1835,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1636,6 +1861,11 @@
                         "description": "Dependency deleted"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Dependencies"
                 ]
@@ -1647,6 +1877,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1661,24 +1892,12 @@
                         "content": {
                             "application/json": {
                                 "example": [
-                                    [
-                                        {
-                                            "assignee": null,
-                                            "created_at": "2025-10-01T10:00:00Z",
-                                            "deleted_at": null,
-                                            "due_date": "2025-10-10T10:00:00Z",
-                                            "duration_days": 9,
-                                            "end_date": "2025-10-10T17:00:00Z",
-                                            "id": "22222222-2222-2222-2222-222222222222",
-                                            "parent_id": null,
-                                            "progress": 0,
-                                            "project_id": "00000000-0000-0000-0000-000000000000",
-                                            "start_date": "2025-10-01T09:00:00Z",
-                                            "status": "pending",
-                                            "title": "Define launch checklist",
-                                            "updated_at": "2025-10-01T10:00:00Z"
-                                        }
-                                    ]
+                                    {
+                                        "id": "uuid",
+                                        "progress": 0,
+                                        "status": "pending",
+                                        "title": "Define checklist"
+                                    }
                                 ],
                                 "schema": {
                                     "items": {
@@ -1691,6 +1910,11 @@
                         "description": "List tasks"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -1700,6 +1924,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1713,7 +1938,8 @@
                     "content": {
                         "application/json": {
                             "example": {
-                                "title": "Quick task"
+                                "status": "pending",
+                                "title": "Define launch checklist"
                             },
                             "schema": {
                                 "$ref": "#/components/schemas/TaskCreateRequest"
@@ -1726,24 +1952,12 @@
                     "201": {
                         "content": {
                             "application/json": {
-                                "example": [
-                                    {
-                                        "assignee": null,
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "due_date": "2025-10-10T10:00:00Z",
-                                        "duration_days": 9,
-                                        "end_date": "2025-10-10T17:00:00Z",
-                                        "id": "22222222-2222-2222-2222-222222222222",
-                                        "parent_id": null,
-                                        "progress": 0,
-                                        "project_id": "00000000-0000-0000-0000-000000000000",
-                                        "start_date": "2025-10-01T09:00:00Z",
-                                        "status": "pending",
-                                        "title": "Define launch checklist",
-                                        "updated_at": "2025-10-01T10:00:00Z"
-                                    }
-                                ],
+                                "example": {
+                                    "id": "uuid",
+                                    "progress": 0,
+                                    "status": "pending",
+                                    "title": "Define checklist"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Task"
                                 }
@@ -1752,6 +1966,11 @@
                         "description": "Task created"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -1763,6 +1982,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1778,14 +1998,9 @@
                             "example": {
                                 "tasks": [
                                     {
-                                        "id": "22222222-2222-2222-2222-222222222222",
+                                        "id": "0000-...",
                                         "progress": 50,
                                         "status": "in_progress"
-                                    },
-                                    {
-                                        "end_date": "2025-11-05T17:00:00Z",
-                                        "id": "66666666-6666-6666-6666-666666666666",
-                                        "start_date": "2025-11-01T09:00:00Z"
                                     }
                                 ]
                             },
@@ -1801,24 +2016,12 @@
                         "content": {
                             "application/json": {
                                 "example": [
-                                    [
-                                        {
-                                            "assignee": null,
-                                            "created_at": "2025-10-01T10:00:00Z",
-                                            "deleted_at": null,
-                                            "due_date": "2025-10-10T10:00:00Z",
-                                            "duration_days": 9,
-                                            "end_date": "2025-10-10T17:00:00Z",
-                                            "id": "22222222-2222-2222-2222-222222222222",
-                                            "parent_id": null,
-                                            "progress": 0,
-                                            "project_id": "00000000-0000-0000-0000-000000000000",
-                                            "start_date": "2025-10-01T09:00:00Z",
-                                            "status": "pending",
-                                            "title": "Define launch checklist",
-                                            "updated_at": "2025-10-01T10:00:00Z"
-                                        }
-                                    ]
+                                    {
+                                        "id": "uuid",
+                                        "progress": 0,
+                                        "status": "pending",
+                                        "title": "Define checklist"
+                                    }
                                 ],
                                 "schema": {
                                     "items": {
@@ -1831,6 +2034,11 @@
                         "description": "Tasks updated"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -1842,6 +2050,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1867,6 +2076,11 @@
                         "description": "Task soft deleted"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -1876,6 +2090,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1900,24 +2115,12 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": [
-                                    {
-                                        "assignee": null,
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "due_date": "2025-10-10T10:00:00Z",
-                                        "duration_days": 9,
-                                        "end_date": "2025-10-10T17:00:00Z",
-                                        "id": "22222222-2222-2222-2222-222222222222",
-                                        "parent_id": null,
-                                        "progress": 0,
-                                        "project_id": "00000000-0000-0000-0000-000000000000",
-                                        "start_date": "2025-10-01T09:00:00Z",
-                                        "status": "pending",
-                                        "title": "Define launch checklist",
-                                        "updated_at": "2025-10-01T10:00:00Z"
-                                    }
-                                ],
+                                "example": {
+                                    "id": "uuid",
+                                    "progress": 0,
+                                    "status": "pending",
+                                    "title": "Define checklist"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Task"
                                 }
@@ -1926,6 +2129,11 @@
                         "description": "Task detail"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -1935,6 +2143,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -1958,9 +2167,6 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "example": {
-                                "status": "in_progress"
-                            },
                             "schema": {
                                 "$ref": "#/components/schemas/TaskUpdateRequest"
                             }
@@ -1972,24 +2178,12 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": [
-                                    {
-                                        "assignee": null,
-                                        "created_at": "2025-10-01T10:00:00Z",
-                                        "deleted_at": null,
-                                        "due_date": "2025-10-10T10:00:00Z",
-                                        "duration_days": 9,
-                                        "end_date": "2025-10-10T17:00:00Z",
-                                        "id": "22222222-2222-2222-2222-222222222222",
-                                        "parent_id": null,
-                                        "progress": 0,
-                                        "project_id": "00000000-0000-0000-0000-000000000000",
-                                        "start_date": "2025-10-01T09:00:00Z",
-                                        "status": "pending",
-                                        "title": "Define launch checklist",
-                                        "updated_at": "2025-10-01T10:00:00Z"
-                                    }
-                                ],
+                                "example": {
+                                    "id": "uuid",
+                                    "progress": 0,
+                                    "status": "pending",
+                                    "title": "Define checklist"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Task"
                                 }
@@ -1998,6 +2192,11 @@
                         "description": "Task updated"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Tasks"
                 ]
@@ -2009,6 +2208,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -2019,6 +2219,7 @@
                     },
                     {
                         "description": "Task id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "task_id",
                         "required": true,
@@ -2032,18 +2233,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": [
-                                    {
-                                        "created_at": "2025-10-05T10:00:00Z",
-                                        "deleted_at": null,
-                                        "id": "33333333-3333-3333-3333-333333333333",
-                                        "note": "Halfway done",
-                                        "progress": 50,
-                                        "project_id": "00000000-0000-0000-0000-000000000000",
-                                        "task_id": "22222222-2222-2222-2222-222222222222",
-                                        "updated_at": "2025-10-05T10:00:00Z"
-                                    }
-                                ],
                                 "schema": {
                                     "items": {
                                         "$ref": "#/components/schemas/Progress"
@@ -2055,6 +2244,11 @@
                         "description": "List progress entries"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Progress"
                 ]
@@ -2064,6 +2258,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -2074,6 +2269,7 @@
                     },
                     {
                         "description": "Task id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "task_id",
                         "required": true,
@@ -2087,7 +2283,8 @@
                     "content": {
                         "application/json": {
                             "example": {
-                                "progress": 10
+                                "note": "Halfway there",
+                                "progress": 50
                             },
                             "schema": {
                                 "$ref": "#/components/schemas/ProgressCreateRequest"
@@ -2100,16 +2297,6 @@
                     "201": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "created_at": "2025-10-05T10:00:00Z",
-                                    "deleted_at": null,
-                                    "id": "33333333-3333-3333-3333-333333333333",
-                                    "note": "Halfway done",
-                                    "progress": 50,
-                                    "project_id": "00000000-0000-0000-0000-000000000000",
-                                    "task_id": "22222222-2222-2222-2222-222222222222",
-                                    "updated_at": "2025-10-05T10:00:00Z"
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Progress"
                                 }
@@ -2118,6 +2305,11 @@
                         "description": "Progress created"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Progress"
                 ]
@@ -2129,6 +2321,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -2139,6 +2332,7 @@
                     },
                     {
                         "description": "Task id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "task_id",
                         "required": true,
@@ -2164,6 +2358,11 @@
                         "description": "Progress soft deleted"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Progress"
                 ]
@@ -2173,6 +2372,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -2183,6 +2383,7 @@
                     },
                     {
                         "description": "Task id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "task_id",
                         "required": true,
@@ -2207,16 +2408,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "created_at": "2025-10-05T10:00:00Z",
-                                    "deleted_at": null,
-                                    "id": "33333333-3333-3333-3333-333333333333",
-                                    "note": "Halfway done",
-                                    "progress": 50,
-                                    "project_id": "00000000-0000-0000-0000-000000000000",
-                                    "task_id": "22222222-2222-2222-2222-222222222222",
-                                    "updated_at": "2025-10-05T10:00:00Z"
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Progress"
                                 }
@@ -2225,6 +2416,11 @@
                         "description": "Progress detail"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Progress"
                 ]
@@ -2234,6 +2430,7 @@
                 "parameters": [
                     {
                         "description": "Project id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "project_id",
                         "required": true,
@@ -2244,6 +2441,7 @@
                     },
                     {
                         "description": "Task id",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "task_id",
                         "required": true,
@@ -2267,9 +2465,6 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
-                            "example": {
-                                "progress": 75
-                            },
                             "schema": {
                                 "$ref": "#/components/schemas/ProgressUpdateRequest"
                             }
@@ -2281,16 +2476,6 @@
                     "200": {
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "created_at": "2025-10-05T10:00:00Z",
-                                    "deleted_at": null,
-                                    "id": "33333333-3333-3333-3333-333333333333",
-                                    "note": "Halfway done",
-                                    "progress": 50,
-                                    "project_id": "00000000-0000-0000-0000-000000000000",
-                                    "task_id": "22222222-2222-2222-2222-222222222222",
-                                    "updated_at": "2025-10-05T10:00:00Z"
-                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Progress"
                                 }
@@ -2299,8 +2484,125 @@
                         "description": "Progress updated"
                     }
                 },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "tags": [
                     "Progress"
+                ]
+            }
+        },
+        "/rbac/audit-logs": {
+            "get": {
+                "operationId": "list_audit_logs",
+                "parameters": [
+                    {
+                        "description": "Page number (1-based)",
+                        "in": "query",
+                        "name": "page",
+                        "required": false,
+                        "schema": {
+                            "format": "int64",
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Items per page (max 100)",
+                        "in": "query",
+                        "name": "per_page",
+                        "required": false,
+                        "schema": {
+                            "format": "int64",
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Filter by action/event name (e.g., \"role.assign\")",
+                        "in": "query",
+                        "name": "action",
+                        "required": false,
+                        "schema": {
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter by target user ID (subject_id)",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "query",
+                        "name": "user_id",
+                        "required": false,
+                        "schema": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter by actor ID (who performed the action)",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "query",
+                        "name": "actor_id",
+                        "required": false,
+                        "schema": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter entries from this timestamp",
+                        "in": "query",
+                        "name": "from",
+                        "required": false,
+                        "schema": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter entries until this timestamp",
+                        "in": "query",
+                        "name": "to",
+                        "required": false,
+                        "schema": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAuditLogs"
+                                }
+                            }
+                        },
+                        "description": "Paginated audit log entries",
+                        "headers": {
+                            "X-Total-Count": {
+                                "description": "Total number of matching entries",
+                                "schema": {
+                                    "format": "int64",
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "RBAC"
                 ]
             }
         },
@@ -2337,6 +2639,10 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
+                            "example": {
+                                "description": "View projects",
+                                "name": "project.view"
+                            },
                             "schema": {
                                 "$ref": "#/components/schemas/PermissionCreateRequest"
                             }
@@ -2377,6 +2683,13 @@
                     "200": {
                         "content": {
                             "application/json": {
+                                "example": [
+                                    {
+                                        "description": "Full access",
+                                        "id": "uuid",
+                                        "name": "super_admin"
+                                    }
+                                ],
                                 "schema": {
                                     "items": {
                                         "$ref": "#/components/schemas/Role"
@@ -2403,6 +2716,10 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
+                            "example": {
+                                "description": "Can manage project tasks",
+                                "name": "project_manager"
+                            },
                             "schema": {
                                 "$ref": "#/components/schemas/RoleCreateRequest"
                             }
@@ -2414,6 +2731,11 @@
                     "201": {
                         "content": {
                             "application/json": {
+                                "example": {
+                                    "description": "Full access",
+                                    "id": "uuid",
+                                    "name": "super_admin"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Role"
                                 }
@@ -2442,6 +2764,7 @@
                 "parameters": [
                     {
                         "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "role_id",
                         "required": true,
@@ -2474,6 +2797,7 @@
                 "parameters": [
                     {
                         "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "role_id",
                         "required": true,
@@ -2487,6 +2811,11 @@
                     "200": {
                         "content": {
                             "application/json": {
+                                "example": {
+                                    "description": "Full access",
+                                    "id": "uuid",
+                                    "name": "super_admin"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/Role"
                                 }
@@ -2515,6 +2844,7 @@
                 "parameters": [
                     {
                         "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "role_id",
                         "required": true,
@@ -2554,6 +2884,7 @@
                 "parameters": [
                     {
                         "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "role_id",
                         "required": true,
@@ -2592,12 +2923,56 @@
                 ]
             }
         },
+        "/rbac/roles/{role_id}/permissions/{permission_id}": {
+            "delete": {
+                "operationId": "delete_permission_from_role",
+                "parameters": [
+                    {
+                        "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "path",
+                        "name": "role_id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Permission ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "path",
+                        "name": "permission_id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Permission removed from role"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "summary": "Remove a permission from a role",
+                "tags": [
+                    "RBAC"
+                ]
+            }
+        },
         "/rbac/users/{user_id}/effective-permissions": {
             "get": {
                 "operationId": "get_effective_permissions",
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2611,6 +2986,19 @@
                     "200": {
                         "content": {
                             "application/json": {
+                                "example": {
+                                    "permissions": [
+                                        {
+                                            "name": "*",
+                                            "role_name": "super_admin",
+                                            "source": "role"
+                                        }
+                                    ],
+                                    "roles": [
+                                        "super_admin"
+                                    ],
+                                    "user_id": "uuid"
+                                },
                                 "schema": {
                                     "$ref": "#/components/schemas/EffectivePermissions"
                                 }
@@ -2636,6 +3024,7 @@
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2675,6 +3064,7 @@
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2687,6 +3077,12 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
+                            "example": {
+                                "permission_id": "00000000-0000-0000-0000-000000000000",
+                                "scope": {
+                                    "project_id": "00000000-0000-0000-0000-000000000000"
+                                }
+                            },
                             "schema": {
                                 "$ref": "#/components/schemas/GrantPermissionRequest"
                             }
@@ -2716,6 +3112,7 @@
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2729,6 +3126,13 @@
                     "200": {
                         "content": {
                             "application/json": {
+                                "example": [
+                                    {
+                                        "description": "Full access",
+                                        "id": "uuid",
+                                        "name": "super_admin"
+                                    }
+                                ],
                                 "schema": {
                                     "items": {
                                         "$ref": "#/components/schemas/Role"
@@ -2755,6 +3159,7 @@
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2767,6 +3172,9 @@
                 "requestBody": {
                     "content": {
                         "application/json": {
+                            "example": {
+                                "role_id": "00000000-0000-0000-0000-000000000000"
+                            },
                             "schema": {
                                 "$ref": "#/components/schemas/AssignRoleRequest"
                             }
@@ -2796,6 +3204,7 @@
                 "parameters": [
                     {
                         "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "user_id",
                         "required": true,
@@ -2806,6 +3215,7 @@
                     },
                     {
                         "description": "Role ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
                         "in": "path",
                         "name": "role_id",
                         "required": true,
@@ -2828,6 +3238,225 @@
                 "summary": "Revoke a role from a user",
                 "tags": [
                     "RBAC"
+                ]
+            }
+        },
+        "/users": {
+            "get": {
+                "description": "Returns a paginated list of users, optionally filtered by name or email.\nAccessible only to admins or users with `user.view` permission.",
+                "operationId": "list_users",
+                "parameters": [
+                    {
+                        "description": "Optional search query (name or email)",
+                        "in": "query",
+                        "name": "q",
+                        "required": false,
+                        "schema": {
+                            "nullable": true,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number (1-based, default 1)",
+                        "in": "query",
+                        "name": "page",
+                        "required": false,
+                        "schema": {
+                            "format": "int32",
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Items per page (default 25, max 100)",
+                        "in": "query",
+                        "name": "per_page",
+                        "required": false,
+                        "schema": {
+                            "format": "int32",
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "List users",
+                        "headers": {
+                            "X-Total-Count": {
+                                "description": "Total number of users matching the query",
+                                "schema": {
+                                    "format": "int64",
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "summary": "List users (admin)",
+                "tags": [
+                    "Users"
+                ]
+            },
+            "post": {
+                "description": "Creates a new user with password hash. Requires `user.manage` permission.",
+                "operationId": "create_user",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "email": "dev1@example.com",
+                                "name": "Developer One",
+                                "password": "SecurePassword123!"
+                            },
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateUserRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": "User created"
+                    },
+                    "409": {
+                        "description": "Email already in use"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "summary": "Create a new user (admin)",
+                "tags": [
+                    "Users"
+                ]
+            }
+        },
+        "/users/{id}": {
+            "delete": {
+                "description": "Soft-deletes a user by setting deleted_at. Requires `user.manage` permission.",
+                "operationId": "delete_user",
+                "parameters": [
+                    {
+                        "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "message": "User deleted"
+                                },
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeletedResponse"
+                                }
+                            }
+                        },
+                        "description": "User deleted"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "summary": "Delete a user (admin)",
+                "tags": [
+                    "Users"
+                ]
+            },
+            "put": {
+                "description": "Updates user details. Requires `user.manage` permission.",
+                "operationId": "update_user",
+                "parameters": [
+                    {
+                        "description": "User ID",
+                        "example": "00000000-0000-0000-0000-000000000000",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "format": "uuid",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "email": "dev2@example.com",
+                                "name": "Developer Two"
+                            },
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": "User updated"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "summary": "Update a user (admin)",
+                "tags": [
+                    "Users"
                 ]
             }
         }
@@ -2865,6 +3494,10 @@
         {
             "description": "Role-Based Access Control",
             "name": "RBAC"
+        },
+        {
+            "description": "User management",
+            "name": "Users"
         }
     ]
 }
