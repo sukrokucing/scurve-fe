@@ -13,7 +13,8 @@ type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useNetworkStore } from "@/store/networkStore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
+import { Search, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -205,15 +206,17 @@ export function TasksPage() {
                                     </Badge>
                                 </KanbanHeader>
                                 <KanbanCards id={column.id}>
-                                    {(task) => (
-                                        <KanbanCard
-                                            key={task.id}
-                                            item={task}
-                                            onDoubleClick={(item) => {
-                                                const t = item as unknown as Task;
-                                                setEditing(t);
-                                                const start = t.startDate ? new Date(t.startDate) : new Date();
-                                                const end = t.endDate ? new Date(t.endDate) : new Date();
+                                    {(task) => {
+                                        const kanbanTask = task as Task;
+                                        return (
+                                            <KanbanCard
+                                                key={kanbanTask.id}
+                                                item={kanbanTask}
+                                                onDoubleClick={(item) => {
+                                                    const t = item as Task;
+                                                    setEditing(t);
+                                                    const start = t.startDate ? new Date(t.startDate) : new Date();
+                                                    const end = t.endDate ? new Date(t.endDate) : new Date();
                                                 const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                                                 let mode: 'plan' | 'range' | 'today' = 'range';
 
@@ -233,31 +236,32 @@ export function TasksPage() {
                                                     status: t.status,
                                                     projectId: t.projectId
                                                 });
-                                            }}
-                                        >
+                                                }}
+                                            >
 
-                                            <div className="font-medium text-sm leading-tight">{(task as any).name}</div>
-                                            {(task as any).description && (
-                                                <div className="text-xs text-muted-foreground line-clamp-2">{(task as any).description}</div>
-                                            )}
-
-                                            <div className="flex items-center justify-between pt-2">
-                                                {(task as any).assigneeId && (
-                                                    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
-                                                        U
-                                                    </div>
+                                                <div className="font-medium text-sm leading-tight">{kanbanTask.name}</div>
+                                                {kanbanTask.description && (
+                                                    <div className="text-xs text-muted-foreground line-clamp-2">{kanbanTask.description}</div>
                                                 )}
 
-                                                {(task as any).dueDate && (
-                                                    <div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                                        {format(new Date((task as any).dueDate), "MMM d")}
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center justify-between pt-2">
+                                                    {kanbanTask.assigneeId && (
+                                                        <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
+                                                            U
+                                                        </div>
+                                                    )}
+
+                                                    {kanbanTask.dueDate && (
+                                                        <div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                                            {format(new Date(kanbanTask.dueDate), "MMM d")}
+                                                        </div>
+                                                    )}
 
 
-                                            </div>
-                                        </KanbanCard>
-                                    )}
+                                                </div>
+                                            </KanbanCard>
+                                        );
+                                    }}
                                 </KanbanCards>
                             </KanbanBoard>
                         )}
@@ -270,7 +274,9 @@ export function TasksPage() {
             return (
                 <GanttView
                     projectId={selectedProject || ""}
-                    tasks={filteredTasks}
+                    // Keep Gantt on full project task graph so drag/dependency operations
+                    // are consistent even when list search/status filters are active.
+                    tasks={tasks}
                     progress={progress}
                     dependencies={dependenciesData ?? []}
                     onUpdateTasks={(updatedTasks: GanttTask[]) => {
@@ -318,7 +324,7 @@ export function TasksPage() {
                     }}
                     onDoubleClick={(ganttTask) => {
                         // Find the full task object to edit
-                        const taskToEdit = (filteredTasks as Task[]).find(t => t.id === ganttTask.originalId);
+                        const taskToEdit = (tasks as Task[]).find(t => t.id === ganttTask.originalId);
                         if (taskToEdit) {
                             setEditing(taskToEdit);
                             const start = new Date(taskToEdit.startDate || "");
@@ -431,6 +437,7 @@ export function TasksPage() {
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
+                                                data-testid="tasks-row-edit-button"
                                                 onClick={() => {
                                                     setEditing(task);
                                                     const start = new Date(task.startDate || "");
@@ -461,6 +468,7 @@ export function TasksPage() {
                                             <Button
                                                 size="sm"
                                                 variant="destructive-outline"
+                                                data-testid="tasks-row-delete-button"
                                                 onClick={() => {
                                                     setTaskToDelete(task);
                                                     setConfirmOpen(true);
@@ -515,7 +523,7 @@ export function TasksPage() {
                     />
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => refetchTasks()}
                         disabled={!selectedProject || isRefetching || isRateLimited}
                     >
@@ -523,15 +531,12 @@ export function TasksPage() {
                     </Button>
                     <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button type="button">New task</Button>
+                            <Button type="button" data-testid="tasks-new-button">New task</Button>
                         </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Create task</DialogTitle>
-                                <DialogDescription>
-                                    Create a new task for your project with optional progress tracking.
-                                </DialogDescription>
-                            </DialogHeader>
+                        <AppDialogContent
+                            title="Create task"
+                            description="Create a new task for your project with optional progress tracking."
+                        >
                             <Form {...createForm}>
                                 <form
                                     onSubmit={createForm.handleSubmit((values) => {
@@ -571,7 +576,7 @@ export function TasksPage() {
                                             dueDate: dueDate,
                                             startDate: startDate,
                                             endDate: finalEndDate,
-                                            status: (parsed.data.status as any) || "todo",
+                                            status: (parsed.data.status ?? "todo") as TaskStatus,
                                             progress: parsed.data.progress || 0,
                                         })
                                             .then(() => {
@@ -618,6 +623,7 @@ export function TasksPage() {
                                                 <FormControl>
                                                     <Input
                                                         {...field}
+                                                        data-testid="tasks-create-title-input"
                                                         className={
                                                             createForm.formState.errors.title
                                                                 ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
@@ -824,14 +830,18 @@ export function TasksPage() {
 
                                     <div className="flex justify-end">
                                         <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                                        <Button type="submit" disabled={createForm.formState.isSubmitting}>
+                                        <Button
+                                            type="submit"
+                                            disabled={createForm.formState.isSubmitting}
+                                            data-testid="tasks-create-submit-button"
+                                        >
                                             {createForm.formState.isSubmitting ? "Creating…" : "Create"}
                                         </Button>
                                     </div>
                                 </form>
                             </Form>
                             <DialogFooter />
-                        </DialogContent>
+                        </AppDialogContent>
                     </Dialog>
                 </div>
             </div>
@@ -853,6 +863,7 @@ export function TasksPage() {
                                     className="pl-9 h-10"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    data-testid="tasks-search-input"
                                 />
                             </div>
                             <Combobox
@@ -873,15 +884,30 @@ export function TasksPage() {
 
                         {/* View Toggle */}
                         <div className="flex items-center gap-2">
-                            <Button variant={view === "list" ? "default" : "outline"} onClick={() => setView("list")} className="h-10">
+                            <Button
+                                variant={view === "list" ? "default" : "outline"}
+                                onClick={() => setView("list")}
+                                className="h-10"
+                                data-testid="tasks-view-list-button"
+                            >
                                 <List className="mr-2 h-4 w-4" />
                                 List
                             </Button>
-                            <Button variant={view === "kanban" ? "default" : "outline"} onClick={() => setView("kanban")} className="h-10">
+                            <Button
+                                variant={view === "kanban" ? "default" : "outline"}
+                                onClick={() => setView("kanban")}
+                                className="h-10"
+                                data-testid="tasks-view-board-button"
+                            >
                                 <Kanban className="mr-2 h-4 w-4" />
                                 Board
                             </Button>
-                            <Button variant={view === "gantt" ? "default" : "outline"} onClick={() => setView("gantt")} className="h-10">
+                            <Button
+                                variant={view === "gantt" ? "default" : "outline"}
+                                onClick={() => setView("gantt")}
+                                className="h-10"
+                                data-testid="tasks-view-gantt-button"
+                            >
                                 <CalendarRange className="mr-2 h-4 w-4" />
                                 Gantt
                             </Button>
@@ -892,13 +918,10 @@ export function TasksPage() {
             </Card>
             {/* Edit dialog */}
             <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit task</DialogTitle>
-                        <DialogDescription>
-                            Update the task details and save your changes.
-                        </DialogDescription>
-                    </DialogHeader>
+                <AppDialogContent
+                    title="Edit task"
+                    description="Update the task details and save your changes."
+                >
                     <Form {...editForm}>
                         <form
                             onSubmit={editForm.handleSubmit((values) => {
@@ -958,6 +981,7 @@ export function TasksPage() {
                                         <Input
                                             {...field}
                                             placeholder="Enter task name..."
+                                            data-testid="tasks-edit-title-input"
                                             className={editForm.formState.errors.title ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""}
                                         />
                                     </FormControl>
@@ -1150,33 +1174,38 @@ export function TasksPage() {
 
                             <div className="flex justify-end">
                                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-                                <Button type="submit" disabled={updateMutation.status === "pending"}>{updateMutation.status === "pending" ? "Saving…" : "Save"}</Button>
+                                <Button
+                                    type="submit"
+                                    disabled={updateMutation.status === "pending"}
+                                    data-testid="tasks-edit-save-button"
+                                >
+                                    {updateMutation.status === "pending" ? "Saving…" : "Save"}
+                                </Button>
                             </div>
                         </form>
                     </Form>
                     <DialogFooter />
-                </DialogContent>
+                </AppDialogContent>
             </Dialog>
             {/* Confirm delete dialog */}
             <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete task</DialogTitle>
-                        <DialogDescription>Are you sure you want to permanently delete this task? This action cannot be undone.</DialogDescription>
-                    </DialogHeader>
+                <AppDialogContent
+                    title="Delete task"
+                    description="Are you sure you want to permanently delete this task? This action cannot be undone."
+                >
                     <div className="flex justify-end gap-2 mt-4">
                         <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
                         <Button type="button" variant="destructive" onClick={() => {
                             if (!taskToDelete) return;
                             deleteMutation.mutate(taskToDelete.id);
                             setConfirmOpen(false);
-                        }}>
+                        }} data-testid="tasks-delete-confirm-button">
                             Delete
                         </Button>
                     </div>
                     <DialogFooter />
                     <DialogClose />
-                </DialogContent>
+                </AppDialogContent>
             </Dialog>
         </div>
     );

@@ -294,10 +294,45 @@ export function useDeleteDependency(projectId?: string) {
 
 export function useBatchUpdateTasks(projectId?: string) {
     const queryClient = useQueryClient();
-    return useMutation({
+    type BatchUpdateContext = {
+        previousTasks?: Task[];
+    };
+
+    return useMutation<unknown, unknown, import("@/api/openapiClient").TaskBatchUpdatePayload, BatchUpdateContext>({
         mutationFn: async (payload: import("@/api/openapiClient").TaskBatchUpdatePayload) => {
             if (!projectId) throw new Error("projectId is required for batch update");
             return openapi.batchUpdateTasks(projectId, payload);
+        },
+        onMutate: async (payload): Promise<BatchUpdateContext> => {
+            if (!projectId) return {};
+
+            await queryClient.cancelQueries({ queryKey: tasksKeys.byProject(projectId) });
+            const previousTasks = queryClient.getQueryData<Task[]>(tasksKeys.byProject(projectId));
+
+            if (previousTasks) {
+                const updates = new Map(
+                    (payload.tasks ?? []).map((task) => [task.id, task]),
+                );
+
+                queryClient.setQueryData<Task[]>(
+                    tasksKeys.byProject(projectId),
+                    previousTasks.map((task) => {
+                        const update = updates.get(task.id);
+                        if (!update) return task;
+
+                        return {
+                            ...task,
+                            ...(update.title !== undefined ? { name: update.title } : {}),
+                            ...(update.start_date !== undefined ? { startDate: update.start_date } : {}),
+                            ...(update.end_date !== undefined ? { endDate: update.end_date } : {}),
+                            ...(update.due_date !== undefined ? { dueDate: update.due_date } : {}),
+                            ...(update.progress !== undefined ? { progress: update.progress } : {}),
+                        };
+                    }),
+                );
+            }
+
+            return { previousTasks };
         },
         onSuccess: () => {
             if (projectId) {
@@ -305,7 +340,11 @@ export function useBatchUpdateTasks(projectId?: string) {
             }
             toast.success("Updated tasks");
         },
-        onError: (err: unknown) => {
+        onError: (err: unknown, _payload, context) => {
+            if (projectId && context?.previousTasks) {
+                queryClient.setQueryData(tasksKeys.byProject(projectId), context.previousTasks);
+            }
+
             const message = err instanceof Error ? err.message : String(err);
             toast.error(`Failed to batch update tasks: ${message}`);
         },

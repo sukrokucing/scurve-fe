@@ -22,86 +22,53 @@ export const TimelineHeader = memo(function TimelineHeader({
     const columnWidth = COLUMN_WIDTH[viewMode];
     const rowHeight = HEADER_HEIGHT / 2;
 
-    // Calculate visible range for top-row generation
-    const visibleRange = useMemo(() => {
-        if (virtualColumns.length === 0) return null;
-        const firstCol = allColumns[virtualColumns[0].index];
-        const lastCol = allColumns[virtualColumns[virtualColumns.length - 1].index];
-        if (!firstCol || !lastCol) return null;
-
-        return {
-            start: firstCol.date,
-            end: lastCol.date
-        };
-    }, [virtualColumns, allColumns]);
-
     // Generate top row items (groups)
     const topRowItems = useMemo(() => {
-        if (!visibleRange) return [];
+        if (allColumns.length === 0) return [];
         const items: { label: string; start: number; width: number; key: string }[] = [];
-
-
-
-        // This logic is complex because 'groups' might start before our visible area.
-        // Instead, let's iterate through visible columns and group them dynamically
-
-        let currentGroup: any = null;
-
-
-        // We need to look at ALL columns to get correct widths, but that's expensive for virtualized.
-        // Actually, we can just render the top row based on the virtual columns' data
-        // For each virtual column, determine its group.
-        // If it's the start of a group OR start of viewport, start a new block.
-        // This is tricky with virtualization.
-
-        // Alternative Robust Approach:
-        // Use `allColumns` (which isn't virtualized, just the data array) to generate the groups.
-        // Since `allColumns` is already calculated, we can just iterate it once.
-        // The count shouldn't be massive (a few thousand days max).
-
-        let lastLabel = '';
-        let startIdx = 0;
-
-        allColumns.forEach((col, idx) => {
-            let label = '';
+        const groupLabelForDate = (date: Date) => {
             if (viewMode === 'day' || viewMode === 'week') {
-                label = format(col.date, 'MMMM yyyy');
-            } else {
-                label = format(col.date, 'yyyy');
+                return format(date, 'MMMM yyyy');
+            }
+            if (viewMode === 'year') {
+                const decadeStart = Math.floor(date.getFullYear() / 10) * 10;
+                return `${decadeStart}s`;
+            }
+            return format(date, 'yyyy');
+        };
+
+        let currentLabel = '';
+        let groupStart = 0;
+
+        allColumns.forEach((column, index) => {
+            const nextLabel = groupLabelForDate(column.date);
+            if (index === 0) {
+                currentLabel = nextLabel;
+                groupStart = 0;
+                return;
             }
 
-            if (label !== lastLabel) {
-                if (currentGroup) {
-                    items.push({
-                        label: currentGroup.label,
-                        start: currentGroup.startX,
-                        width: (idx - startIdx) * columnWidth,
-                        key: `group-${startIdx}`
-                    });
-                }
-                lastLabel = label;
-                startIdx = idx;
-                currentGroup = { label, startX: idx * columnWidth, width: 0 };
+            if (nextLabel !== currentLabel) {
+                items.push({
+                    label: currentLabel,
+                    start: groupStart * columnWidth,
+                    width: (index - groupStart) * columnWidth,
+                    key: `group-${groupStart}`,
+                });
+                currentLabel = nextLabel;
+                groupStart = index;
             }
         });
 
-        // Push last group
-        if (currentGroup) {
-            items.push({
-                label: (currentGroup as any).label,
-                start: (currentGroup as any).startX,
-                width: (allColumns.length - startIdx) * columnWidth,
-                key: `group-${startIdx}`
-            });
-
-        }
+        items.push({
+            label: currentLabel,
+            start: groupStart * columnWidth,
+            width: (allColumns.length - groupStart) * columnWidth,
+            key: `group-${groupStart}`,
+        });
 
         return items;
-
-    }, [allColumns, viewMode, columnWidth, visibleRange]);
-
-    // Filter top row items to only those visible (optional, but good for perf)
-    const visibleTopRow = topRowItems; // CSS clipping handles the rest mostly
+    }, [allColumns, viewMode, columnWidth]);
 
     return (
         <div
@@ -110,7 +77,7 @@ export const TimelineHeader = memo(function TimelineHeader({
         >
             {/* Top Row: Months/Years */}
             <div className="relative border-b" style={{ width: totalWidth, height: rowHeight }}>
-                {visibleTopRow.map((item) => (
+                {topRowItems.map((item) => (
                     <div
                         key={item.key}
                         className="absolute flex items-center px-4 font-semibold text-sm text-foreground bg-background border-r whitespace-nowrap overflow-hidden text-ellipsis"
@@ -134,14 +101,14 @@ export const TimelineHeader = memo(function TimelineHeader({
                     return (
                         <div
                             key={virtualColumn.key}
-                            className={cn(
-                                "absolute flex items-center justify-center border-r bg-background",
-                                "text-xs font-medium text-muted-foreground",
-                                column.isWeekend && "bg-muted/50",
-                                column.isToday && "bg-primary/10 text-primary font-semibold"
-                            )}
-                            style={{
-                                left: virtualColumn.start,
+                        className={cn(
+                            "absolute flex items-center justify-center border-r bg-background",
+                            "text-xs font-medium text-muted-foreground",
+                            viewMode === 'day' && column.isWeekend && "bg-muted/50",
+                            viewMode === 'day' && column.isToday && "bg-primary/10 text-primary font-semibold"
+                        )}
+                        style={{
+                            left: virtualColumn.start,
                                 width: columnWidth,
                                 height: rowHeight,
                             }}
@@ -150,6 +117,8 @@ export const TimelineHeader = memo(function TimelineHeader({
                             {viewMode === 'day' && format(column.date, 'EEE, d')}
                             {viewMode === 'week' && `W${format(column.date, 'I')} (${format(column.date, 'd')} - ${format(addDays(column.date, 6), 'd')})`}
                             {viewMode === 'month' && format(column.date, 'MMM')}
+                            {viewMode === 'quarter' && `Q${Math.floor(column.date.getMonth() / 3) + 1}`}
+                            {viewMode === 'year' && format(column.date, 'yyyy')}
                         </div>
                     );
                 })}

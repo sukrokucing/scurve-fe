@@ -8,7 +8,7 @@ interface PermissionState {
     isLoading: boolean;
     setPermissions: (permissions: EffectivePermission[]) => void;
     setIsLoading: (isLoading: boolean) => void;
-    hasPermission: (name: string, scope?: Record<string, any>) => boolean;
+    hasPermission: (name: string, scope?: Record<string, unknown>) => boolean;
     reset: () => void;
 }
 
@@ -61,7 +61,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         if (typeof window !== "undefined") {
             try {
                 window.localStorage.removeItem("permissions");
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }

@@ -61,7 +61,7 @@ export async function checkBackendAvailable(force = false): Promise<boolean> {
                             useNetworkStore.getState().setOffline(false, null);
                             return true;
                         }
-                    } catch (secondErr) {
+                    } catch {
                         // swallow - we'll fall through to the outer catch below
                     }
                     // rethrow the original error so outer catch records offline state

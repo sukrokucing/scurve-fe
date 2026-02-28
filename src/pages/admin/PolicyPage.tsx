@@ -1,4 +1,4 @@
-import { Lock, History } from "lucide-react";
+import { Lock } from "lucide-react";
 
 import { PermissionMatrix } from "@/components/rbac/PermissionMatrix";
 import { AuditLogDialog } from "@/components/rbac/AuditLogDialog";

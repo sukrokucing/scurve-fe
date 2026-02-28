@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import * as chrono from "chrono-node";
 import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -80,34 +81,34 @@ export function DateInput({ value, onChange, placeholder = 'Try "tomorrow" or "i
         }
     };
 
-    const handleCalendarSelect = (selected: any) => {
+    const handleSingleSelect = (selected: Date | undefined) => {
         if (!selected) {
             onChange(null);
             setInputValue("");
-        } else if (mode === "range") {
-            // Handle range selection (DateRange object from react-day-picker)
-            if (selected?.from) {
-                if (selected.to) {
-                    onChange([selected.from, selected.to]);
-                    setIsOpen(false); // Close only when both dates are selected
-                } else {
-                    // Only start date selected so far, don't close yet
-                    // We can't pass a partial range to onChange based on current type signature
-                    // So we might need to wait or handle internal state if we want to show partial selection
-                    // For now, let's just not trigger onChange until we have both, or trigger with same date
-                }
-            }
         } else {
-            // Single date
-            onChange(selected as Date);
+            onChange(selected);
             setIsOpen(false);
         }
     };
 
-    // Prepare value for Calendar component
-    const calendarSelected = mode === "range"
-        ? (Array.isArray(value) ? { from: value[0], to: value[1] } : undefined)
-        : (value instanceof Date ? value : undefined);
+    const handleRangeSelect = (selected: DateRange | undefined) => {
+        if (!selected) {
+            onChange(null);
+            setInputValue("");
+            return;
+        }
+
+        if (selected.from && selected.to) {
+            onChange([selected.from, selected.to]);
+            setIsOpen(false);
+        }
+    };
+
+    const rangeSelected: DateRange | undefined = Array.isArray(value)
+        ? { from: value[0], to: value[1] }
+        : undefined;
+
+    const singleSelected = value instanceof Date ? value : undefined;
 
     return (
         <div className={cn("flex items-stretch gap-0", className)}>
@@ -133,12 +134,21 @@ export function DateInput({ value, onChange, placeholder = 'Try "tomorrow" or "i
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode={mode as any}
-                        selected={calendarSelected}
-                        onSelect={handleCalendarSelect}
-                        initialFocus
-                    />
+                    {mode === "range" ? (
+                        <Calendar
+                            mode="range"
+                            selected={rangeSelected}
+                            onSelect={handleRangeSelect}
+                            initialFocus
+                        />
+                    ) : (
+                        <Calendar
+                            mode="single"
+                            selected={singleSelected}
+                            onSelect={handleSingleSelect}
+                            initialFocus
+                        />
+                    )}
                 </PopoverContent>
             </Popover>
         </div>

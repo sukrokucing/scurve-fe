@@ -5,12 +5,9 @@ import { Loader2, User, History } from "lucide-react";
 
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import {
     Table,
     TableBody,
@@ -55,18 +52,16 @@ export function AuditLogDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" data-testid="policy-audit-log-button">
                     <History className="mr-2 h-4 w-4" />
                     Audit Log
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>System Audit Log</DialogTitle>
-                    <DialogDescription>
-                        View the history of security and access control changes.
-                    </DialogDescription>
-                </DialogHeader>
+            <AppDialogContent
+                className="max-w-4xl max-h-[80vh] flex flex-col"
+                title="System Audit Log"
+                description="View the history of security and access control changes."
+            >
 
                 <div className="flex items-center gap-4 py-4">
                     <Combobox
@@ -152,6 +147,7 @@ export function AuditLogDialog() {
                             size="sm"
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1 || isLoading}
+                            data-testid="policy-audit-log-prev-button"
                         >
                             Previous
                         </Button>
@@ -160,12 +156,13 @@ export function AuditLogDialog() {
                             size="sm"
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages || isLoading}
+                            data-testid="policy-audit-log-next-button"
                         >
                             Next
                         </Button>
                     </div>
                 </div>
-            </DialogContent>
+            </AppDialogContent>
         </Dialog>
     );
 }

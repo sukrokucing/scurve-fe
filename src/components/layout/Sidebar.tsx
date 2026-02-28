@@ -154,7 +154,7 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     className={cn(
-                        "w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-10 transition-colors",
+                        "w-full justify-start text-foreground/80 hover:text-destructive-foreground hover:bg-destructive active:bg-destructive/90 active:text-destructive-foreground h-10 transition-colors",
                         isCollapsed ? "justify-center px-0" : "px-3"
                     )}
                     onClick={logout}

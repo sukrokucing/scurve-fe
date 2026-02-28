@@ -26,16 +26,12 @@ import {
 } from "@/components/ui/table";
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
     DialogFooter,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import {
     Form,
-    FormControl,
     FormField,
     FormItem,
     FormLabel,
@@ -57,33 +53,35 @@ type AssignRoleValues = z.infer<typeof assignRoleSchema>;
 
 export const UserAccessPage = () => {
     const { userId } = useParams<{ userId: string }>();
+    const safeUserId = userId ?? "";
     const queryClient = useQueryClient();
     const [assignOpen, setAssignOpen] = useState(false);
 
-    if (!userId) return <div>Invalid User ID</div>;
-
     // --- Queries ---
     const { data: userRoles, isLoading: loadingRoles } = useQuery({
-        queryKey: ["user-roles", userId],
-        queryFn: () => rbacApi.getUserRoles(userId),
+        queryKey: ["user-roles", safeUserId],
+        queryFn: () => rbacApi.getUserRoles(safeUserId),
+        enabled: Boolean(userId),
     });
 
     const { data: effectivePerms, isLoading: loadingPerms } = useQuery({
-        queryKey: ["user-permissions", userId],
-        queryFn: () => rbacApi.getUserEffectivePermissions(userId),
+        queryKey: ["user-permissions", safeUserId],
+        queryFn: () => rbacApi.getUserEffectivePermissions(safeUserId),
+        enabled: Boolean(userId),
     });
 
     const { data: allRoles } = useQuery({
         queryKey: ["roles"],
         queryFn: rbacApi.listRoles,
+        enabled: Boolean(userId),
     });
 
     // --- Mutations ---
     const assignRoleMutation = useMutation({
-        mutationFn: (values: AssignRoleValues) => rbacApi.assignRoleToUser(userId, { role_id: values.roleId }),
+        mutationFn: (values: AssignRoleValues) => rbacApi.assignRoleToUser(safeUserId, { role_id: values.roleId }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-roles", userId] });
-            queryClient.invalidateQueries({ queryKey: ["user-permissions", userId] });
+            queryClient.invalidateQueries({ queryKey: ["user-roles", safeUserId] });
+            queryClient.invalidateQueries({ queryKey: ["user-permissions", safeUserId] });
             setAssignOpen(false);
             toast.success("Role assigned successfully");
             form.reset();
@@ -95,10 +93,10 @@ export const UserAccessPage = () => {
     });
 
     const revokeRoleMutation = useMutation({
-        mutationFn: (roleId: string) => rbacApi.revokeRoleFromUser(userId, roleId),
+        mutationFn: (roleId: string) => rbacApi.revokeRoleFromUser(safeUserId, roleId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-roles", userId] });
-            queryClient.invalidateQueries({ queryKey: ["user-permissions", userId] });
+            queryClient.invalidateQueries({ queryKey: ["user-roles", safeUserId] });
+            queryClient.invalidateQueries({ queryKey: ["user-permissions", safeUserId] });
             toast.success("Role revoked");
         },
         onError: (err) => {
@@ -111,6 +109,8 @@ export const UserAccessPage = () => {
     const form = useForm<AssignRoleValues>({
         resolver: zodResolver(assignRoleSchema),
     });
+
+    if (!userId) return <div>Invalid User ID</div>;
 
     const onSubmit = (values: AssignRoleValues) => {
         assignRoleMutation.mutate(values);
@@ -145,17 +145,16 @@ export const UserAccessPage = () => {
                             <CardDescription>Roles currently granted to this user.</CardDescription>
                         </div>
                         <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Assign Role
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Assign Role</DialogTitle>
-                                    <DialogDescription>Select a role to grant to this user.</DialogDescription>
-                                </DialogHeader>
+                        <DialogTrigger asChild>
+                            <Button size="sm">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Assign Role
+                            </Button>
+                        </DialogTrigger>
+                            <AppDialogContent
+                                title="Assign Role"
+                                description="Select a role to grant to this user."
+                            >
                                 <Form {...form}>
                                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                         <FormField
@@ -183,7 +182,7 @@ export const UserAccessPage = () => {
                                         </DialogFooter>
                                     </form>
                                 </Form>
-                            </DialogContent>
+                            </AppDialogContent>
                         </Dialog>
                     </CardHeader>
                     <CardContent>

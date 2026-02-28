@@ -1,10 +1,15 @@
-import React, { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Info } from "lucide-react";
-
-import { toast } from "sonner";
+import React, { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Info, Loader2 } from "lucide-react";
 import clsx from "clsx";
+import { toast } from "sonner";
 
+import { rbacApi } from "@/api/rbac";
+import type { Permission, Role } from "@/api/rbac";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
 import {
     Table,
     TableBody,
@@ -13,8 +18,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-
 import {
     Tooltip,
     TooltipContent,
@@ -22,207 +25,448 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { rbacApi } from "@/api/rbac";
-import type { Permission } from "@/api/rbac";
+const ALL_ROLES = "__all_roles__";
+const ALL_RESOURCES = "__all_resources__";
 
-
+type ToggleState = { roleId: string; permId: string } | null;
+type BulkState = { roleId: string; mode: "grant" | "revoke" } | null;
 
 export const PermissionMatrix = () => {
     const queryClient = useQueryClient();
-    const [toggling, setToggling] = useState<{ roleId: string; permId: string } | null>(null);
 
-    // 1. Fetch available Roles
+    const [editMode, setEditMode] = useState(true);
+    const [allowGrant, setAllowGrant] = useState(true);
+    const [allowRevoke, setAllowRevoke] = useState(true);
+    const [roleFilter, setRoleFilter] = useState(ALL_ROLES);
+    const [resourceFilter, setResourceFilter] = useState(ALL_RESOURCES);
+    const [permissionQuery, setPermissionQuery] = useState("");
+    const [assignedOnly, setAssignedOnly] = useState(false);
+    const [toggling, setToggling] = useState<ToggleState>(null);
+    const [bulkAction, setBulkAction] = useState<BulkState>(null);
+
     const { data: roles, isLoading: loadingRoles } = useQuery({
         queryKey: ["roles"],
         queryFn: rbacApi.listRoles,
     });
 
-    // 2. Fetch available Permissions
     const { data: permissions, isLoading: loadingPerms } = useQuery({
         queryKey: ["permissions"],
         queryFn: rbacApi.listPermissions,
     });
 
-    // 3. Fetch Assigned Permissions for ALL roles
-    // In a real app with many roles, this might need optimization or a bulk endpoint.
-    // We'll use useQuery for each role to get its permissions.
-    // For simplicity in this demo, we'll assume we can just fetch them when we render.
-    // A better approach for many roles would be `useQueries`.
-
-    // We will use a map to store: roleId -> Set<permissionId>
-    // Since we can't easily use hooks in a loop without useQueries (which is verbose here),
-    // we'll create a wrapper component or just fetch them all via a Promise.all in a distinct query.
-
     const { data: rolePermissionsMap, isLoading: loadingMap } = useQuery({
-        queryKey: ["all-role-permissions", roles?.map(r => r.id)],
+        queryKey: ["all-role-permissions", roles?.map((role) => role.id)],
         queryFn: async () => {
             if (!roles) return {};
             const map: Record<string, Set<string>> = {};
-            await Promise.all(roles.map(async (role) => {
-                try {
-                    const perms = await rbacApi.getRolePermissions(role.id);
-                    map[role.id] = new Set(perms.map(p => p.id));
-                } catch (e) {
-                    console.warn(`Failed to fetch perms for role ${role.id}`, e);
-                    map[role.id] = new Set();
-                }
-            }));
+
+            await Promise.all(
+                roles.map(async (role) => {
+                    try {
+                        const rolePerms = await rbacApi.getRolePermissions(role.id);
+                        map[role.id] = new Set(rolePerms.map((perm) => perm.id));
+                    } catch (error) {
+                        console.warn(`Failed to fetch permissions for role ${role.id}`, error);
+                        map[role.id] = new Set();
+                    }
+                }),
+            );
+
             return map;
         },
         enabled: !!roles && roles.length > 0,
     });
 
-    const assignMutation = useMutation({
-        mutationFn: async ({ roleId, permId }: { roleId: string; permId: string }) => {
-            // Check if already assigned
-            const assigned = rolePermissionsMap?.[roleId]?.has(permId);
-            if (assigned) {
-                // Revoke permission via API
-                await rbacApi.revokePermissionFromRole(roleId, permId);
-            } else {
-                await rbacApi.assignPermissionToRole(roleId, { permission_id: permId });
-            }
-        },
-        onSuccess: (_, { roleId }) => {
-            // Invalidate the map to refetch
-            queryClient.invalidateQueries({ queryKey: ["all-role-permissions"] });
-            // Also invalidate specific role query used in other components
-            queryClient.invalidateQueries({ queryKey: ["role-permissions", roleId] });
-            toast.success("Permission updated");
-        },
-        onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "Failed to update permission");
-        },
-        onSettled: () => setToggling(null),
-    });
-
-    const handleToggle = (roleId: string, permId: string) => {
-        setToggling({ roleId, permId });
-        assignMutation.mutate({ roleId, permId });
-    };
-
-    // Group permissions by Resource
     const groupedPermissions = useMemo(() => {
-        if (!permissions) return {};
+        if (!permissions) return {} as Record<string, Permission[]>;
         const groups: Record<string, Permission[]> = {};
 
-        permissions.forEach(p => {
-            // Assume format "resource.action" (e.g. project.create)
-            // Or just "resource" if no dot.
-            const parts = p.name.split('.');
-            // If name is "project.create", resource is "project"
-            // If name is "manage_users", resource is "manage_users" (fallback)
-            const resource = parts.length > 1 ? parts[0] : "General";
+        permissions.forEach((permission) => {
+            const [resourcePart] = permission.name.split(".");
+            const resource = resourcePart || "General";
             if (!groups[resource]) groups[resource] = [];
-            groups[resource].push(p);
+            groups[resource].push(permission);
+        });
+
+        Object.keys(groups).forEach((resource) => {
+            groups[resource] = [...groups[resource]].sort((a, b) => a.name.localeCompare(b.name));
         });
 
         return groups;
     }, [permissions]);
 
+    const filteredRoles = useMemo<Role[]>(() => {
+        if (!roles) return [];
+        if (roleFilter === ALL_ROLES) return roles;
+        return roles.filter((role) => role.id === roleFilter);
+    }, [roleFilter, roles]);
+
+    const filteredGroupedPermissions = useMemo(() => {
+        const next: Record<string, Permission[]> = {};
+        const roleIds = filteredRoles.map((role) => role.id);
+        const query = permissionQuery.trim().toLowerCase();
+
+        Object.entries(groupedPermissions).forEach(([resource, perms]) => {
+            if (resourceFilter !== ALL_RESOURCES && resource !== resourceFilter) {
+                return;
+            }
+
+            const visiblePerms = perms.filter((perm) => {
+                const matchesQuery =
+                    query.length === 0
+                    || perm.name.toLowerCase().includes(query)
+                    || (perm.description?.toLowerCase().includes(query) ?? false);
+
+                if (!matchesQuery) return false;
+                if (!assignedOnly) return true;
+
+                return roleIds.some((roleId) => rolePermissionsMap?.[roleId]?.has(perm.id));
+            });
+
+            if (visiblePerms.length > 0) {
+                next[resource] = visiblePerms;
+            }
+        });
+
+        return next;
+    }, [assignedOnly, filteredRoles, groupedPermissions, permissionQuery, resourceFilter, rolePermissionsMap]);
+
+    const visibleResources = useMemo(
+        () => Object.keys(filteredGroupedPermissions).sort(),
+        [filteredGroupedPermissions],
+    );
+
+    const visiblePermissionIds = useMemo(
+        () => visibleResources.flatMap((resource) => filteredGroupedPermissions[resource].map((perm) => perm.id)),
+        [filteredGroupedPermissions, visibleResources],
+    );
+
+    const roleOptions = useMemo(
+        () => [
+            { value: ALL_ROLES, label: "All roles" },
+            ...(roles ?? []).map((role) => ({ value: role.id, label: role.name })),
+        ],
+        [roles],
+    );
+
+    const resourceOptions = useMemo(
+        () => [
+            { value: ALL_RESOURCES, label: "All resources" },
+            ...Object.keys(groupedPermissions).sort().map((resource) => ({ value: resource, label: resource })),
+        ],
+        [groupedPermissions],
+    );
+
+    const assignMutation = useMutation({
+        mutationFn: async ({ roleId, permId }: { roleId: string; permId: string }) => {
+            const assigned = rolePermissionsMap?.[roleId]?.has(permId);
+            if (assigned) {
+                await rbacApi.revokePermissionFromRole(roleId, permId);
+                return "revoke" as const;
+            }
+
+            await rbacApi.assignPermissionToRole(roleId, { permission_id: permId });
+            return "grant" as const;
+        },
+        onSuccess: (_, { roleId }) => {
+            queryClient.invalidateQueries({ queryKey: ["all-role-permissions"] });
+            queryClient.invalidateQueries({ queryKey: ["role-permissions", roleId] });
+            toast.success("Permission updated");
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to update permission");
+        },
+        onSettled: () => setToggling(null),
+    });
+
+    const bulkMutation = useMutation({
+        mutationFn: async ({
+            roleId,
+            permissionIds,
+            mode,
+        }: {
+            roleId: string;
+            permissionIds: string[];
+            mode: "grant" | "revoke";
+        }) => {
+            const assignedSet = rolePermissionsMap?.[roleId] ?? new Set<string>();
+            const actionableIds = permissionIds.filter((permissionId) =>
+                mode === "grant" ? !assignedSet.has(permissionId) : assignedSet.has(permissionId),
+            );
+
+            if (actionableIds.length === 0) {
+                return { changed: 0 };
+            }
+
+            await Promise.all(
+                actionableIds.map((permissionId) =>
+                    mode === "grant"
+                        ? rbacApi.assignPermissionToRole(roleId, { permission_id: permissionId })
+                        : rbacApi.revokePermissionFromRole(roleId, permissionId),
+                ),
+            );
+
+            return { changed: actionableIds.length };
+        },
+        onSuccess: ({ changed }, { roleId, mode }) => {
+            queryClient.invalidateQueries({ queryKey: ["all-role-permissions"] });
+            queryClient.invalidateQueries({ queryKey: ["role-permissions", roleId] });
+            const verb = mode === "grant" ? "granted" : "revoked";
+            toast.success(`Bulk update complete: ${changed} ${verb}`);
+        },
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : "Bulk permission update failed");
+        },
+        onSettled: () => setBulkAction(null),
+    });
+
+    const canMutate = editMode;
     const isLoading = loadingRoles || loadingPerms || loadingMap;
 
+    const totalVisiblePermissions = visiblePermissionIds.length;
+    const totalVisibleCells = filteredRoles.length * totalVisiblePermissions;
+
+    const canToggleCell = (isAssigned: boolean) => {
+        if (!canMutate) return false;
+        if (isAssigned) return allowRevoke;
+        return allowGrant;
+    };
+
+    const handleToggle = (roleId: string, permId: string, isAssigned: boolean) => {
+        if (!canToggleCell(isAssigned)) return;
+        if (toggling || bulkAction) return;
+        setToggling({ roleId, permId });
+        assignMutation.mutate({ roleId, permId });
+    };
+
+    const handleBulkForRole = (roleId: string, mode: "grant" | "revoke") => {
+        if (!editMode) return;
+        if (mode === "grant" && !allowGrant) return;
+        if (mode === "revoke" && !allowRevoke) return;
+
+        setBulkAction({ roleId, mode });
+        bulkMutation.mutate({ roleId, permissionIds: visiblePermissionIds, mode });
+    };
+
     if (isLoading) {
-        return <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+        return (
+            <div className="p-12 flex justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
     }
 
-    if (!roles || !permissions) return <div>Failed to load data.</div>;
-
-    const resources = Object.keys(groupedPermissions).sort();
+    if (!roles || !permissions) {
+        return <div>Failed to load data.</div>;
+    }
 
     return (
         <div className="rounded-md border bg-card shadow-sm overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-3">
+                <Button
+                    type="button"
+                    variant={editMode ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setEditMode((prev) => !prev)}
+                    data-testid="rbac-edit-mode-toggle"
+                >
+                    Edit
+                </Button>
+                <Button
+                    type="button"
+                    variant={allowGrant ? "secondary" : "outline"}
+                    size="sm"
+                    disabled={!editMode}
+                    onClick={() => setAllowGrant((prev) => !prev)}
+                    data-testid="rbac-grant-toggle"
+                >
+                    Grant
+                </Button>
+                <Button
+                    type="button"
+                    variant={allowRevoke ? "secondary" : "outline"}
+                    size="sm"
+                    disabled={!editMode}
+                    onClick={() => setAllowRevoke((prev) => !prev)}
+                    data-testid="rbac-revoke-toggle"
+                >
+                    Revoke
+                </Button>
+                <Combobox
+                    value={roleFilter}
+                    onChange={setRoleFilter}
+                    options={roleOptions}
+                    className="w-[170px]"
+                    placeholder="All roles"
+                    searchPlaceholder="Search roles..."
+                    triggerAriaLabel="Filter roles"
+                    triggerTestId="rbac-role-filter-combobox"
+                />
+                <Combobox
+                    value={resourceFilter}
+                    onChange={setResourceFilter}
+                    options={resourceOptions}
+                    className="w-[190px]"
+                    placeholder="All resources"
+                    searchPlaceholder="Search resources..."
+                    triggerAriaLabel="Filter resources"
+                    triggerTestId="rbac-resource-filter-combobox"
+                />
+                <Input
+                    value={permissionQuery}
+                    onChange={(event) => setPermissionQuery(event.target.value)}
+                    placeholder="Search permissions..."
+                    className="h-9 w-[220px]"
+                    data-testid="rbac-permission-search-input"
+                />
+                <Button
+                    type="button"
+                    variant={assignedOnly ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setAssignedOnly((prev) => !prev)}
+                    data-testid="rbac-assigned-only-toggle"
+                >
+                    Assigned only
+                </Button>
+                <div className="ml-auto text-xs text-muted-foreground">
+                    {filteredRoles.length} role(s) • {totalVisiblePermissions} permission(s) • {totalVisibleCells} cell(s)
+                </div>
+            </div>
+
             <div className="overflow-x-auto">
-                <Table className="min-w-[800px]">
+                <Table className="min-w-[900px]">
                     <TableHeader>
                         <TableRow className="bg-muted/50">
-                            <TableHead className="w-[300px] font-bold">Resource / Permission</TableHead>
-                            {roles.map(role => (
-                                <TableHead key={role.id} className="text-center min-w-[120px]">
-                                    <div className="flex flex-col items-center gap-1 py-1">
-                                        <span className="font-semibold text-foreground">{role.name}</span>
-                                        <span className="text-xs font-normal text-muted-foreground line-clamp-1">
-                                            {role.description || "No desc"}
-                                        </span>
-                                    </div>
-                                </TableHead>
-                            ))}
+                            <TableHead className="w-[320px] font-bold">Resource / Permission</TableHead>
+                            {filteredRoles.map((role) => {
+                                const roleBusy = bulkAction?.roleId === role.id && bulkMutation.isPending;
+                                return (
+                                    <TableHead key={role.id} className="text-center min-w-[170px]">
+                                        <div className="flex flex-col items-center gap-1 py-1">
+                                            <span className="font-semibold text-foreground">{role.name}</span>
+                                            <span className="text-xs font-normal text-muted-foreground line-clamp-1">
+                                                {role.description || "No desc"}
+                                            </span>
+                                            <div className="flex items-center gap-1 pt-1">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-7 px-2 text-xs"
+                                                    disabled={!editMode || !allowGrant || totalVisiblePermissions === 0 || roleBusy}
+                                                    onClick={() => handleBulkForRole(role.id, "grant")}
+                                                    data-testid={`rbac-role-grant-visible-${role.id}`}
+                                                >
+                                                    + Visible
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-7 px-2 text-xs"
+                                                    disabled={!editMode || !allowRevoke || totalVisiblePermissions === 0 || roleBusy}
+                                                    onClick={() => handleBulkForRole(role.id, "revoke")}
+                                                    data-testid={`rbac-role-revoke-visible-${role.id}`}
+                                                >
+                                                    - Visible
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </TableHead>
+                                );
+                            })}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {resources.map(resource => (
-                            <React.Fragment key={resource}>
-                                {/* Resource Header Row */}
-                                <TableRow key={`res-${resource}`} className="bg-muted/20 hover:bg-muted/30">
-                                    <TableCell colSpan={roles.length + 1} className="font-semibold text-primary py-2 px-4 capitalize">
-                                        {resource}
-                                    </TableCell>
-                                </TableRow>
-
-                                {/* Permissions Rows */}
-                                {groupedPermissions[resource].map(perm => (
-                                    <TableRow key={perm.id}>
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">{perm.name}</span>
-                                                {perm.description && (
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger>
-                                                                <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>{perm.description}</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                )}
+                        {visibleResources.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={filteredRoles.length + 1} className="h-20 text-center text-muted-foreground">
+                                    No permissions match the current granular filters.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            visibleResources.map((resource) => (
+                                <React.Fragment key={resource}>
+                                    <TableRow className="bg-muted/20 hover:bg-muted/30">
+                                        <TableCell colSpan={filteredRoles.length + 1} className="font-semibold text-primary py-2 px-4">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="capitalize">{resource}</span>
+                                                <span className="text-xs font-normal text-muted-foreground">
+                                                    {filteredGroupedPermissions[resource].length} permission(s)
+                                                </span>
                                             </div>
                                         </TableCell>
-
-                                        {roles.map(role => {
-                                            const roleId = role.id;
-                                            const isAssigned = rolePermissionsMap?.[roleId]?.has(perm.id);
-                                            const isProcessing = toggling?.roleId === roleId && toggling?.permId === perm.id;
-
-                                            // Determine interaction state
-                                            // If REVOKE is technically impossible (no API), we should visually disable the "assigned" state
-                                            // or show a tooltip. For now, we allow clicking but it will error if we try to revoke.
-
-                                            return (
-                                                <TableCell key={`${role.id}-${perm.id}`} className="text-center p-0">
-                                                    <div
-                                                        className={clsx(
-                                                            "h-12 w-full flex items-center justify-center cursor-pointer transition-colors",
-                                                            isAssigned
-                                                                ? "bg-primary/5 hover:bg-primary/10"
-                                                                : "hover:bg-muted/50"
-                                                        )}
-                                                        onClick={() => {
-                                                            if (!isProcessing) handleToggle(role.id, perm.id);
-                                                        }}
-                                                    >
-                                                        {isProcessing ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                                        ) : isAssigned ? (
-                                                            <Badge variant="default" className="bg-teal-600 hover:bg-teal-700">
-                                                                Allow
-                                                            </Badge>
-                                                        ) : (
-                                                            <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            );
-                                        })}
                                     </TableRow>
-                                ))}
-                            </React.Fragment>
-                        ))}
+
+                                    {filteredGroupedPermissions[resource].map((permission) => (
+                                        <TableRow key={permission.id}>
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm">{permission.name}</span>
+                                                    {permission.description && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="inline-flex text-muted-foreground hover:text-foreground"
+                                                                        aria-label={`Permission info for ${permission.name}`}
+                                                                    >
+                                                                        <Info className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{permission.description}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+
+                                            {filteredRoles.map((role) => {
+                                                const roleId = role.id;
+                                                const isAssigned = rolePermissionsMap?.[roleId]?.has(permission.id) ?? false;
+                                                const isCellBusy =
+                                                    (toggling?.roleId === roleId && toggling?.permId === permission.id)
+                                                    || (bulkAction?.roleId === roleId && bulkMutation.isPending);
+                                                const canToggle = canToggleCell(isAssigned);
+
+                                                return (
+                                                    <TableCell key={`${roleId}-${permission.id}`} className="text-center p-0">
+                                                        <button
+                                                            type="button"
+                                                            className={clsx(
+                                                                "h-12 w-full flex items-center justify-center transition-colors",
+                                                                canToggle
+                                                                    ? (isAssigned ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50")
+                                                                    : "bg-muted/20 opacity-60 cursor-not-allowed",
+                                                            )}
+                                                            disabled={!canToggle || isCellBusy}
+                                                            onClick={() => handleToggle(roleId, permission.id, isAssigned)}
+                                                            data-testid={`rbac-permission-cell-${roleId}-${permission.id}`}
+                                                        >
+                                                            {isCellBusy ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                                            ) : isAssigned ? (
+                                                                <Badge variant="default" className="bg-teal-600 hover:bg-teal-700">
+                                                                    Allow
+                                                                </Badge>
+                                                            ) : (
+                                                                <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
+                                                            )}
+                                                        </button>
+                                                    </TableCell>
+                                                );
+                                            })}
+                                        </TableRow>
+                                    ))}
+                                </React.Fragment>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>
-            {/* Backend supports revocation; informational note removed */}
         </div>
     );
 };

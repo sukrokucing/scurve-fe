@@ -1,0 +1,812 @@
+version: "2.1"
+source_document: "CAPABILITIES.md"
+draft_note: "Capability-first executable draft with CRUD flows"
+
+config:
+  base_url: "http://localhost:3001"
+  generated_spec: "e2e/generated/business-flow.generated.spec.ts"
+
+credentials:
+  username:
+    env:
+      - PLAYWRIGHT_USERNAME
+      - TEST_EMAIL
+  password:
+    env:
+      - PLAYWRIGHT_PASSWORD
+      - TEST_PASSWORD
+
+variables:
+  RUN_SUFFIX: "${RUN_ID}"
+  PROJECT_NAME: "Flow Project CRUD ${RUN_SUFFIX}"
+  PROJECT_DESCRIPTION_CREATE: "Created by capability-based business_flow.yaml (${RUN_SUFFIX})"
+  PROJECT_DESCRIPTION_UPDATE: "Updated by capability-based business_flow.yaml (${RUN_SUFFIX})"
+  TASK_TITLE: "Flow Task CRUD ${RUN_SUFFIX}"
+  TASK_TITLE_UPDATED: "Flow Task CRUD Updated ${RUN_SUFFIX}"
+  ROLE_NAME: "flow_role_crud_${RUN_SUFFIX}"
+  ROLE_DESCRIPTION: "Role created by capability-based business_flow.yaml (${RUN_SUFFIX})"
+
+action_library:
+  # -------- Auth --------
+  goto_login:
+    kind: goto
+    url: /login
+    description: Open login page
+  fill_login_email:
+    kind: fill
+    locator:
+      by: role
+      role: textbox
+      name: Email
+    value_from_credential: username
+    description: Fill login email from .env
+  fill_login_password:
+    kind: fill
+    locator:
+      by: role
+      role: textbox
+      name: Password
+    value_from_credential: password
+    description: Fill login password from .env
+  click_sign_in:
+    kind: click
+    locator:
+      by: role
+      role: button
+      name: Sign in
+    description: Submit login form
+  ensure_authenticated:
+    kind: ensure_authenticated
+    description: Ensure session is authenticated using configured credentials
+  expect_dashboard_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Dashboard
+    description: Dashboard heading is visible
+
+  # -------- Dashboard --------
+  goto_dashboard:
+    kind: goto
+    url: /
+    description: Open dashboard
+  expect_dashboard_project_progress:
+    kind: expect_visible
+    locator:
+      by: text
+      text: Project Progress
+    description: Dashboard project progress chart section is visible
+
+  # -------- Projects (CRUD) --------
+  goto_projects:
+    kind: goto
+    url: /projects
+    description: Open projects page
+  expect_projects_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Projects
+    description: Projects heading is visible
+  retry_projects_if_backend_failed:
+    kind: click_if_visible
+    locator:
+      by: role
+      role: button
+      name: Retry
+    timeout_ms: 1200
+    description: Retry projects query when backend temporarily fails
+  open_project_create_dialog:
+    kind: click
+    locator:
+      by: testid
+      testid: projects-new-button
+    description: Open create project dialog
+  expect_project_create_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Create project
+    description: Create project dialog is visible
+  fill_project_name:
+    kind: fill
+    locator:
+      by: testid
+      testid: projects-create-name-input
+    value_template: "${PROJECT_NAME}"
+    description: Fill project name
+  fill_project_description:
+    kind: fill
+    locator:
+      by: testid
+      testid: projects-create-description-input
+    value_template: "${PROJECT_DESCRIPTION_CREATE}"
+    description: Fill project description
+  submit_project_create:
+    kind: click
+    locator:
+      by: testid
+      testid: projects-create-submit-button
+    description: Submit create project
+  expect_created_project_row:
+    kind: expect_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}")'
+    timeout_ms: 15000
+    description: Created project row is visible
+  open_first_project_dashboard:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-dashboard-link"]'
+    description: Open first project dashboard
+  expect_project_dashboard_curve:
+    kind: expect_visible
+    locator:
+      by: text
+      text: S-Curve Performance
+    description: S-Curve chart section is visible
+  open_first_project_edit_dialog:
+    kind: goto
+    url: /projects
+    description: Return to projects page before update
+  click_first_project_edit:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-edit-button"]'
+    description: Open first project edit dialog
+  expect_project_edit_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Edit project
+    description: Edit project dialog is visible
+  update_project_description:
+    kind: fill
+    locator:
+      by: testid
+      testid: projects-edit-description-input
+    value_template: "${PROJECT_DESCRIPTION_UPDATE}"
+    description: Update project description
+  submit_project_save:
+    kind: click
+    locator:
+      by: testid
+      testid: projects-edit-save-button
+    description: Save project update
+  click_first_project_delete:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-delete-button"]'
+    description: Open first project delete confirmation
+  expect_project_delete_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Delete project
+    description: Delete project confirmation dialog is visible
+  confirm_project_delete:
+    kind: click
+    locator:
+      by: testid
+      testid: projects-delete-confirm-button
+    description: Confirm project deletion
+
+  # -------- Tasks (CRUD) --------
+  goto_tasks:
+    kind: goto
+    url: /tasks
+    description: Open tasks page
+  expect_tasks_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Tasks
+      exact: true
+    description: Tasks heading is visible
+  open_task_create_dialog:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-new-button
+    description: Open create task dialog
+  expect_task_create_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Create task
+    description: Create task dialog is visible
+  fill_task_title:
+    kind: fill
+    locator:
+      by: testid
+      testid: tasks-create-title-input
+    value_template: "${TASK_TITLE}"
+    description: Fill task title
+  submit_task_create:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-create-submit-button
+    description: Submit create task
+  filter_tasks_by_created_title:
+    kind: fill
+    locator:
+      by: testid
+      testid: tasks-search-input
+    value_template: "${TASK_TITLE}"
+    description: Filter tasks list by created task title
+  filter_tasks_by_updated_title:
+    kind: fill
+    locator:
+      by: testid
+      testid: tasks-search-input
+    value_template: "${TASK_TITLE_UPDATED}"
+    description: Filter tasks list by updated task title
+  expect_created_task_row:
+    kind: expect_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${TASK_TITLE}")'
+    description: Created task row is visible
+  switch_task_board_view:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-view-board-button
+    description: Switch to board view
+  switch_task_gantt_view:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-view-gantt-button
+    description: Switch to gantt view
+  expect_gantt_view_mode_combobox:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: gantt-view-mode-combobox
+    description: Gantt view mode combobox is visible
+  expect_gantt_today_button:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: gantt-today-button
+    description: Gantt today button is visible
+  click_gantt_scroll_left:
+    kind: click
+    locator:
+      by: testid
+      testid: gantt-scroll-left-button
+    description: Scroll gantt timeline left
+  click_gantt_scroll_right:
+    kind: click
+    locator:
+      by: testid
+      testid: gantt-scroll-right-button
+    description: Scroll gantt timeline right
+  click_gantt_toggle_table:
+    kind: click
+    locator:
+      by: testid
+      testid: gantt-toggle-table-button
+    description: Toggle gantt table visibility
+  expect_gantt_dependency_add_button:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: gantt-dependency-add-button
+      first: true
+    description: Gantt dependency add control is visible
+  switch_task_list_view:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-view-list-button
+    description: Switch back to list view
+  click_first_task_edit:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-row-edit-button
+      first: true
+    description: Open first task edit dialog
+  expect_task_edit_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Edit task
+    description: Edit task dialog is visible
+  fill_task_title_updated:
+    kind: fill
+    locator:
+      by: testid
+      testid: tasks-edit-title-input
+    value_template: "${TASK_TITLE_UPDATED}"
+    description: Update task title
+  submit_task_save:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-edit-save-button
+    description: Save task update
+  click_first_task_delete:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-row-delete-button
+      first: true
+    description: Open first task delete confirmation
+  expect_task_delete_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Delete task
+    description: Delete task confirmation dialog is visible
+  confirm_task_delete:
+    kind: click
+    locator:
+      by: testid
+      testid: tasks-delete-confirm-button
+    description: Confirm task deletion
+
+  # -------- Roles (CRUD-like: create/read/delete) --------
+  goto_roles:
+    kind: goto
+    url: /settings/roles
+    description: Open roles page
+  expect_roles_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Roles
+    description: Roles heading is visible
+  open_create_role_dialog:
+    kind: click
+    locator:
+      by: testid
+      testid: roles-create-button
+    description: Open create role dialog
+  expect_create_role_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: Create New Role
+    description: Create role dialog is visible
+  fill_role_name:
+    kind: fill
+    locator:
+      by: testid
+      testid: roles-create-name-input
+    value_template: "${ROLE_NAME}"
+    description: Fill role name
+  fill_role_description:
+    kind: fill
+    locator:
+      by: testid
+      testid: roles-create-description-input
+    value_template: "${ROLE_DESCRIPTION}"
+    description: Fill role description
+  submit_role_create:
+    kind: click
+    locator:
+      by: testid
+      testid: roles-create-submit-button
+    description: Submit role creation
+  expect_created_role_row:
+    kind: expect_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${ROLE_NAME}")'
+    description: Created role row is visible
+  open_super_admin_role_detail:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${ROLE_NAME}") [data-testid="roles-row-name-button"]'
+    description: Open created role detail
+  expect_role_detail_dialog:
+    kind: expect_visible
+    locator:
+      by: css
+      selector: '[role="dialog"]'
+    description: Role detail dialog is visible
+  close_active_dialog:
+    kind: click
+    locator:
+      by: role
+      role: button
+      name: Close
+    description: Close active dialog
+  accept_delete_role_confirm:
+    kind: accept_dialog_next
+    description: Accept browser confirmation for role deletion
+  click_first_role_delete:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${ROLE_NAME}") [data-testid="roles-row-delete-button"]'
+    description: Delete first role row
+
+  # -------- Users / Access Flow / Policy --------
+  goto_users:
+    kind: goto
+    url: /settings/users
+    description: Open users page
+  expect_users_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: User Management
+    description: Users page heading is visible
+  click_first_manage_access_link:
+    kind: click
+    locator:
+      by: testid
+      testid: users-row-manage-access-link
+      first: true
+    description: Open user access page from users table
+  expect_user_access_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: User Access Management
+    description: User access heading is visible
+  goto_access_flow:
+    kind: goto
+    url: /settings/flow
+    description: Open access flow explorer
+  expect_access_flow_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Access Flow Explorer
+    description: Access flow heading is visible
+  click_first_access_flow_user:
+    kind: click
+    locator:
+      by: testid
+      testid: access-flow-user-item
+      first: true
+    description: Select first user in access flow explorer
+  click_access_flow_manage_access:
+    kind: click
+    locator:
+      by: testid
+      testid: access-flow-manage-access-button
+    description: Open user access management from access flow
+  goto_policy:
+    kind: goto
+    url: /settings/policy
+    description: Open policy page
+  expect_policy_heading:
+    kind: expect_visible
+    locator:
+      by: role
+      role: heading
+      name: Access Policy
+    description: Access policy heading is visible
+  open_audit_log_dialog:
+    kind: click
+    locator:
+      by: testid
+      testid: policy-audit-log-button
+    description: Open audit log dialog
+  expect_audit_log_dialog:
+    kind: expect_visible
+    locator:
+      by: role
+      role: dialog
+      name: System Audit Log
+    description: Audit log dialog is visible
+  expect_audit_log_next_button:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: policy-audit-log-next-button
+    description: Next page control exists in audit log
+
+flows:
+  # -------- Auth / Dashboard --------
+  - id: auth_login_email
+    module: authentication
+    capability_ref: "1.1 Authentication"
+    title: login_using_email_credentials
+    actor: app_user
+    crud:
+      - read
+    risk_level: high
+    preconditions:
+      - env_credentials_available
+      - user_account_exists
+    steps:
+      - use: goto_login
+      - use: ensure_authenticated
+
+  - id: dashboard_overview_read
+    module: dashboard
+    capability_ref: "1.2 Dashboard"
+    title: view_dashboard_overview_widgets
+    actor: app_user
+    crud:
+      - read
+    risk_level: low
+    preconditions:
+      - user_logged_in
+    steps:
+      - use: goto_dashboard
+      - use: expect_dashboard_heading
+      - use: expect_dashboard_project_progress
+
+  # -------- Projects CRUD --------
+  - id: project_create
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: create_project_via_projects_page
+    actor: app_user
+    crud:
+      - create
+    risk_level: high
+    preconditions:
+      - user_logged_in
+    steps:
+      - use: goto_projects
+      - use: expect_projects_heading
+      - use: open_project_create_dialog
+      - use: expect_project_create_dialog
+      - use: fill_project_name
+      - use: fill_project_description
+      - use: submit_project_create
+      - use: retry_projects_if_backend_failed
+      - use: expect_created_project_row
+
+  - id: project_read_dashboard
+    module: project_management
+    capability_ref: "1.3 Projects, 1.4 Project Dashboard"
+    title: read_project_dashboard_drilldown
+    actor: app_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: goto_projects
+      - use: retry_projects_if_backend_failed
+      - use: open_first_project_dashboard
+      - use: expect_project_dashboard_curve
+
+  - id: project_update
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: update_first_project
+    actor: app_user
+    crud:
+      - update
+    risk_level: medium
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: open_first_project_edit_dialog
+      - use: retry_projects_if_backend_failed
+      - use: click_first_project_edit
+      - use: expect_project_edit_dialog
+      - use: update_project_description
+      - use: submit_project_save
+
+  - id: project_delete
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: delete_first_project
+    actor: app_user
+    crud:
+      - delete
+    risk_level: medium
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: goto_projects
+      - use: retry_projects_if_backend_failed
+      - use: click_first_project_delete
+      - use: expect_project_delete_dialog
+      - use: confirm_project_delete
+
+  # -------- Tasks CRUD --------
+  - id: task_create
+    module: task_management
+    capability_ref: "1.5 Tasks"
+    title: create_task_with_default_schedule
+    actor: app_user
+    crud:
+      - create
+    risk_level: high
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: goto_tasks
+      - use: expect_tasks_heading
+      - use: open_task_create_dialog
+      - use: expect_task_create_dialog
+      - use: fill_task_title
+      - use: submit_task_create
+      - use: filter_tasks_by_created_title
+      - use: expect_created_task_row
+
+  - id: task_read_views
+    module: task_management
+    capability_ref: "1.5 Tasks, 1.6 Kanban Board, 1.7 Gantt"
+    title: read_task_views_list_board_gantt
+    actor: app_user
+    crud:
+      - read
+    risk_level: low
+    preconditions:
+      - tasks_page_accessible
+    steps:
+      - use: goto_tasks
+      - use: switch_task_board_view
+      - use: switch_task_gantt_view
+      - use: expect_gantt_view_mode_combobox
+      - use: expect_gantt_today_button
+      - use: click_gantt_scroll_left
+      - use: click_gantt_scroll_right
+      - use: click_gantt_toggle_table
+      - use: click_gantt_toggle_table
+      - use: expect_gantt_dependency_add_button
+      - use: switch_task_list_view
+
+  - id: task_update
+    module: task_management
+    capability_ref: "1.5 Tasks"
+    title: update_first_task
+    actor: app_user
+    crud:
+      - update
+    risk_level: medium
+    preconditions:
+      - at_least_one_task_exists
+    steps:
+      - use: goto_tasks
+      - use: filter_tasks_by_created_title
+      - use: click_first_task_edit
+      - use: expect_task_edit_dialog
+      - use: fill_task_title_updated
+      - use: submit_task_save
+
+  - id: task_delete
+    module: task_management
+    capability_ref: "1.5 Tasks"
+    title: delete_first_task
+    actor: app_user
+    crud:
+      - delete
+    risk_level: medium
+    preconditions:
+      - at_least_one_task_exists
+    steps:
+      - use: goto_tasks
+      - use: filter_tasks_by_updated_title
+      - use: click_first_task_delete
+      - use: expect_task_delete_dialog
+      - use: confirm_task_delete
+
+  # -------- Roles CRUD-like --------
+  - id: role_create
+    module: rbac_roles
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: create_role
+    actor: admin_user
+    crud:
+      - create
+    risk_level: medium
+    preconditions:
+      - user_has_role_manage_permission
+    steps:
+      - use: goto_roles
+      - use: expect_roles_heading
+      - use: open_create_role_dialog
+      - use: expect_create_role_dialog
+      - use: fill_role_name
+      - use: fill_role_description
+      - use: submit_role_create
+      - use: expect_created_role_row
+
+  - id: role_read_detail
+    module: rbac_roles
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: read_role_detail_permissions
+    actor: admin_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - roles_exist
+    steps:
+      - use: goto_roles
+      - use: open_super_admin_role_detail
+      - use: expect_role_detail_dialog
+      - use: close_active_dialog
+
+  - id: role_delete
+    module: rbac_roles
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: delete_first_role
+    actor: admin_user
+    crud:
+      - delete
+    risk_level: high
+    preconditions:
+      - at_least_one_deletable_role_exists
+    steps:
+      - use: goto_roles
+      - use: accept_delete_role_confirm
+      - use: click_first_role_delete
+
+  # -------- Users / Access Flow / Policy --------
+  - id: users_read_and_manage_access
+    module: rbac_users
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: read_users_and_open_manage_access
+    actor: admin_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - users_exist
+    steps:
+      - use: goto_users
+      - use: expect_users_heading
+      - use: click_first_manage_access_link
+      - use: expect_user_access_heading
+
+  - id: access_flow_read_drilldown
+    module: rbac_access_flow
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: read_access_flow_and_open_user_access
+    actor: admin_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - users_and_roles_exist
+    steps:
+      - use: goto_access_flow
+      - use: expect_access_flow_heading
+      - use: click_first_access_flow_user
+      - use: click_access_flow_manage_access
+      - use: expect_user_access_heading
+
+  - id: policy_read_audit_log
+    module: rbac_policy
+    capability_ref: "1.8 Admin / Settings / RBAC"
+    title: read_policy_matrix_and_audit_log
+    actor: admin_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - policy_page_accessible
+    steps:
+      - use: goto_policy
+      - use: expect_policy_heading
+      - use: open_audit_log_dialog
+      - use: expect_audit_log_dialog
+      - use: expect_audit_log_next_button
+      - use: close_active_dialog

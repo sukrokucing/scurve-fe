@@ -9,9 +9,9 @@ const badgeVariants = cva(
         variants: {
             variant: {
                 default:
-                    "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+                    "border-transparent bg-primary text-primary-foreground hover:bg-primary-hover",
                 secondary:
-                    "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                    "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary-hover",
                 destructive:
                     "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
                 success:
@@ -22,7 +22,7 @@ const badgeVariants = cva(
                     "border-transparent bg-info text-info-foreground hover:bg-info/80",
                 error:
                     "border-transparent bg-error text-error-foreground hover:bg-error/80",
-                outline: "text-foreground",
+                outline: "border-border bg-surface text-foreground",
             },
         },
         defaultVariants: {
@@ -41,4 +41,4 @@ function Badge({ className, variant, ...props }: BadgeProps) {
     )
 }
 
-export { Badge, badgeVariants }
+export { Badge }

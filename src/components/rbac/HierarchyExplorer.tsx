@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, Search, ShieldCheck } from "lucide-react";
+import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 
 import { usersApi, type User } from "@/api/users";
 import { rbacApi, type Role } from "@/api/rbac";
+
+const EMPTY_USERS: User[] = [];
 
 export const HierarchyExplorer = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -23,7 +25,22 @@ export const HierarchyExplorer = () => {
         queryFn: () => usersApi.listUsers({ q: searchQuery || undefined }),
     });
 
-    const users = usersData?.users ?? [];
+    const users = usersData?.users ?? EMPTY_USERS;
+    const userOptions = useMemo(() => {
+        const mapped = users.map((user) => ({
+            value: user.id,
+            label: `${user.name} (${user.email})`,
+        }));
+
+        if (!selectedUser || mapped.some((option) => option.value === selectedUser.id)) {
+            return mapped;
+        }
+
+        return [
+            { value: selectedUser.id, label: `${selectedUser.name} (${selectedUser.email})` },
+            ...mapped,
+        ];
+    }, [users, selectedUser]);
 
     // --- Column 2: User Roles (from real RBAC API) ---
     const { data: userRoles, isLoading: loadingUserRoles } = useQuery({
@@ -68,27 +85,52 @@ export const HierarchyExplorer = () => {
                 </div>
                 {/* Search Input */}
                 <div className="p-2 border-b">
-                    <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by name or email..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 h-8 text-sm"
-                        />
-                    </div>
+                    <Combobox
+                        value={selectedUser?.id}
+                        options={userOptions}
+                        onChange={(userId) => {
+                            const nextUser = users.find((user) => user.id === userId)
+                                ?? (selectedUser?.id === userId ? selectedUser : null);
+                            if (!nextUser) return;
+                            setSelectedUser(nextUser);
+                            setSelectedRole(null);
+                        }}
+                        onSearchChange={setSearchQuery}
+                        shouldFilterClientSide={false}
+                        searchDebounceMs={300}
+                        minSearchLength={0}
+                        isLoading={loadingUsers}
+                        placeholder="Search users..."
+                        searchPlaceholder="Type name or email..."
+                        emptyText="No users found"
+                        loadingText="Searching users..."
+                        className="h-8 text-sm"
+                        triggerAriaLabel="Search and select user"
+                        triggerTestId="access-flow-user-search-combobox"
+                    />
                 </div>
                 <ScrollArea className="flex-1">
                     {loadingUsers ? <ColumnLoading /> : (
                         <div className="p-2 space-y-1">
                             {users.length === 0 ? <ColumnEmpty msg="No users found" /> : (
                                 users.map(user => (
-                                    <button
+                                    <div
                                         key={user.id}
+                                        data-testid="access-flow-user-item"
                                         onClick={() => {
                                             setSelectedUser(user);
                                             setSelectedRole(null); // Reset downstream selection
                                         }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                setSelectedUser(user);
+                                                setSelectedRole(null); // Reset downstream selection
+                                            }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-pressed={selectedUser?.id === user.id}
                                         className={clsx(
                                             "w-full text-left p-3 rounded-md flex items-center justify-between transition-colors text-sm",
                                             selectedUser?.id === user.id
@@ -115,6 +157,7 @@ export const HierarchyExplorer = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    data-testid="access-flow-manage-access-button"
                                                     className={clsx(
                                                         "h-7 w-7 rounded-sm transition-colors",
                                                         selectedUser?.id === user.id ? "hover:bg-primary-foreground/20 text-primary-foreground" : "hover:bg-muted"
@@ -130,7 +173,7 @@ export const HierarchyExplorer = () => {
                                             )}
                                             {selectedUser?.id === user.id && <ChevronRight className="h-4 w-4 opacity-50" />}
                                         </div>
-                                    </button>
+                                    </div>
                                 ))
                             )}
                         </div>

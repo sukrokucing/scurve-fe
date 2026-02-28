@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Seed values for deterministic harmony token generation."
+  },
+  "defaults": {
+    "neutralHue": 220,
+    "neutralChroma": 0.015,
+    "surfaceChroma": 0.01,
+    "borderChroma": 0.01,
+    "stateDeltas": {
+      "hover": -0.03,
+      "active": -0.045
+    },
+    "secondaryStateDeltas": {
+      "hover": -0.02,
+      "active": -0.04
+    },
+    "accentStateDeltas": {
+      "hover": -0.03,
+      "active": -0.06
+    },
+    "surfaceStateDeltas": {
+      "hover": -0.015,
+      "active": -0.03
+    },
+    "status": {
+      "l": 0.66,
+      "c": 0.14
+    },
+    "chart": {
+      "l": 0.64,
+      "c": 0.14
+    }
+  },
+  "themes": {
+    ":root": {
+      "primary": {
+        "l": 0.62,
+        "c": 0.13,
+        "h": 175
+      },
+      "background": {
+        "l": 0.98,
+        "c": 0.006,
+        "h": 220
+      },
+      "surface": {
+        "l": 0.985,
+        "c": 0.004,
+        "h": 220
+      },
+      "muted": {
+        "l": 0.95,
+        "c": 0.01,
+        "h": 220
+      },
+      "foreground": {
+        "l": 0.2,
+        "c": 0.025,
+        "h": 220
+      },
+      "border": {
+        "l": 0.9,
+        "c": 0.005,
+        "h": 220
+      },
+      "accent": {
+        "l": 0.92,
+        "c": 0.05
+      },
+      "status": {
+        "l": 0.66,
+        "c": 0.14
+      },
+      "chart": {
+        "l": 0.64,
+        "c": 0.14
+      }
+    },
+    ".dark": {
+      "primary": {
+        "l": 0.75,
+        "c": 0.13,
+        "h": 175
+      },
+      "background": {
+        "l": 0.21,
+        "c": 0.012,
+        "h": 220
+      },
+      "surface": {
+        "l": 0.26,
+        "c": 0.01,
+        "h": 220
+      },
+      "muted": {
+        "l": 0.31,
+        "c": 0.012,
+        "h": 220
+      },
+      "foreground": {
+        "l": 0.94,
+        "c": 0.01,
+        "h": 220
+      },
+      "border": {
+        "l": 0.36,
+        "c": 0.008,
+        "h": 220
+      },
+      "accent": {
+        "l": 0.34,
+        "c": 0.08
+      },
+      "status": {
+        "l": 0.7,
+        "c": 0.13
+      },
+      "chart": {
+        "l": 0.69,
+        "c": 0.13
+      }
+    },
+    ".theme-glass": {
+      "primary": {
+        "l": 0.62,
+        "c": 0.13,
+        "h": 175
+      },
+      "background": {
+        "l": 0.94,
+        "c": 0.03,
+        "h": 220
+      },
+      "surface": {
+        "l": 0.965,
+        "c": 0.016,
+        "h": 220
+      },
+      "muted": {
+        "l": 0.91,
+        "c": 0.024,
+        "h": 220
+      },
+      "foreground": {
+        "l": 0.2,
+        "c": 0.025,
+        "h": 220
+      },
+      "border": {
+        "l": 0.84,
+        "c": 0.018,
+        "h": 220
+      },
+      "accent": {
+        "l": 0.9,
+        "c": 0.09
+      },
+      "status": {
+        "l": 0.66,
+        "c": 0.14
+      },
+      "chart": {
+        "l": 0.64,
+        "c": 0.14
+      }
+    }
+  }
+}

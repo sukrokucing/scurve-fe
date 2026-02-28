@@ -5,34 +5,39 @@ import { TASK_BAR_HEIGHT } from '../constants';
 import { getTaskBarPosition } from '../utils/positionUtils';
 
 interface DependencyArrowProps {
-    dependency: GanttDependency;
-    sourceTask: GanttTask;
-    targetTask: GanttTask;
-    sourceRowIndex: number;
-    targetRowIndex: number;
+    predecessorTask: GanttTask;
+    dependentTask: GanttTask;
+    predecessorRowIndex: number;
+    dependentRowIndex: number;
     dateRange: DateRange;
     viewMode: ViewMode;
+    predecessorPreview?: { leftDelta: number; widthDelta: number };
+    dependentPreview?: { leftDelta: number; widthDelta: number };
 }
 
 export const DependencyArrow = memo(function DependencyArrow({
-    sourceTask,
-    targetTask,
-    sourceRowIndex,
-    targetRowIndex,
+    predecessorTask,
+    dependentTask,
+    predecessorRowIndex,
+    dependentRowIndex,
     dateRange,
     viewMode,
+    predecessorPreview,
+    dependentPreview,
 }: DependencyArrowProps) {
-    const sourcePos = getTaskBarPosition(sourceTask, dateRange.start, viewMode, sourceRowIndex);
-    const targetPos = getTaskBarPosition(targetTask, dateRange.start, viewMode, targetRowIndex);
+    const predecessorPos = getTaskBarPosition(predecessorTask, dateRange.start, viewMode, predecessorRowIndex);
+    const dependentPos = getTaskBarPosition(dependentTask, dateRange.start, viewMode, dependentRowIndex);
 
-    // Calculate arrow path based on dependency type
+    // Finish-to-start: predecessor end -> dependent start.
     const path = useMemo(() => {
-        // Default: finish-to-start
-        // Arrow goes from end of source to start of target
-        const startX = sourcePos.x + sourcePos.width;
-        const startY = sourcePos.y + TASK_BAR_HEIGHT / 2;
-        const endX = targetPos.x;
-        const endY = targetPos.y + TASK_BAR_HEIGHT / 2;
+        const predecessorLeftDelta = predecessorPreview?.leftDelta ?? 0;
+        const predecessorWidthDelta = predecessorPreview?.widthDelta ?? 0;
+        const dependentLeftDelta = dependentPreview?.leftDelta ?? 0;
+
+        const startX = predecessorPos.x + predecessorPos.width + predecessorLeftDelta + predecessorWidthDelta;
+        const startY = predecessorPos.y + TASK_BAR_HEIGHT / 2;
+        const endX = dependentPos.x + dependentLeftDelta;
+        const endY = dependentPos.y + TASK_BAR_HEIGHT / 2;
 
         // Calculate control points for smooth curve
         const curveOffset = Math.min(50, Math.abs(endX - startX) / 3);
@@ -56,12 +61,13 @@ export const DependencyArrow = memo(function DependencyArrow({
         ${endX - curveOffset} ${endY},
         ${endX} ${endY}
     `;
-    }, [sourcePos, targetPos]);
+    }, [dependentPos, dependentPreview, predecessorPos, predecessorPreview]);
 
     // Arrowhead path
     const arrowHead = useMemo(() => {
-        const endX = targetPos.x;
-        const endY = targetPos.y + TASK_BAR_HEIGHT / 2;
+        const dependentLeftDelta = dependentPreview?.leftDelta ?? 0;
+        const endX = dependentPos.x + dependentLeftDelta;
+        const endY = dependentPos.y + TASK_BAR_HEIGHT / 2;
         const size = 6;
 
         return `
@@ -70,10 +76,15 @@ export const DependencyArrow = memo(function DependencyArrow({
       L ${endX - size} ${endY + size}
       Z
     `;
-    }, [targetPos]);
+    }, [dependentPos, dependentPreview]);
 
     return (
-        <g className="dependency-arrow">
+        <g
+            className="dependency-arrow"
+            data-testid="gantt-dependency-arrow"
+            data-predecessor-id={predecessorTask.id}
+            data-dependent-id={dependentTask.id}
+        >
             {/* Arrow line */}
             <path
                 d={path}
@@ -101,6 +112,7 @@ interface DependencyLayerProps {
     viewMode: ViewMode;
     totalWidth: number;
     totalHeight: number;
+    previewBars?: Record<string, { leftDelta: number; widthDelta: number }>;
 }
 
 export const DependencyLayer = memo(function DependencyLayer({
@@ -110,6 +122,7 @@ export const DependencyLayer = memo(function DependencyLayer({
     viewMode,
     totalWidth,
     totalHeight,
+    previewBars = {},
 }: DependencyLayerProps) {
     // Create task index map for O(1) lookup
     const taskIndexMap = useMemo(() => {
@@ -135,25 +148,27 @@ export const DependencyLayer = memo(function DependencyLayer({
             style={{ width: totalWidth, height: totalHeight }}
         >
             {dependencies.map((dep) => {
-                const sourceTask = taskMap.get(dep.source_task_id);
-                const targetTask = taskMap.get(dep.target_task_id);
-                const sourceIndex = taskIndexMap.get(dep.source_task_id);
-                const targetIndex = taskIndexMap.get(dep.target_task_id);
+                // API semantics: source_task_id is dependent, target_task_id is predecessor.
+                const predecessorTask = taskMap.get(dep.target_task_id);
+                const dependentTask = taskMap.get(dep.source_task_id);
+                const predecessorIndex = taskIndexMap.get(dep.target_task_id);
+                const dependentIndex = taskIndexMap.get(dep.source_task_id);
 
-                if (!sourceTask || !targetTask || sourceIndex === undefined || targetIndex === undefined) {
+                if (!predecessorTask || !dependentTask || predecessorIndex === undefined || dependentIndex === undefined) {
                     return null;
                 }
 
                 return (
                     <DependencyArrow
                         key={dep.id}
-                        dependency={dep}
-                        sourceTask={sourceTask}
-                        targetTask={targetTask}
-                        sourceRowIndex={sourceIndex}
-                        targetRowIndex={targetIndex}
+                        predecessorTask={predecessorTask}
+                        dependentTask={dependentTask}
+                        predecessorRowIndex={predecessorIndex}
+                        dependentRowIndex={dependentIndex}
                         dateRange={dateRange}
                         viewMode={viewMode}
+                        predecessorPreview={previewBars[predecessorTask.id]}
+                        dependentPreview={previewBars[dependentTask.id]}
                     />
                 );
             })}

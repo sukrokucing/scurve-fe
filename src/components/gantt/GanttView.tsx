@@ -44,6 +44,12 @@ export function GanttView({
 }: GanttViewProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('day');
     const [isTableVisible, setIsTableVisible] = useState(true);
+    const [editMode, setEditMode] = useState(true);
+    const [showProgress, setShowProgress] = useState(true);
+    const [allowProgressEdit, setAllowProgressEdit] = useState(true);
+    const [allowTaskMove, setAllowTaskMove] = useState(true);
+    const [allowTaskResize, setAllowTaskResize] = useState(true);
+    const [focusMode, setFocusMode] = useState(true);
 
     const { data: criticalPathIds } = useCriticalPath(projectId);
 
@@ -151,25 +157,24 @@ export function GanttView({
         }
     }, [ganttTasks, dateRange, viewMode]);
 
-    // Initial scroll to today
+    // Initial/refresh scroll to today when focus mode is enabled.
     useEffect(() => {
-        if (ganttTasks.length > 0) {
-            // Small timeout to ensure layout is ready
-            const timer = setTimeout(() => {
-                scrollToToday();
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, []); // Run once on mount
+        if (!focusMode || ganttTasks.length === 0) return;
+        const timer = setTimeout(() => {
+            scrollToToday();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [focusMode, ganttTasks.length, scrollToToday]);
 
-    // Scroll to today when view mode changes
+    // Scroll to today when view mode changes (focus mode only).
     useEffect(() => {
+        if (!focusMode) return;
         // Small timeout to allow layout to settle after remount
         const timer = setTimeout(() => {
             scrollToToday();
         }, 100);
         return () => clearTimeout(timer);
-    }, [viewMode, scrollToToday]);
+    }, [viewMode, focusMode, scrollToToday]);
 
     return (
         <div className="flex flex-col gap-4 h-[600px]">
@@ -177,14 +182,72 @@ export function GanttView({
                 <h2 className="text-lg font-semibold">Gantt View</h2>
 
                 {/* Global Toolbar */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsTableVisible(!isTableVisible)}
                         className="hidden md:flex"
+                        data-testid="gantt-toggle-table-button"
                     >
                         {isTableVisible ? 'Hide Table' : 'Show Table'}
+                    </Button>
+
+                    <Button
+                        variant={editMode ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setEditMode((prev) => !prev)}
+                        data-testid="gantt-edit-mode-toggle"
+                    >
+                        Edit
+                    </Button>
+
+                    <Button
+                        variant={allowTaskMove ? "secondary" : "outline"}
+                        size="sm"
+                        disabled={!editMode}
+                        onClick={() => setAllowTaskMove((prev) => !prev)}
+                        data-testid="gantt-move-toggle"
+                    >
+                        Move
+                    </Button>
+
+                    <Button
+                        variant={allowTaskResize ? "secondary" : "outline"}
+                        size="sm"
+                        disabled={!editMode}
+                        onClick={() => setAllowTaskResize((prev) => !prev)}
+                        data-testid="gantt-resize-toggle"
+                    >
+                        Resize
+                    </Button>
+
+                    <Button
+                        variant={showProgress ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setShowProgress((prev) => !prev)}
+                        data-testid="gantt-progress-visibility-toggle"
+                    >
+                        Progress
+                    </Button>
+
+                    <Button
+                        variant={allowProgressEdit ? "secondary" : "outline"}
+                        size="sm"
+                        disabled={!editMode || !showProgress}
+                        onClick={() => setAllowProgressEdit((prev) => !prev)}
+                        data-testid="gantt-progress-edit-toggle"
+                    >
+                        Progress Edit
+                    </Button>
+
+                    <Button
+                        variant={focusMode ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setFocusMode((prev) => !prev)}
+                        data-testid="gantt-focus-toggle"
+                    >
+                        Focus
                     </Button>
 
                     <div className="h-6 w-px bg-border mx-2" />
@@ -192,16 +255,26 @@ export function GanttView({
                     <Combobox
                         value={viewMode}
                         onChange={(v) => setViewMode(v as ViewMode)}
-                        className="w-[100px]"
+                        className="w-[120px]"
                         placeholder="View"
+                        searchPlaceholder="Search view..."
+                        triggerAriaLabel="Gantt view mode"
+                        triggerTestId="gantt-view-mode-combobox"
                         options={[
                             { value: 'day', label: 'Day' },
                             { value: 'week', label: 'Week' },
                             { value: 'month', label: 'Month' },
+                            { value: 'quarter', label: 'Quarter' },
+                            { value: 'year', label: 'Year' },
                         ]}
                     />
 
-                    <Button variant="outline" size="sm" onClick={scrollToToday}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={scrollToToday}
+                        data-testid="gantt-today-button"
+                    >
                         <CalendarDays className="h-4 w-4 mr-1" />
                         Today
                     </Button>
@@ -213,6 +286,8 @@ export function GanttView({
                             onClick={() => {
                                 chartContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
                             }}
+                            aria-label="Scroll timeline left"
+                            data-testid="gantt-scroll-left-button"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
@@ -222,6 +297,8 @@ export function GanttView({
                             onClick={() => {
                                 chartContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
                             }}
+                            aria-label="Scroll timeline right"
+                            data-testid="gantt-scroll-right-button"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -249,7 +326,7 @@ export function GanttView({
                     {ganttTasks.length > 0 ? (
                         <GanttChart
                             ref={chartContainerRef}
-                            key={`${isTableVisible ? 'with-table' : 'full-width'}-${viewMode}`}
+                            key={isTableVisible ? 'with-table' : 'full-width'}
                             tasks={ganttTasks}
                             dependencies={ganttDependencies}
                             viewMode={viewMode}
@@ -258,6 +335,12 @@ export function GanttView({
                             onAddDependency={onAddDependency}
                             onDeleteDependency={onDeleteDependency}
                             onTaskDoubleClick={onDoubleClick}
+                            editMode={editMode}
+                            showProgress={showProgress}
+                            allowProgressEdit={allowProgressEdit}
+                            allowTaskMove={allowTaskMove}
+                            allowTaskResize={allowTaskResize}
+                            focusMode={focusMode}
                             onScroll={handleChartScroll}
                         />
                     ) : (

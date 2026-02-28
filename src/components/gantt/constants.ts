@@ -8,6 +8,8 @@ export const COLUMN_WIDTH = {
     day: 100,
     week: 200,
     month: 300,
+    quarter: 240,
+    year: 220,
 } as const;
 
 // Virtualization settings

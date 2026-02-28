@@ -1,5 +1,5 @@
 // Main Gantt Chart Component - Fully Virtualized
-import { forwardRef, useState, useMemo, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useState, useMemo, useImperativeHandle, useRef, useCallback } from 'react';
 import type { GanttProps } from './types';
 
 import { HEADER_HEIGHT } from './constants';
@@ -19,6 +19,16 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
     onTasksUpdate,
     onTaskDoubleClick,
     viewMode,
+    editMode = true,
+    showProgress = true,
+    allowProgressEdit = true,
+    allowTaskMove = true,
+    allowTaskResize = true,
+    smoothDragging = true,
+    animationSpeed = 0.45,
+    edgeAutoScroll = true,
+    autoScrollThreshold = 72,
+    autoScrollSpeed = 16,
     onScroll,
 }, ref) {
     const localRef = useRef<HTMLDivElement>(null);
@@ -43,27 +53,50 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
         virtualColumns,
         totalWidth,
     } = useTimelineVirtualizer({
-        containerRef: localRef as any,
+        containerRef: localRef,
         tasks,
         dateRange,
         viewMode,
     });
 
     // Drag handling
-    const { handleDragStart, dragState, ghostRef } = useTaskDrag({
+    const { handleDragStart, previewBars } = useTaskDrag({
         tasks,
         dateRange,
         viewMode,
         onTasksUpdate,
+        scrollContainerRef: localRef,
+        editMode,
+        allowTaskMove,
+        allowTaskResize,
+        smoothDragging,
+        animationSpeed,
+        edgeAutoScroll,
+        autoScrollThreshold,
+        autoScrollSpeed,
     });
 
+    const handleTaskProgressUpdate = useCallback((task: GanttProps['tasks'][number], progress: number) => {
+        const normalizedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+        if (normalizedProgress === Math.round(task.progress)) return;
 
+        onTasksUpdate([
+            {
+                ...task,
+                progress: normalizedProgress,
+            },
+        ]);
+    }, [onTasksUpdate]);
+
+    const canEditProgress = editMode && showProgress && allowProgressEdit;
+    const progressHandler = canEditProgress ? handleTaskProgressUpdate : undefined;
 
     return (
         <div
             ref={localRef}
             className="relative flex-1 overflow-auto bg-background/50"
             onScroll={onScroll}
+            data-testid="gantt-chart-scroll-container"
         >
             <div
                 className="relative"
@@ -107,6 +140,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
                         viewMode={viewMode}
                         totalWidth={totalWidth}
                         totalHeight={totalHeight}
+                        previewBars={previewBars}
                     />
 
                     {/* Task Bars */}
@@ -125,31 +159,17 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
                                 onDragStart={handleDragStart}
                                 onSelect={(t) => setSelectedTaskId(t.id)}
                                 onDoubleClick={onTaskDoubleClick}
+                                editMode={editMode}
+                                showProgress={showProgress}
+                                allowProgressEdit={allowProgressEdit}
+                                allowTaskMove={allowTaskMove}
+                                allowTaskResize={allowTaskResize}
+                                onProgressUpdate={progressHandler}
+                                previewLeftDeltaPx={previewBars[task.id]?.leftDelta ?? 0}
+                                previewWidthDeltaPx={previewBars[task.id]?.widthDelta ?? 0}
                             />
                         );
                     })}
-
-                    {/* Drag Preview - Direct DOM Manipulation */}
-                    {dragState.isDragging && dragState.task && (
-                        <div
-                            ref={ghostRef}
-                            className="absolute z-50 pointer-events-none will-change-transform"
-                            style={{
-                                top: 0, // We need to calculate the top offset or use the same logic as TaskBar
-                                left: 0,
-                                width: '100%',
-                                height: 0, // Wrapper doesn't need height, just used for transform
-                            }}
-                        >
-                            <TaskBar
-                                task={dragState.task}
-                                rowStart={virtualRows.find(r => r.index === tasks.findIndex(t => t.id === dragState.task?.id))?.start || 0}
-                                dateRange={dateRange}
-                                viewMode={viewMode}
-                                isSelected={true}
-                            />
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

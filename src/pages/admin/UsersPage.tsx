@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Users, Search, ShieldCheck, Mail, Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -20,7 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { usersApi } from "@/api/users";
 
 export const UsersPage = () => {
-    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
 
     const { data, isLoading } = useQuery({
@@ -57,6 +56,7 @@ export const UsersPage = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-8"
+                            data-testid="users-search-input"
                         />
                     </div>
                 </CardHeader>
@@ -119,8 +119,12 @@ export const UsersPage = () => {
                                                     size="sm"
                                                     className="hover:text-primary"
                                                     asChild
+                                                    data-testid="users-row-manage-access-link"
                                                 >
-                                                    <Link to={`/settings/users/${user.id}`}>
+                                                    <Link
+                                                        to={`/settings/users/${user.id}`}
+                                                        data-testid="users-row-manage-access-link"
+                                                    >
                                                         <ShieldCheck className="mr-2 h-4 w-4" />
                                                         Manage Access
                                                         <ArrowRight className="ml-2 h-3 w-3" />

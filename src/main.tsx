@@ -72,20 +72,20 @@ async function bootstrap() {
                                     usePermissionStore.getState().setPermissions(permData.permissions);
                                 }
                             }
-                        } catch (e) {
-                            console.warn("Failed to fetch permissions", e);
+                        } catch {
+                            console.warn("Failed to fetch permissions");
                         }
                     } else if (res.status === 401) {
                         // token invalid/expired
                         useAuthStore.getState().reset();
                     }
-                } catch (e) {
+                } catch {
                     // network error; leave auth as-is and let UI show offline state
                     // console.debug('bootstrap fetchMe error', e);
                 }
             }
         }
-    } catch (err) {
+    } catch {
         // ignore
     }
 

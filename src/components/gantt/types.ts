@@ -38,11 +38,22 @@ export interface GanttProps {
     onDeleteDependency: (dependencyId: string) => void;
     onTaskDoubleClick?: (task: GanttTask) => void;
     viewMode: ViewMode;
+    editMode?: boolean;
+    showProgress?: boolean;
+    allowProgressEdit?: boolean;
+    allowTaskMove?: boolean;
+    allowTaskResize?: boolean;
+    focusMode?: boolean;
+    smoothDragging?: boolean;
+    animationSpeed?: number;
+    edgeAutoScroll?: boolean;
+    autoScrollThreshold?: number;
+    autoScrollSpeed?: number;
     onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
 
-export type ViewMode = 'day' | 'week' | 'month';
+export type ViewMode = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 export interface DateRange {
     start: Date;

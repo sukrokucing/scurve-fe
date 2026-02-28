@@ -1,5 +1,5 @@
 // Position utilities for converting dates to pixels and vice versa
-import { differenceInDays, addDays } from 'date-fns';
+import { differenceInDays, addDays, startOfWeek, startOfQuarter, startOfYear } from 'date-fns';
 import type { GanttTask, ViewMode } from '../types';
 
 import { COLUMN_WIDTH, ROW_HEIGHT, TASK_BAR_HEIGHT, TASK_BAR_MARGIN } from '../constants';
@@ -22,20 +22,48 @@ export function dateToX(
     const columnWidth = getColumnWidth(viewMode);
 
     switch (viewMode) {
-        case 'day':
+        case 'day': {
             // Days from start + fraction of day
             const days = differenceInDays(date, rangeStart);
             const hourFraction = date.getHours() / 24;
             return (days + hourFraction) * columnWidth;
-        case 'week':
-            // Weeks from start
-            return (differenceInDays(date, rangeStart) / 7) * columnWidth;
-        case 'month':
-            // Approximate months from start
-            const startMonth = rangeStart.getFullYear() * 12 + rangeStart.getMonth();
+        }
+        case 'week': {
+            // Weeks from week boundary (must match header generation).
+            const weekAnchor = startOfWeek(rangeStart, { weekStartsOn: 1 });
+            return (differenceInDays(date, weekAnchor) / 7) * columnWidth;
+        }
+        case 'month': {
+            // Months from month boundary (must match header generation).
+            const monthAnchor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+            const startMonth = monthAnchor.getFullYear() * 12 + monthAnchor.getMonth();
             const dateMonth = date.getFullYear() * 12 + date.getMonth();
-            const dayOfMonth = date.getDate() / 30; // Approximation
+            const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const dayOfMonth = (date.getDate() - 1 + date.getHours() / 24) / daysInMonth;
             return (dateMonth - startMonth + dayOfMonth) * columnWidth;
+        }
+        case 'quarter': {
+            const quarterAnchor = startOfQuarter(rangeStart);
+            const startQuarter = quarterAnchor.getFullYear() * 4 + Math.floor(quarterAnchor.getMonth() / 3);
+            const quarterStart = startOfQuarter(date);
+            const dateQuarter = quarterStart.getFullYear() * 4 + Math.floor(quarterStart.getMonth() / 3);
+            const nextQuarter = new Date(quarterStart.getFullYear(), quarterStart.getMonth() + 3, 1);
+            const daysInQuarter = Math.max(1, differenceInDays(nextQuarter, quarterStart));
+            const dayOfQuarter = differenceInDays(date, quarterStart) + date.getHours() / 24;
+            const quarterFraction = dayOfQuarter / daysInQuarter;
+            return (dateQuarter - startQuarter + quarterFraction) * columnWidth;
+        }
+        case 'year': {
+            const yearAnchor = startOfYear(rangeStart);
+            const yearStart = startOfYear(date);
+            const startYear = yearAnchor.getFullYear();
+            const dateYear = yearStart.getFullYear();
+            const nextYear = new Date(yearStart.getFullYear() + 1, 0, 1);
+            const daysInYear = Math.max(1, differenceInDays(nextYear, yearStart));
+            const dayOfYear = differenceInDays(date, yearStart) + date.getHours() / 24;
+            const yearFraction = dayOfYear / daysInYear;
+            return (dateYear - startYear + yearFraction) * columnWidth;
+        }
         default:
             return differenceInDays(date, rangeStart) * columnWidth;
     }
@@ -52,19 +80,37 @@ export function xToDate(
     const columnWidth = getColumnWidth(viewMode);
 
     switch (viewMode) {
-        case 'day':
+        case 'day': {
             const days = x / columnWidth;
             return addDays(rangeStart, Math.round(days));
-        case 'week':
+        }
+        case 'week': {
             const weeks = x / columnWidth;
-            return addDays(rangeStart, Math.round(weeks * 7));
-        case 'month':
+            return addDays(startOfWeek(rangeStart, { weekStartsOn: 1 }), Math.round(weeks * 7));
+        }
+        case 'month': {
             const months = x / columnWidth;
+            const monthAnchor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
             return new Date(
-                rangeStart.getFullYear(),
-                rangeStart.getMonth() + Math.round(months),
+                monthAnchor.getFullYear(),
+                monthAnchor.getMonth() + Math.round(months),
                 1
             );
+        }
+        case 'quarter': {
+            const quarters = x / columnWidth;
+            const quarterAnchor = startOfQuarter(rangeStart);
+            return new Date(
+                quarterAnchor.getFullYear(),
+                quarterAnchor.getMonth() + (Math.round(quarters) * 3),
+                1
+            );
+        }
+        case 'year': {
+            const years = x / columnWidth;
+            const yearAnchor = startOfYear(rangeStart);
+            return new Date(yearAnchor.getFullYear() + Math.round(years), 0, 1);
+        }
         default:
             return addDays(rangeStart, Math.round(x / columnWidth));
     }
@@ -88,8 +134,9 @@ export function getTaskBarPosition(
     const startX = dateToX(task.start, rangeStart, viewMode);
     const endX = dateToX(task.end, rangeStart, viewMode);
 
-    // Minimum width for visibility
-    const width = Math.max(endX - startX, 20);
+    const isMilestone = task.type === 'milestone' || task.start.getTime() === task.end.getTime();
+    const minWidth = isMilestone ? 20 : getColumnWidth(viewMode);
+    const width = Math.max(endX - startX, minWidth);
 
     return {
         x: startX,

@@ -1,8 +1,9 @@
 // Virtualization hooks for horizontal (columns) and vertical (rows) scrolling
 import { useMemo, type RefObject } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import type { GanttTask, ViewMode, DateRange } from '../types';
 import { ROW_HEIGHT, COLUMN_WIDTH, OVERSCAN_ROWS, OVERSCAN_COLUMNS } from '../constants';
+import { getColumnCount } from '../utils/dateUtils';
 
 interface UseTimelineVirtualizerProps {
     containerRef: RefObject<HTMLDivElement>;
@@ -12,9 +13,9 @@ interface UseTimelineVirtualizerProps {
 }
 
 interface UseTimelineVirtualizerReturn {
-    virtualRows: any[];
+    virtualRows: VirtualItem[];
     totalHeight: number;
-    virtualColumns: any[];
+    virtualColumns: VirtualItem[];
     totalWidth: number;
 }
 
@@ -25,12 +26,10 @@ export function useTimelineVirtualizer({
     viewMode,
 }: UseTimelineVirtualizerProps): UseTimelineVirtualizerReturn {
     // Calculate column count based on view mode
-    const columnCount = useMemo(() => {
-        const diffDays = Math.ceil(
-            (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        return diffDays + 1;
-    }, [dateRange]);
+    const columnCount = useMemo(
+        () => getColumnCount(dateRange, viewMode),
+        [dateRange, viewMode]
+    );
 
     const columnWidth = COLUMN_WIDTH[viewMode];
 

@@ -3,78 +3,153 @@
 @tailwind utilities;
 
 @layer base {
+                /* THEME TOKENS: START (generated) */
     :root {
-        /* Base - Slate-50 / Slate-950 */
-        --background: 210 40% 98%;
-        --foreground: 222.2 84% 4.9%;
+        --background: 195.2 47.8% 97.1%;
+        --foreground: 194 58.8% 7.4%;
+        --primary: 169 100% 31.1%;
+        --primary-foreground: 194.4 43.1% 7.8%;
+        --primary-dark: 168.3 100% 28.4%;
+        --primary-hover: 168.5 100% 29.3%;
+        --primary-active: 168.3 100% 28.4%;
+        --secondary: 195.2 32.6% 93.1%;
+        --secondary-foreground: 194.4 43.1% 7.8%;
+        --secondary-hover: 195.2 23.6% 90.5%;
+        --secondary-active: 195.2 18.5% 87.9%;
+        --accent: 186.2 71.9% 85.3%;
+        --accent-foreground: 194.4 43.1% 7.8%;
+        --accent-hover: 186.2 56.6% 81.4%;
+        --accent-active: 186.2 46.7% 77.6%;
+        --surface: 195.3 42.8% 97.9%;
+        --surface-hover: 195.3 22.1% 95.9%;
+        --surface-active: 195.3 14.9% 94%;
+        --card: 195.3 42.8% 97.9%;
+        --card-foreground: 194.4 43.1% 7.8%;
+        --popover: 195.3 32.7% 97.2%;
+        --popover-foreground: 194.4 43.1% 7.8%;
+        --destructive: 334.7 54.3% 62.2%;
+        --destructive-foreground: 194.4 43.1% 7.8%;
+        --muted: 195.2 32.6% 93.1%;
+        --muted-foreground: 195.1 8% 36.1%;
+        --border: 195.3 8.4% 86.8%;
+        --input: 195.3 8.4% 86.8%;
+        --ring: 169 100% 31.1%;
+        --focus-strong: 164.7 100% 24.7%;
+        --success: 122.6 28% 51.2%;
+        --success-foreground: 194.4 43.1% 7.8%;
+        --warning: 297.1 35.9% 66%;
+        --warning-foreground: 194.4 43.1% 7.8%;
+        --info: 256.1 56.1% 69%;
+        --info-foreground: 194.4 43.1% 7.8%;
+        --error: 334.7 54.3% 62.2%;
+        --error-foreground: 194.4 43.1% 7.8%;
+        --chart-1: 168 100% 35.2%;
+        --chart-2: 206.2 75.5% 52.6%;
+        --chart-3: 287.4 25.1% 50.5%;
+        --chart-4: 8.5 91.6% 68.3%;
+        --chart-5: 54.9 100% 31.9%;
+    }
+    .dark {
+        --background: 194.9 21.2% 9.1%;
+        --foreground: 195.2 27.4% 91.8%;
+        --primary: 167.6 59.8% 49.2%;
+        --primary-foreground: 194.4 43.1% 7.8%;
+        --primary-dark: 168.9 80% 40.5%;
+        --primary-hover: 167 61.8% 53.9%;
+        --primary-active: 166.8 64.3% 56.1%;
+        --secondary: 195.1 11.3% 18.5%;
+        --secondary-foreground: 195.2 52.6% 95.7%;
+        --secondary-hover: 195.1 10.4% 20.5%;
+        --secondary-active: 195.1 9.6% 22.5%;
+        --accent: 186.9 100% 14.8%;
+        --accent-foreground: 195.2 52.6% 95.7%;
+        --accent-hover: 186.2 100% 16.4%;
+        --accent-active: 185.6 100% 18%;
+        --surface: 195.1 12.1% 13.8%;
+        --surface-hover: 195.1 11.1% 15.2%;
+        --surface-active: 195.1 10.3% 16.6%;
+        --card: 195.1 12.1% 13.8%;
+        --card-foreground: 195.2 52.6% 95.7%;
+        --popover: 195.1 10.8% 15.7%;
+        --popover-foreground: 195.2 52.6% 95.7%;
+        --destructive: 335.4 58.8% 67.2%;
+        --destructive-foreground: 194.4 43.1% 7.8%;
+        --muted: 195.1 11.3% 18.5%;
+        --muted-foreground: 195.2 3.3% 61.8%;
+        --border: 195.2 6% 23.7%;
+        --input: 195.2 6% 23.7%;
+        --ring: 167.6 59.8% 49.2%;
+        --focus-strong: 170 97.4% 47.5%;
+        --success: 121.8 29.7% 58%;
+        --success-foreground: 194.4 43.1% 7.8%;
+        --warning: 297.2 36.6% 69.5%;
+        --warning-foreground: 194.4 43.1% 7.8%;
+        --info: 255.4 64.1% 74.6%;
+        --info-foreground: 194.4 43.1% 7.8%;
+        --error: 335.4 58.8% 67.2%;
+        --error-foreground: 194.4 43.1% 7.8%;
+        --chart-1: 169.2 100% 38%;
+        --chart-2: 207.4 81.8% 60.5%;
+        --chart-3: 287.3 26.1% 56.2%;
+        --chart-4: 9.2 100% 73.5%;
+        --chart-5: 54.1 54.4% 44.9%;
+    }
+    .theme-glass {
+        --background: 195.1 75.3% 90.9%;
+        --foreground: 194 58.8% 7.4%;
+        --primary: 169 100% 31.1%;
+        --primary-foreground: 194.4 43.1% 7.8%;
+        --primary-dark: 168.3 100% 28.4%;
+        --primary-hover: 168.5 100% 29.3%;
+        --primary-active: 168.3 100% 28.4%;
+        --secondary: 195.1 42.7% 87.3%;
+        --secondary-foreground: 194.4 43.1% 7.8%;
+        --secondary-hover: 195.1 35.3% 84.7%;
+        --secondary-active: 195.1 30.1% 82.2%;
+        --accent: 186.1 91.9% 77.8%;
+        --accent-foreground: 194.4 43.1% 7.8%;
+        --accent-hover: 186.1 78% 73.9%;
+        --accent-active: 186.1 67.8% 70%;
+        --surface: 195.2 69.8% 94.8%;
+        --surface-hover: 195.2 50.6% 92.8%;
+        --surface-active: 195.2 39.7% 90.9%;
+        --card: 195.2 69.8% 94.8%;
+        --card-foreground: 194.4 43.1% 7.8%;
+        --popover: 195.2 69.8% 94.8%;
+        --popover-foreground: 194.4 43.1% 7.8%;
+        --destructive: 334.7 54.3% 62.2%;
+        --destructive-foreground: 194.4 43.1% 7.8%;
+        --muted: 195.1 42.7% 87.3%;
+        --muted-foreground: 195.1 8% 36.1%;
+        --border: 195.2 18.6% 78.6%;
+        --input: 195.2 18.6% 78.6%;
+        --ring: 169 100% 31.1%;
+        --focus-strong: 164.7 100% 24.7%;
+        --success: 122.6 28% 51.2%;
+        --success-foreground: 194.4 43.1% 7.8%;
+        --warning: 297.1 35.9% 66%;
+        --warning-foreground: 194.4 43.1% 7.8%;
+        --info: 256.1 56.1% 69%;
+        --info-foreground: 194.4 43.1% 7.8%;
+        --error: 334.7 54.3% 62.2%;
+        --error-foreground: 194.4 43.1% 7.8%;
+        --chart-1: 168 100% 35.2%;
+        --chart-2: 206.2 75.5% 52.6%;
+        --chart-3: 287.4 25.1% 50.5%;
+        --chart-4: 8.5 91.6% 68.3%;
+        --chart-5: 54.9 100% 31.9%;
+    }
+    /* THEME TOKENS: END (generated) */
 
-        /* Primary: Teal-600 */
-        --primary: 175 77% 31%;
-        --primary-foreground: 210 40% 98%;
-        --primary-dark: 175 80% 24%;
-        /* Teal-700 */
-
-        /* Secondary: Slate-100 */
-        --secondary: 210 40% 96.1%;
-        --secondary-foreground: 222.2 47.4% 11.2%;
-
-        /* Accent: Indigo-100 (Harmony Upgrade) */
-        --accent: 226 70% 94%;
-        --accent-foreground: 222.2 47.4% 11.2%;
-
-        /* Card & Popover - Solid backgrounds for dropdowns */
-        --card: 0 0% 100%;
-        --card-foreground: 222.2 84% 4.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222.2 84% 4.9%;
-
-        /* Destructive: Red-600 */
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 210 40% 98%;
-
-        /* Muted: Slate-100 */
-        --muted: 210 40% 96.1%;
-        --muted-foreground: 215.4 16.3% 46.9%;
-
-        /* Borders */
-        --border: 214.3 31.8% 91.4%;
-        --input: 214.3 31.8% 91.4%;
-        --ring: 175 77% 31%;
-
+    :root {
         --radius: 0.5rem;
 
-        /* Chart Colors (Preserved) */
-        --chart-1: oklch(0.646 0.222 41.116);
-        --chart-2: oklch(0.6 0.118 184.704);
-        --chart-3: oklch(0.398 0.07 227.392);
-        --chart-4: oklch(0.828 0.189 84.429);
-        --chart-5: oklch(0.769 0.188 70.08);
-
-        /* Shadow System */
         --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
-        /* Functional Colors */
-        --success: 142 76% 36%;
-        /* Green-600 */
-        --success-foreground: 210 40% 98%;
-
-        --warning: 38 92% 50%;
-        /* Amber-500 */
-        --warning-foreground: 48 96% 89%;
-
-        --info: 221 83% 53%;
-        /* Blue-500 */
-        --info-foreground: 210 40% 98%;
-
-        --error: 0 72% 51%;
-        /* Red-600 */
-        --error-foreground: 210 40% 98%;
-
-        /* Gray Scale (Slate) */
         --gray-50: 210 40% 98%;
         --gray-100: 210 40% 96.1%;
         --gray-200: 214.3 31.8% 91.4%;
@@ -88,88 +163,11 @@
     }
 
     .dark {
-        /* Background: Slate-950 */
-        --background: 222.2 47% 11%;
-        --foreground: 210 40% 98%;
-
-        /* Primary: Teal-400 (Lighter for dark mode visibility) */
-        --primary: 175 77% 45%;
-        --primary-foreground: 222.2 47.4% 11.2%;
-
-        /* Secondary: Slate-800 */
-        --secondary: 217 33% 17%;
-        --secondary-foreground: 210 40% 98%;
-
-        /* Accent: Indigo-900 (Subtle tint) */
-        --accent: 226 70% 20%;
-        --accent-foreground: 210 40% 98%;
-
-        /* Card & Popover - Solid backgrounds for dropdowns */
-        --card: 222.2 47% 11%;
-        --card-foreground: 210 40% 98%;
-        --popover: 222.2 47% 15%;
-        --popover-foreground: 210 40% 98%;
-
-        /* Destructive: Red-500 */
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 210 40% 98%;
-
-        /* Muted: Slate-800 */
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20.2% 65.1%;
-
-        --border: 217 33% 17%;
-        --input: 217 33% 17%;
-        --ring: 175 77% 45%;
-
-        /* Chart colors for dark mode */
-        --chart-1: oklch(0.488 0.243 264.376);
-        --chart-2: oklch(0.696 0.17 162.48);
-        --chart-3: oklch(0.769 0.188 70.08);
-        --chart-4: oklch(0.627 0.265 303.9);
-        --chart-5: oklch(0.645 0.246 16.439);
-
-        /* Shadow System - Dark Mode */
         --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
         --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
         --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
         --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.6);
         --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7);
-    }
-
-    /* Glass Theme - Distinct from Light Mode */
-    .theme-glass {
-        /* Cooler, slightly darker background for glass effect contrast */
-        --background: 210 50% 95%;
-        --foreground: 222.2 84% 4.9%;
-
-        /* Solid backgrounds for readability in dropdowns/cards */
-        --card: 0 0% 100%;
-        --card-foreground: 222.2 84% 4.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222.2 84% 4.9%;
-
-        /* Primary: Teal-600 (Same as Light) */
-        --primary: 175 77% 31%;
-        --primary-foreground: 210 40% 98%;
-
-        /* Secondary: White with opacity for glass feel */
-        --secondary: 210 40% 96.1%;
-        --secondary-foreground: 222.2 47.4% 11.2%;
-
-        /* Accent: Indigo-100 */
-        --accent: 226 70% 94%;
-        --accent-foreground: 222.2 47.4% 11.2%;
-
-        --muted: 210 40% 96.1%;
-        --muted-foreground: 215.4 16.3% 46.9%;
-
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 210 40% 98%;
-
-        --border: 214.3 31.8% 91.4%;
-        --input: 214.3 31.8% 91.4%;
-        --ring: 175 77% 31%;
     }
 
     /* Glassmorphism Utility (Migrated from theme.css) */
@@ -182,6 +180,55 @@
         backdrop-filter: blur(8px) saturate(110%);
         -webkit-backdrop-filter: blur(8px) saturate(110%);
         border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .theme-glass body {
+        background-image:
+            radial-gradient(120% 120% at 0% 0%, hsl(var(--surface) / 0.95) 0%, transparent 65%),
+            radial-gradient(140% 140% at 100% 100%, hsl(var(--accent) / 0.22) 0%, transparent 70%);
+        background-attachment: fixed;
+    }
+
+    .theme-glass .glass {
+        background-color: hsl(var(--card) / 0.74);
+        border-color: hsl(var(--border) / 0.82);
+        backdrop-filter: blur(14px) saturate(120%);
+        -webkit-backdrop-filter: blur(14px) saturate(120%);
+    }
+
+    .theme-glass .glass-panel {
+        background-color: hsl(var(--card) / 0.72);
+        border-color: hsl(var(--border) / 0.78);
+        backdrop-filter: blur(14px) saturate(120%);
+        -webkit-backdrop-filter: blur(14px) saturate(120%);
+    }
+
+    .theme-glass #main-content {
+        background-color: hsl(var(--background) / 0.52);
+        backdrop-filter: blur(4px) saturate(110%);
+        -webkit-backdrop-filter: blur(4px) saturate(110%);
+    }
+
+    .theme-glass .bg-card {
+        background-color: hsl(var(--card) / 0.72) !important;
+        backdrop-filter: blur(12px) saturate(118%);
+        -webkit-backdrop-filter: blur(12px) saturate(118%);
+    }
+
+    .theme-glass .bg-card\/50 {
+        background-color: hsl(var(--card) / 0.54) !important;
+    }
+
+    .theme-glass .bg-background\/50 {
+        background-color: hsl(var(--background) / 0.46) !important;
+    }
+
+    .theme-glass .bg-background\/80 {
+        background-color: hsl(var(--background) / 0.7) !important;
+    }
+
+    .theme-glass .border {
+        border-color: hsl(var(--border) / 0.82);
     }
 }
 

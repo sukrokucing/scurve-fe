@@ -7,17 +7,24 @@ module.exports = {
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
-                ring: "hsl(var(--ring))",
+                ring: {
+                    DEFAULT: "hsl(var(--ring))",
+                    strong: "hsl(var(--focus-strong))",
+                },
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",
                 primary: {
                     DEFAULT: "hsl(var(--primary))",
                     foreground: "hsl(var(--primary-foreground))",
                     dark: "hsl(var(--primary-dark))",
+                    hover: "hsl(var(--primary-hover))",
+                    active: "hsl(var(--primary-active))",
                 },
                 secondary: {
                     DEFAULT: "hsl(var(--secondary))",
                     foreground: "hsl(var(--secondary-foreground))",
+                    hover: "hsl(var(--secondary-hover))",
+                    active: "hsl(var(--secondary-active))",
                 },
                 destructive: {
                     DEFAULT: "hsl(var(--destructive))",
@@ -30,6 +37,13 @@ module.exports = {
                 accent: {
                     DEFAULT: "hsl(var(--accent))",
                     foreground: "hsl(var(--accent-foreground))",
+                    hover: "hsl(var(--accent-hover))",
+                    active: "hsl(var(--accent-active))",
+                },
+                surface: {
+                    DEFAULT: "hsl(var(--surface))",
+                    hover: "hsl(var(--surface-hover))",
+                    active: "hsl(var(--surface-active))",
                 },
                 popover: {
                     DEFAULT: "hsl(var(--popover))",

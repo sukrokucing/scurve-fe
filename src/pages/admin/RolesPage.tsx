@@ -18,13 +18,10 @@ import {
 } from "@/components/ui/table";
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
     DialogFooter,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import {
     Form,
     FormControl,
@@ -100,14 +97,16 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
+            <AppDialogContent
+                className="max-w-2xl"
+                title={(
+                    <span className="flex items-center gap-2">
                         <Shield className="h-5 w-5" />
                         {role.name}
-                    </DialogTitle>
-                    <DialogDescription>{role.description}</DialogDescription>
-                </DialogHeader>
+                    </span>
+                )}
+                description={role.description || "No role description provided."}
+            >
 
                 <div className="grid gap-6 py-4">
                     {/* Assign Form */}
@@ -158,7 +157,7 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                         </ScrollArea>
                     </div>
                 </div>
-            </DialogContent>
+            </AppDialogContent>
         </Dialog>
     );
 };
@@ -232,18 +231,16 @@ export const RolesPage = () => {
 
                 <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button data-testid="roles-create-button">
                             <Plus className="mr-2 h-4 w-4" />
                             Create Role
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>Create New Role</DialogTitle>
-                            <DialogDescription>
-                                Define a new role to assign permissions to users.
-                            </DialogDescription>
-                        </DialogHeader>
+                    <AppDialogContent
+                        className="sm:max-w-[425px]"
+                        title="Create New Role"
+                        description="Define a new role to assign permissions to users."
+                    >
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                 <FormField
@@ -253,7 +250,11 @@ export const RolesPage = () => {
                                         <FormItem>
                                             <FormLabel>Role Name</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Project Manager" {...field} />
+                                                <Input
+                                                    placeholder="e.g. Project Manager"
+                                                    data-testid="roles-create-name-input"
+                                                    {...field}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -269,6 +270,7 @@ export const RolesPage = () => {
                                                 <Textarea
                                                     placeholder="Describe what this role allows..."
                                                     className="resize-none"
+                                                    data-testid="roles-create-description-input"
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -277,7 +279,11 @@ export const RolesPage = () => {
                                     )}
                                 />
                                 <DialogFooter>
-                                    <Button type="submit" disabled={createMutation.isPending}>
+                                    <Button
+                                        type="submit"
+                                        disabled={createMutation.isPending}
+                                        data-testid="roles-create-submit-button"
+                                    >
                                         {createMutation.isPending && (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         )}
@@ -286,7 +292,7 @@ export const RolesPage = () => {
                                 </DialogFooter>
                             </form>
                         </Form>
-                    </DialogContent>
+                    </AppDialogContent>
                 </Dialog>
             </div>
 
@@ -314,6 +320,7 @@ export const RolesPage = () => {
                                         <Button
                                             variant="link"
                                             className="p-0 h-auto font-semibold"
+                                            data-testid="roles-row-name-button"
                                             onClick={() => {
                                                 setSelectedRole(role);
                                                 setDetailsOpen(true);
@@ -332,6 +339,7 @@ export const RolesPage = () => {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="text-muted-foreground"
+                                                data-testid="roles-row-settings-button"
                                                 onClick={() => {
                                                     setSelectedRole(role);
                                                     setDetailsOpen(true);
@@ -343,6 +351,7 @@ export const RolesPage = () => {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="text-muted-foreground hover:text-destructive"
+                                                data-testid="roles-row-delete-button"
                                                 onClick={() => {
                                                     if (confirm("Are you sure you want to delete this role?")) {
                                                         deleteMutation.mutate(role.id);

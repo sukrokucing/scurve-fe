@@ -1,5 +1,5 @@
 // Task Table component for editing tasks in split view
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, useEffect, useCallback, forwardRef } from 'react';
 import {
     useReactTable,
     getCoreRowModel,
@@ -15,13 +15,10 @@ import { Trash2, Plus, X } from 'lucide-react';
 import { HEADER_HEIGHT } from './constants';
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
     DialogFooter,
-    DialogHeader,
-    DialogTitle,
     DialogClose,
 } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 
 const columnHelper = createColumnHelper<GanttTask>();
 
@@ -53,6 +50,53 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
     const [taskToDelete, setTaskToDelete] = useState<GanttTask | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
 
+    const wouldCreateDependencyCycle = useCallback((dependentId: string, predecessorId: string) => {
+        if (dependentId === predecessorId) return true;
+
+        const dependencyMap = new Map<string, string[]>();
+        tasks.forEach((task) => {
+            dependencyMap.set(task.id, task.dependencies ?? []);
+        });
+
+        const stack = [predecessorId];
+        const visited = new Set<string>();
+
+        while (stack.length > 0) {
+            const current = stack.pop();
+            if (!current || visited.has(current)) continue;
+            if (current === dependentId) return true;
+            visited.add(current);
+
+            const next = dependencyMap.get(current) ?? [];
+            next.forEach((taskId) => {
+                if (!visited.has(taskId)) {
+                    stack.push(taskId);
+                }
+            });
+        }
+
+        return false;
+    }, [tasks]);
+
+    const updateLocalTask = useCallback((taskId: string, patch: Partial<GanttTask>) => {
+        setData((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)));
+    }, []);
+
+    const commitTaskName = useCallback((taskId: string, rawName: string) => {
+        const sourceTask = tasks.find((task) => task.id === taskId);
+        if (!sourceTask) return;
+
+        const nextName = rawName.trim();
+        if (!nextName) {
+            // Prevent empty task names in UI and restore server value.
+            updateLocalTask(taskId, { name: sourceTask.name });
+            return;
+        }
+
+        if (nextName === sourceTask.name) return;
+        onTasksUpdate([{ ...sourceTask, name: nextName }]);
+    }, [tasks, onTasksUpdate, updateLocalTask]);
+
     const columns = [
         columnHelper.display({
             id: 'rowNumber',
@@ -67,16 +111,36 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
         columnHelper.accessor('name', {
             header: 'Task Name',
             size: 200,
-            cell: (info) => (
-                <Input
-                    value={info.getValue()}
-                    onChange={(e) => {
-                        const updated = { ...info.row.original, name: e.target.value };
-                        onTasksUpdate([updated]);
-                    }}
-                    className="h-8 border-none shadow-none focus-visible:ring-1 min-w-0"
-                />
-            ),
+            cell: (info) => {
+                const task = info.row.original;
+                return (
+                    <Input
+                        value={info.getValue()}
+                        onChange={(e) => {
+                            updateLocalTask(task.id, { name: e.target.value });
+                        }}
+                        onBlur={(e) => {
+                            commitTaskName(task.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                (e.currentTarget as HTMLInputElement).blur();
+                                return;
+                            }
+                            if (e.key === 'Escape') {
+                                const sourceTask = tasks.find((item) => item.id === task.id);
+                                if (sourceTask) {
+                                    updateLocalTask(task.id, { name: sourceTask.name });
+                                }
+                                (e.currentTarget as HTMLInputElement).blur();
+                            }
+                        }}
+                        className="h-8 border-none shadow-none focus-visible:ring-1 min-w-0"
+                        aria-label={`Task name row ${info.row.index + 1}`}
+                        data-testid="gantt-table-task-name-input"
+                    />
+                );
+            },
         }),
         columnHelper.accessor('duration', {
             header: 'Plan',
@@ -108,41 +172,60 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
         columnHelper.display({
             id: 'dependencies',
             header: 'Predecessors',
-            size: 180,
+            size: 240,
             cell: (info) => {
                 const task = info.row.original;
                 const currentDeps = task.dependencies || [];
 
                 return (
-                    <div className="flex flex-wrap gap-1 items-center min-w-[150px]">
+                    <div className="flex w-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap py-1 [scrollbar-width:thin]">
                         {currentDeps.map((depId) => {
                             const depTask = tasks.find((t) => t.id === depId);
                             const depObj = dependencies.find(
                                 (d) => d.source_task_id === task.id && d.target_task_id === depId
                             );
+                            const depLabel = depTask?.name ?? 'Unknown';
 
                             return (
-                                <Badge key={depId} variant="secondary" className="h-6 text-xs gap-1 px-1">
-                                    <span className="truncate max-w-[80px]">{depTask?.name ?? 'Unknown'}</span>
+                                <Badge key={depId} variant="secondary" className="h-6 shrink-0 text-xs gap-1 px-1">
+                                    <span className="truncate max-w-[140px]" title={depLabel}>{depLabel}</span>
                                     {depObj && (
-                                        <X
-                                            className="h-3 w-3 cursor-pointer hover:text-destructive"
+                                        <button
+                                            type="button"
+                                            className="cursor-pointer hover:text-destructive"
+                                            aria-label={`Remove predecessor ${depTask?.name ?? depId}`}
+                                            data-testid="gantt-dependency-remove-button"
                                             onClick={() => onDeleteDependency(depObj.id)}
-                                        />
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
                                     )}
                                 </Badge>
                             );
                         })}
                         <Combobox
-                            onChange={(val) => onAddDependency(task.id, val)}
+                            onChange={(val) => {
+                                if (wouldCreateDependencyCycle(task.id, val)) return;
+                                onAddDependency(task.id, val);
+                            }}
                             placeholder="Add Predecessor..."
                             searchPlaceholder="Search tasks..."
                             options={tasks
-                                .filter((t) => t.id !== task.id && !currentDeps.includes(t.id))
+                                .filter((t) =>
+                                    t.id !== task.id
+                                    && !currentDeps.includes(t.id)
+                                    && !wouldCreateDependencyCycle(task.id, t.id)
+                                )
                                 .map(t => ({ value: t.id, label: t.name }))
                             }
                         >
-                            <Button className="h-6 w-6 p-0 border-dashed border-2 rounded-full flex items-center justify-center hover:border-primary hover:text-primary" variant="outline">
+                            <Button
+                                type="button"
+                                className="h-6 w-6 shrink-0 p-0 border-dashed border-2 rounded-full flex items-center justify-center hover:border-primary hover:text-primary"
+                                variant="outline"
+                                aria-label={`Add predecessor to ${task.name}`}
+                                data-testid="gantt-dependency-add-button"
+                            >
                                 <Plus className="h-3 w-3" />
                             </Button>
                         </Combobox>
@@ -163,6 +246,8 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                         setTaskToDelete(info.row.original);
                         setConfirmOpen(true);
                     }}
+                    aria-label={`Delete task ${info.row.original.name}`}
+                    data-testid="gantt-table-row-delete-button"
                 >
                     <Trash2 className="h-4 w-4" />
                 </Button>
@@ -223,11 +308,10 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                 </table>
             </div>
             <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete task</DialogTitle>
-                        <DialogDescription>Are you sure you want to permanently delete "{taskToDelete?.name}"? This action cannot be undone.</DialogDescription>
-                    </DialogHeader>
+                <AppDialogContent
+                    title="Delete task"
+                    description={`Are you sure you want to permanently delete "${taskToDelete?.name}"? This action cannot be undone.`}
+                >
                     <div className="flex justify-end gap-2 mt-4">
                         <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
                         <Button type="button" variant="destructive" onClick={() => {
@@ -241,7 +325,7 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                     </div>
                     <DialogFooter />
                     <DialogClose />
-                </DialogContent>
+                </AppDialogContent>
             </Dialog>
         </>
     );

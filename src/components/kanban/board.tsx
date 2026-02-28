@@ -130,7 +130,7 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
 
     const itemIds = useMemo(() => columnItems.map((item) => item.id), [columnItems]);
 
-    const viewportRef = useRef<HTMLDivElement>(null as any);
+    const viewportRef = useRef<HTMLDivElement | null>(null);
 
     const rowVirtualizer = useVirtualizer({
         count: columnItems.length,

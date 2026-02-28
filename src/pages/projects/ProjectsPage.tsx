@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { projectSchema, type ProjectFormValues } from "@/schemas/project";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -18,7 +18,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
@@ -136,18 +137,18 @@ export function ProjectsPage() {
                     <p className="text-muted-foreground">Monitor progress and manage milestones.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => refetch()} disabled={isRefetching}>
+                    <Button type="button" variant="secondary" onClick={() => refetch()} disabled={isRefetching}>
                         {isRefetching ? "Refreshing…" : "Refresh"}
                     </Button>
 
                     <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button type="button">New project</Button>
+                            <Button type="button" data-testid="projects-new-button">New project</Button>
                         </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Create project</DialogTitle>
-                            </DialogHeader>
+                        <AppDialogContent
+                            title="Create project"
+                            description="Add a new project to your workspace."
+                        >
                             <Form {...createForm}>
                                 <form
                                     onSubmit={createForm.handleSubmit((values) => {
@@ -186,6 +187,7 @@ export function ProjectsPage() {
                                                 <FormControl>
                                                     <Input
                                                         {...field}
+                                                        data-testid="projects-create-name-input"
                                                         className={
                                                             createForm.formState.errors.name
                                                                 ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
@@ -212,6 +214,7 @@ export function ProjectsPage() {
                                                 <FormControl>
                                                     <Input
                                                         {...field}
+                                                        data-testid="projects-create-description-input"
                                                         className={
                                                             createForm.formState.errors.description
                                                                 ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
@@ -224,44 +227,47 @@ export function ProjectsPage() {
                                         )}
                                     />
                                     <div className="flex justify-end">
-                                        <Button type="submit" disabled={createMutation.status === "pending"}>
+                                        <Button
+                                            type="submit"
+                                            disabled={createMutation.status === "pending"}
+                                            data-testid="projects-create-submit-button"
+                                        >
                                             {createMutation.status === "pending" ? "Creating…" : "Create"}
                                         </Button>
                                     </div>
                                 </form>
                             </Form>
                             <DialogFooter />
-                        </DialogContent>
+                        </AppDialogContent>
                     </Dialog>
 
                     {/* Confirm delete dialog */}
                     <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setProjectToDelete(null); setConfirmOpen(open); }}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Delete project</DialogTitle>
-                                <DialogDescription>Are you sure you want to permanently delete this project? This action cannot be undone.</DialogDescription>
-                            </DialogHeader>
+                        <AppDialogContent
+                            title="Delete project"
+                            description="Are you sure you want to permanently delete this project? This action cannot be undone."
+                        >
                             <div className="flex justify-end gap-2 mt-4">
                                 <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
                                 <Button type="button" variant="destructive" onClick={() => {
                                     if (!projectToDelete) return;
                                     deleteMutation.mutate(projectToDelete.id);
                                     setConfirmOpen(false);
-                                }}>
+                                }} data-testid="projects-delete-confirm-button">
                                     Delete
                                 </Button>
                             </div>
                             <DialogFooter />
                             <DialogClose />
-                        </DialogContent>
+                        </AppDialogContent>
                     </Dialog>
 
                     {/* Edit dialog (controlled) */}
                     <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Edit project</DialogTitle>
-                            </DialogHeader>
+                        <AppDialogContent
+                            title="Edit project"
+                            description="Update project details and save your changes."
+                        >
                             <Form {...editForm}>
                                 <form
                                     onSubmit={editForm.handleSubmit((values) => {
@@ -322,6 +328,7 @@ export function ProjectsPage() {
                                                 <FormControl>
                                                     <Input
                                                         {...field}
+                                                        data-testid="projects-edit-description-input"
                                                         className={
                                                             editForm.formState.errors.description
                                                                 ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
@@ -334,14 +341,18 @@ export function ProjectsPage() {
                                         )}
                                     />
                                     <div className="flex justify-end">
-                                        <Button type="submit" disabled={updateMutation.status === "pending"}>
+                                        <Button
+                                            type="submit"
+                                            disabled={updateMutation.status === "pending"}
+                                            data-testid="projects-edit-save-button"
+                                        >
                                             {updateMutation.status === "pending" ? "Saving…" : "Save"}
                                         </Button>
                                     </div>
                                 </form>
                             </Form>
                             <DialogFooter />
-                        </DialogContent>
+                        </AppDialogContent>
                     </Dialog>
                 </div>
             </div>
@@ -404,7 +415,7 @@ function VirtualizedProjectsTable({
 }: {
     projects: Project[];
     setEditing: (p: Project) => void;
-    editForm: any;
+    editForm: UseFormReturn<ProjectFormValues>;
     setProjectToDelete: (p: Project) => void;
     setConfirmOpen: (o: boolean) => void;
 }) {
@@ -464,8 +475,12 @@ function VirtualizedProjectsTable({
                                             size="sm"
                                             variant="outline"
                                             asChild
+                                            data-testid="projects-row-dashboard-link"
                                         >
-                                            <Link to={`/projects/${project.id}/dashboard`}>
+                                            <Link
+                                                to={`/projects/${project.id}/dashboard`}
+                                                data-testid="projects-row-dashboard-link"
+                                            >
                                                 Dashboard
                                             </Link>
                                         </Button>
@@ -473,6 +488,7 @@ function VirtualizedProjectsTable({
 
                                             size="sm"
                                             variant="ghost"
+                                            data-testid="projects-row-edit-button"
                                             onClick={() => {
                                                 setEditing(project);
                                                 editForm.reset({ name: project.name, description: project.description ?? "", theme_color: "#3498db" });
@@ -483,6 +499,7 @@ function VirtualizedProjectsTable({
                                         <Button
                                             size="sm"
                                             variant="destructive-outline"
+                                            data-testid="projects-row-delete-button"
                                             onClick={() => {
                                                 setProjectToDelete(project);
                                                 setConfirmOpen(true);
