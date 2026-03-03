@@ -245,7 +245,7 @@ export const UserAccessPage = () => {
                                             <TableRow key={`${perm.name}-${idx}`}>
                                                 <TableCell className="font-medium">
                                                     <div className="flex items-center gap-2">
-                                                        <Check className="h-3 w-3 text-green-500" />
+                                                        <Check className="h-3 w-3 text-success" />
                                                         {perm.name}
                                                     </div>
                                                 </TableCell>

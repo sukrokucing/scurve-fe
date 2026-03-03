@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Users, Search, ShieldCheck, Mail, Calendar, ArrowRight, Loader2 } from "lucide-react";
@@ -16,15 +16,20 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import { usersApi } from "@/api/users";
 
 export const UsersPage = () => {
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchInput, setSearchInput] = useState("");
+    const debouncedSearchInput = useDebouncedValue(searchInput, 300);
+    const deferredSearchInput = useDeferredValue(debouncedSearchInput);
+    const searchQuery = useMemo(() => deferredSearchInput.trim(), [deferredSearchInput]);
 
     const { data, isLoading } = useQuery({
         queryKey: ["users", searchQuery],
         queryFn: () => usersApi.listUsers({ q: searchQuery || undefined }),
+        placeholderData: (previous) => previous,
     });
 
     const users = data?.users ?? [];
@@ -53,8 +58,8 @@ export const UsersPage = () => {
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search by name or email..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             className="pl-8"
                             data-testid="users-search-input"
                         />

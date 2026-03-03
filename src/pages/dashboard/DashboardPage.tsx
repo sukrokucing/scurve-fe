@@ -42,8 +42,8 @@ export function DashboardPage() {
         return (
             <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {[...Array(4)].map((_, i) => (
-                        <Skeleton key={i} className="h-32 rounded-xl" />
+                    {["kpi-total", "kpi-active", "kpi-complete", "kpi-efficiency"].map((skeletonKey) => (
+                        <Skeleton key={skeletonKey} className="h-32 rounded-xl" />
                     ))}
                 </div>
                 <Skeleton className="h-[400px] rounded-xl" />
@@ -156,7 +156,7 @@ export function DashboardPage() {
                             {projects?.slice(0, 5).map((project) => (
                                 <div
                                     key={project.id}
-                                    className="flex items-center p-3 rounded-lg border-l-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                    className="flex items-center p-3 rounded-lg border-l-4 hover:bg-surface-hover transition-colors"
                                     style={{ borderLeftColor: project.theme_color ?? "hsl(var(--primary))" }}
                                 >
                                     <div className="h-9 w-9 rounded-full border flex items-center justify-center bg-background">
@@ -164,7 +164,7 @@ export function DashboardPage() {
                                     </div>
                                     <div className="ml-4 space-y-1">
                                         <p className="text-sm font-medium leading-none">{project.name}</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                        <p className="text-xs text-muted-foreground truncate max-w-[200px]" title={project.description || "No description"}>
                                             {project.description || "No description"}
                                         </p>
                                     </div>
@@ -174,7 +174,7 @@ export function DashboardPage() {
                                 </div>
                             ))}
                             {(!projects || projects.length === 0) && (
-                                <p className="text-sm text-muted-foreground text-center py-4">No projects found.</p>
+                                <p className="py-4 text-sm text-muted-foreground">No projects found.</p>
                             )}
                         </div>
                     </CardContent>

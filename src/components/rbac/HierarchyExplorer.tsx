@@ -73,7 +73,7 @@ export const HierarchyExplorer = () => {
     return (
         <div className="rounded-lg border bg-card shadow-sm h-[600px] flex overflow-hidden flex-col md:flex-row text-foreground">
             {/* Disclaimer */}
-            <div className="md:hidden p-2 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-xs text-center border-b">
+            <div className="md:hidden p-2 bg-warning/15 text-warning-foreground text-xs text-center border-b">
                 Best viewed on desktop
             </div>
 
@@ -104,7 +104,7 @@ export const HierarchyExplorer = () => {
                         searchPlaceholder="Type name or email..."
                         emptyText="No users found"
                         loadingText="Searching users..."
-                        className="h-8 text-sm"
+                        className="h-11 text-sm"
                         triggerAriaLabel="Search and select user"
                         triggerTestId="access-flow-user-search-combobox"
                     />
@@ -131,8 +131,9 @@ export const HierarchyExplorer = () => {
                                         role="button"
                                         tabIndex={0}
                                         aria-pressed={selectedUser?.id === user.id}
+                                        aria-label={`Select user ${user.name}`}
                                         className={clsx(
-                                            "w-full text-left p-3 rounded-md flex items-center justify-between transition-colors text-sm",
+                                            "w-full text-left p-3 rounded-md flex items-center justify-between transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                                             selectedUser?.id === user.id
                                                 ? "bg-primary text-primary-foreground"
                                                 : "hover:bg-muted"
@@ -159,7 +160,7 @@ export const HierarchyExplorer = () => {
                                                     size="icon"
                                                     data-testid="access-flow-manage-access-button"
                                                     className={clsx(
-                                                        "h-7 w-7 rounded-sm transition-colors",
+                                                        "h-9 w-9 rounded-sm transition-colors",
                                                         selectedUser?.id === user.id ? "hover:bg-primary-foreground/20 text-primary-foreground" : "hover:bg-muted"
                                                     )}
                                                     onClick={(e) => {
@@ -167,6 +168,7 @@ export const HierarchyExplorer = () => {
                                                         navigate(`/settings/users/${user.id}`);
                                                     }}
                                                     title="Manage Access"
+                                                    aria-label={`Manage access for ${user.name}`}
                                                 >
                                                     <ShieldCheck className="h-4 w-4" />
                                                 </Button>
@@ -203,9 +205,11 @@ export const HierarchyExplorer = () => {
                                     userRoles.map(role => (
                                         <button
                                             key={role.id}
+                                            type="button"
                                             onClick={() => setSelectedRole(role)}
+                                            aria-pressed={selectedRole?.id === role.id}
                                             className={clsx(
-                                                "w-full text-left p-3 rounded-md flex items-center justify-between transition-colors text-sm",
+                                                "w-full text-left p-3 rounded-md flex items-center justify-between transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                                                 selectedRole?.id === role.id
                                                     ? "bg-secondary text-secondary-foreground"
                                                     : "hover:bg-muted/60"
@@ -213,7 +217,11 @@ export const HierarchyExplorer = () => {
                                         >
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="font-medium">{role.name}</span>
-                                                {role.description && <span className="text-xs opacity-70 truncate max-w-[200px]">{role.description}</span>}
+                                                {role.description && (
+                                                    <span className="text-xs opacity-70 truncate max-w-[200px]" title={role.description}>
+                                                        {role.description}
+                                                    </span>
+                                                )}
                                             </div>
                                             {selectedRole?.id === role.id && <ChevronRight className="h-4 w-4 opacity-50" />}
                                         </button>
@@ -245,8 +253,8 @@ export const HierarchyExplorer = () => {
                                             key={perm.id}
                                             className="p-3 rounded-md border bg-background flex items-center gap-3 text-sm animate-in fade-in slide-in-from-left-2 duration-300"
                                         >
-                                            <div className="h-6 w-6 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                                                <Check className="h-3 w-3 text-green-600" />
+                                            <div className="h-6 w-6 rounded-full bg-success/15 flex items-center justify-center shrink-0">
+                                                <Check className="h-3 w-3 text-success" />
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="font-mono font-medium">{perm.name}</span>

@@ -129,7 +129,13 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                                         </FormItem>
                                     )}
                                 />
-                                <Button type="submit" disabled={assignMutation.isPending} size="icon">
+                                <Button
+                                    type="submit"
+                                    disabled={assignMutation.isPending}
+                                    size="icon"
+                                    aria-label="Assign selected permission"
+                                    title="Assign selected permission"
+                                >
                                     <Plus className="h-4 w-4" />
                                 </Button>
                             </form>
@@ -143,12 +149,12 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                             {loadingPerms ? (
                                 <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
                             ) : !rolePerms || rolePerms.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4">No permissions assigned.</p>
+                                <p className="py-4 text-sm text-muted-foreground">No permissions assigned.</p>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
                                     {rolePerms.map(perm => (
                                         <div key={perm.id} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/40">
-                                            <Check className="h-3 w-3 text-green-500" />
+                                            <Check className="h-3 w-3 text-success" />
                                             <span className="font-mono">{perm.name}</span>
                                         </div>
                                     ))}
@@ -340,6 +346,8 @@ export const RolesPage = () => {
                                                 size="icon"
                                                 className="text-muted-foreground"
                                                 data-testid="roles-row-settings-button"
+                                                aria-label={`Open settings for role ${role.name}`}
+                                                title={`Open settings for role ${role.name}`}
                                                 onClick={() => {
                                                     setSelectedRole(role);
                                                     setDetailsOpen(true);
@@ -352,6 +360,8 @@ export const RolesPage = () => {
                                                 size="icon"
                                                 className="text-muted-foreground hover:text-destructive"
                                                 data-testid="roles-row-delete-button"
+                                                aria-label={`Delete role ${role.name}`}
+                                                title={`Delete role ${role.name}`}
                                                 onClick={() => {
                                                     if (confirm("Are you sure you want to delete this role?")) {
                                                         deleteMutation.mutate(role.id);

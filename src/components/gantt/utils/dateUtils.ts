@@ -23,15 +23,18 @@ import { DEFAULT_RANGE_BEFORE, DEFAULT_RANGE_AFTER } from '../constants';
  * Adds padding before/after for context
  */
 export function calculateDateRange(tasks: GanttTask[]): DateRange {
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(todayStart);
+
     if (tasks.length === 0) {
-        const today = startOfDay(new Date());
         return {
-            start: addDays(today, -DEFAULT_RANGE_BEFORE),
-            end: addDays(today, DEFAULT_RANGE_AFTER),
+            start: addDays(todayStart, -DEFAULT_RANGE_BEFORE),
+            end: addDays(todayEnd, DEFAULT_RANGE_AFTER),
         };
     }
 
-    const allDates = tasks.flatMap(t => [t.start, t.end]);
+    // Always include today in timeline range so "Today" navigation remains functional.
+    const allDates = [...tasks.flatMap(t => [t.start, t.end]), todayStart, todayEnd];
     const minDate = min(allDates);
     const maxDate = max(allDates);
 

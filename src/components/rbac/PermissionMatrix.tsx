@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useDeferredValue, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2 } from "lucide-react";
 import clsx from "clsx";
@@ -24,6 +24,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const ALL_ROLES = "__all_roles__";
 const ALL_RESOURCES = "__all_resources__";
@@ -39,10 +40,16 @@ export const PermissionMatrix = () => {
     const [allowRevoke, setAllowRevoke] = useState(true);
     const [roleFilter, setRoleFilter] = useState(ALL_ROLES);
     const [resourceFilter, setResourceFilter] = useState(ALL_RESOURCES);
-    const [permissionQuery, setPermissionQuery] = useState("");
+    const [permissionQueryInput, setPermissionQueryInput] = useState("");
     const [assignedOnly, setAssignedOnly] = useState(false);
     const [toggling, setToggling] = useState<ToggleState>(null);
     const [bulkAction, setBulkAction] = useState<BulkState>(null);
+    const debouncedPermissionQuery = useDebouncedValue(permissionQueryInput, 180);
+    const deferredPermissionQuery = useDeferredValue(debouncedPermissionQuery);
+    const normalizedPermissionQuery = useMemo(
+        () => deferredPermissionQuery.trim().toLowerCase(),
+        [deferredPermissionQuery],
+    );
 
     const { data: roles, isLoading: loadingRoles } = useQuery({
         queryKey: ["roles"],
@@ -53,11 +60,12 @@ export const PermissionMatrix = () => {
         queryKey: ["permissions"],
         queryFn: rbacApi.listPermissions,
     });
+    const roleIds = useMemo(() => (roles ?? []).map((role) => role.id), [roles]);
 
     const { data: rolePermissionsMap, isLoading: loadingMap } = useQuery({
-        queryKey: ["all-role-permissions", roles?.map((role) => role.id)],
+        queryKey: ["all-role-permissions", roleIds],
         queryFn: async () => {
-            if (!roles) return {};
+            if (roleIds.length === 0 || !roles) return {};
             const map: Record<string, Set<string>> = {};
 
             await Promise.all(
@@ -74,7 +82,7 @@ export const PermissionMatrix = () => {
 
             return map;
         },
-        enabled: !!roles && roles.length > 0,
+        enabled: roleIds.length > 0,
     });
 
     const groupedPermissions = useMemo(() => {
@@ -104,7 +112,6 @@ export const PermissionMatrix = () => {
     const filteredGroupedPermissions = useMemo(() => {
         const next: Record<string, Permission[]> = {};
         const roleIds = filteredRoles.map((role) => role.id);
-        const query = permissionQuery.trim().toLowerCase();
 
         Object.entries(groupedPermissions).forEach(([resource, perms]) => {
             if (resourceFilter !== ALL_RESOURCES && resource !== resourceFilter) {
@@ -113,9 +120,9 @@ export const PermissionMatrix = () => {
 
             const visiblePerms = perms.filter((perm) => {
                 const matchesQuery =
-                    query.length === 0
-                    || perm.name.toLowerCase().includes(query)
-                    || (perm.description?.toLowerCase().includes(query) ?? false);
+                    normalizedPermissionQuery.length === 0
+                    || perm.name.toLowerCase().includes(normalizedPermissionQuery)
+                    || (perm.description?.toLowerCase().includes(normalizedPermissionQuery) ?? false);
 
                 if (!matchesQuery) return false;
                 if (!assignedOnly) return true;
@@ -129,7 +136,7 @@ export const PermissionMatrix = () => {
         });
 
         return next;
-    }, [assignedOnly, filteredRoles, groupedPermissions, permissionQuery, resourceFilter, rolePermissionsMap]);
+    }, [assignedOnly, filteredRoles, groupedPermissions, normalizedPermissionQuery, resourceFilter, rolePermissionsMap]);
 
     const visibleResources = useMemo(
         () => Object.keys(filteredGroupedPermissions).sort(),
@@ -313,10 +320,10 @@ export const PermissionMatrix = () => {
                     triggerTestId="rbac-resource-filter-combobox"
                 />
                 <Input
-                    value={permissionQuery}
-                    onChange={(event) => setPermissionQuery(event.target.value)}
+                    value={permissionQueryInput}
+                    onChange={(event) => setPermissionQueryInput(event.target.value)}
                     placeholder="Search permissions..."
-                    className="h-9 w-[220px]"
+                    className="h-11 w-[240px]"
                     data-testid="rbac-permission-search-input"
                 />
                 <Button
@@ -344,7 +351,7 @@ export const PermissionMatrix = () => {
                                     <TableHead key={role.id} className="text-center min-w-[170px]">
                                         <div className="flex flex-col items-center gap-1 py-1">
                                             <span className="font-semibold text-foreground">{role.name}</span>
-                                            <span className="text-xs font-normal text-muted-foreground line-clamp-1">
+                                            <span className="text-xs font-normal text-muted-foreground line-clamp-1" title={role.description || "No desc"}>
                                                 {role.description || "No desc"}
                                             </span>
                                             <div className="flex items-center gap-1 pt-1">
@@ -352,7 +359,7 @@ export const PermissionMatrix = () => {
                                                     type="button"
                                                     size="sm"
                                                     variant="outline"
-                                                    className="h-7 px-2 text-xs"
+                                                    className="h-9 px-2 text-xs"
                                                     disabled={!editMode || !allowGrant || totalVisiblePermissions === 0 || roleBusy}
                                                     onClick={() => handleBulkForRole(role.id, "grant")}
                                                     data-testid={`rbac-role-grant-visible-${role.id}`}
@@ -363,7 +370,7 @@ export const PermissionMatrix = () => {
                                                     type="button"
                                                     size="sm"
                                                     variant="outline"
-                                                    className="h-7 px-2 text-xs"
+                                                    className="h-9 px-2 text-xs"
                                                     disabled={!editMode || !allowRevoke || totalVisiblePermissions === 0 || roleBusy}
                                                     onClick={() => handleBulkForRole(role.id, "revoke")}
                                                     data-testid={`rbac-role-revoke-visible-${role.id}`}
@@ -409,10 +416,10 @@ export const PermissionMatrix = () => {
                                                                 <TooltipTrigger asChild>
                                                                     <button
                                                                         type="button"
-                                                                        className="inline-flex text-muted-foreground hover:text-foreground"
+                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-1"
                                                                         aria-label={`Permission info for ${permission.name}`}
                                                                     >
-                                                                        <Info className="h-3.5 w-3.5" />
+                                                                        <Info className="h-4 w-4" />
                                                                     </button>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
@@ -431,6 +438,11 @@ export const PermissionMatrix = () => {
                                                     (toggling?.roleId === roleId && toggling?.permId === permission.id)
                                                     || (bulkAction?.roleId === roleId && bulkMutation.isPending);
                                                 const canToggle = canToggleCell(isAssigned);
+                                                const permissionAction = isAssigned ? "Revoke" : "Grant";
+                                                const permissionState = isAssigned ? "allowed" : "not allowed";
+                                                const permissionCellLabel = isCellBusy
+                                                    ? `Updating ${permission.name} permission for role ${role.name}`
+                                                    : `${permissionAction} ${permission.name} permission for role ${role.name} (${permissionState})`;
 
                                                 return (
                                                     <TableCell key={`${roleId}-${permission.id}`} className="text-center p-0">
@@ -444,16 +456,20 @@ export const PermissionMatrix = () => {
                                                             )}
                                                             disabled={!canToggle || isCellBusy}
                                                             onClick={() => handleToggle(roleId, permission.id, isAssigned)}
+                                                            aria-label={permissionCellLabel}
+                                                            aria-pressed={isAssigned}
+                                                            aria-busy={isCellBusy || undefined}
+                                                            title={permissionCellLabel}
                                                             data-testid={`rbac-permission-cell-${roleId}-${permission.id}`}
                                                         >
                                                             {isCellBusy ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                                                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-primary" />
                                                             ) : isAssigned ? (
-                                                                <Badge variant="default" className="bg-teal-600 hover:bg-teal-700">
+                                                                <Badge variant="default">
                                                                     Allow
                                                                 </Badge>
                                                             ) : (
-                                                                <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
+                                                                <div aria-hidden="true" className="h-4 w-4 rounded-full border border-muted-foreground/30" />
                                                             )}
                                                         </button>
                                                     </TableCell>

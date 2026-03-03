@@ -1,8 +1,12 @@
 // Dependency arrow component (SVG)
 import { memo, useMemo } from 'react';
 import type { GanttTask, GanttDependency, ViewMode, DateRange } from '../types';
-import { TASK_BAR_HEIGHT } from '../constants';
+import { ROW_HEIGHT, TASK_BAR_HEIGHT } from '../constants';
 import { getTaskBarPosition } from '../utils/positionUtils';
+
+const alignToPixel = (value: number) => Math.round(value) + 0.5;
+const ARROW_INDENT = 20;
+const EMPTY_PREVIEW_BARS: Record<string, { leftDelta: number; widthDelta: number }> = Object.freeze({});
 
 interface DependencyArrowProps {
     predecessorTask: GanttTask;
@@ -28,55 +32,48 @@ export const DependencyArrow = memo(function DependencyArrow({
     const predecessorPos = getTaskBarPosition(predecessorTask, dateRange.start, viewMode, predecessorRowIndex);
     const dependentPos = getTaskBarPosition(dependentTask, dateRange.start, viewMode, dependentRowIndex);
 
-    // Finish-to-start: predecessor end -> dependent start.
-    const path = useMemo(() => {
+    // Finish-to-start routing based on gantt-task-react orthogonal arrow style.
+    const { path, arrowHeadPoints } = useMemo(() => {
         const predecessorLeftDelta = predecessorPreview?.leftDelta ?? 0;
         const predecessorWidthDelta = predecessorPreview?.widthDelta ?? 0;
         const dependentLeftDelta = dependentPreview?.leftDelta ?? 0;
 
-        const startX = predecessorPos.x + predecessorPos.width + predecessorLeftDelta + predecessorWidthDelta;
-        const startY = predecessorPos.y + TASK_BAR_HEIGHT / 2;
-        const endX = dependentPos.x + dependentLeftDelta;
-        const endY = dependentPos.y + TASK_BAR_HEIGHT / 2;
+        const startX = alignToPixel(predecessorPos.x + predecessorPos.width + predecessorLeftDelta + predecessorWidthDelta);
+        const startY = alignToPixel(predecessorPos.y + TASK_BAR_HEIGHT / 2);
+        const endX = alignToPixel(dependentPos.x + dependentLeftDelta);
+        const endY = alignToPixel(dependentPos.y + TASK_BAR_HEIGHT / 2);
+        const indexCompare = predecessorRowIndex > dependentRowIndex ? -1 : 1;
+        const midY = alignToPixel(startY + ((indexCompare * ROW_HEIGHT) / 2));
+        const firstHorizontalX = alignToPixel(startX + ARROW_INDENT);
+        const sourceEndPosition = alignToPixel(startX + (ARROW_INDENT * 2));
+        const beforeTargetX = alignToPixel(endX - ARROW_INDENT);
+        const requiresDetour = sourceEndPosition >= endX;
 
-        // Calculate control points for smooth curve
-        const curveOffset = Math.min(50, Math.abs(endX - startX) / 3);
+        const segments = [
+            `M ${startX} ${startY}`,
+            `H ${firstHorizontalX}`,
+            `V ${midY}`,
+        ];
 
-        // If target is to the left of source (backwards dependency)
-        if (endX < startX) {
-            // Go around: right, down/up, left
-            return `
-        M ${startX} ${startY}
-        H ${startX + 20}
-        V ${endY}
-        H ${endX - 10}
-        L ${endX} ${endY}
-      `;
+        if (requiresDetour) {
+            segments.push(`H ${beforeTargetX}`);
         }
 
-        // Normal case: source before target
-        return `
-      M ${startX} ${startY}
-      C ${startX + curveOffset} ${startY},
-        ${endX - curveOffset} ${endY},
-        ${endX} ${endY}
-    `;
-    }, [dependentPos, dependentPreview, predecessorPos, predecessorPreview]);
+        // End with explicit line command so tests can read final absolute point.
+        segments.push(`V ${endY}`, `H ${endX}`, `L ${endX} ${endY}`);
 
-    // Arrowhead path
-    const arrowHead = useMemo(() => {
-        const dependentLeftDelta = dependentPreview?.leftDelta ?? 0;
-        const endX = dependentPos.x + dependentLeftDelta;
-        const endY = dependentPos.y + TASK_BAR_HEIGHT / 2;
+        const path = segments.join(' ');
         const size = 6;
-
-        return `
-      M ${endX} ${endY}
-      L ${endX - size} ${endY - size}
-      L ${endX - size} ${endY + size}
-      Z
-    `;
-    }, [dependentPos, dependentPreview]);
+        const arrowHeadPoints = `${endX},${endY} ${endX - size},${endY - size} ${endX - size},${endY + size}`;
+        return { path, arrowHeadPoints };
+    }, [
+        dependentPos,
+        dependentPreview,
+        dependentRowIndex,
+        predecessorPos,
+        predecessorPreview,
+        predecessorRowIndex,
+    ]);
 
     return (
         <g
@@ -91,13 +88,15 @@ export const DependencyArrow = memo(function DependencyArrow({
                 fill="none"
                 stroke="hsl(var(--muted-foreground))"
                 strokeWidth={1.5}
+                strokeLinejoin="round"
                 strokeLinecap="round"
+                shapeRendering="geometricPrecision"
                 className="transition-colors hover:stroke-primary"
             />
 
             {/* Arrowhead */}
-            <path
-                d={arrowHead}
+            <polygon
+                points={arrowHeadPoints}
                 fill="hsl(var(--muted-foreground))"
                 className="transition-colors hover:fill-primary"
             />
@@ -112,6 +111,7 @@ interface DependencyLayerProps {
     viewMode: ViewMode;
     totalWidth: number;
     totalHeight: number;
+    visibleRowRange?: { start: number; end: number } | null;
     previewBars?: Record<string, { leftDelta: number; widthDelta: number }>;
 }
 
@@ -122,7 +122,8 @@ export const DependencyLayer = memo(function DependencyLayer({
     viewMode,
     totalWidth,
     totalHeight,
-    previewBars = {},
+    visibleRowRange = null,
+    previewBars = EMPTY_PREVIEW_BARS,
 }: DependencyLayerProps) {
     // Create task index map for O(1) lookup
     const taskIndexMap = useMemo(() => {
@@ -144,7 +145,7 @@ export const DependencyLayer = memo(function DependencyLayer({
 
     return (
         <svg
-            className="absolute inset-0 pointer-events-none z-5"
+            className="absolute inset-0 pointer-events-none z-[5]"
             style={{ width: totalWidth, height: totalHeight }}
         >
             {dependencies.map((dep) => {
@@ -156,6 +157,17 @@ export const DependencyLayer = memo(function DependencyLayer({
 
                 if (!predecessorTask || !dependentTask || predecessorIndex === undefined || dependentIndex === undefined) {
                     return null;
+                }
+
+                if (visibleRowRange) {
+                    const rowBuffer = 6;
+                    const minVisibleRow = visibleRowRange.start - rowBuffer;
+                    const maxVisibleRow = visibleRowRange.end + rowBuffer;
+                    const predecessorVisible = predecessorIndex >= minVisibleRow && predecessorIndex <= maxVisibleRow;
+                    const dependentVisible = dependentIndex >= minVisibleRow && dependentIndex <= maxVisibleRow;
+                    if (!predecessorVisible && !dependentVisible) {
+                        return null;
+                    }
                 }
 
                 return (

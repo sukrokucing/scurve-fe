@@ -45,7 +45,6 @@ export function ThemeToggle() {
     return (
         <Button
             variant="outline"
-            size="sm"
             onClick={toggleTheme}
             aria-label="Toggle theme"
             className="min-w-[70px]"

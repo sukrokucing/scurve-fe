@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
-import * as chrono from "chrono-node";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
@@ -8,6 +7,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+let chronoModulePromise: Promise<typeof import("chrono-node")> | null = null;
+
+function getChronoModule() {
+    if (!chronoModulePromise) {
+        chronoModulePromise = import("chrono-node");
+    }
+    return chronoModulePromise;
+}
 
 interface DateInputProps {
     value?: Date | [Date, Date] | null;
@@ -21,6 +29,7 @@ export function DateInput({ value, onChange, placeholder = 'Try "tomorrow" or "i
     const [inputValue, setInputValue] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const parseRequestIdRef = useRef(0);
 
     // Update input display when value prop changes
     useEffect(() => {
@@ -42,36 +51,39 @@ export function DateInput({ value, onChange, placeholder = 'Try "tomorrow" or "i
         setInputValue(text);
 
         if (!text.trim()) {
+            parseRequestIdRef.current += 1;
             onChange(null);
             return;
         }
 
-        // Try to parse as natural language with Chrono
-        const results = chrono.parse(text);
+        const requestId = ++parseRequestIdRef.current;
 
-        if (results.length === 0) {
-            // No valid date found
-            return;
-        }
+        // Defer heavy chrono-node bundle until the user actually types a date expression.
+        void (async () => {
+            try {
+                const chronoModule = await getChronoModule();
+                if (requestId !== parseRequestIdRef.current) return;
 
-        if (results.length === 1) {
-            // Single date or range
-            const result = results[0];
-            if (result.end) {
-                // It's a range
-                const startDate = result.start.date();
-                const endDate = result.end.date();
-                onChange([startDate, endDate]);
-            } else {
-                // Single date
-                onChange(result.start.date());
+                const results = chronoModule.parse(text);
+                if (results.length === 0) return;
+
+                if (results.length === 1) {
+                    const result = results[0];
+                    if (result.end) {
+                        onChange([result.start.date(), result.end.date()]);
+                    } else {
+                        onChange(result.start.date());
+                    }
+                    return;
+                }
+
+                if (results.length === 2) {
+                    onChange([results[0].start.date(), results[1].start.date()]);
+                }
+            } catch (error) {
+                console.warn("Failed to load chrono parser", error);
             }
-        } else if (results.length === 2) {
-            // Two separate dates = range
-            const startDate = results[0].start.date();
-            const endDate = results[1].start.date();
-            onChange([startDate, endDate]);
-        }
+        })();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

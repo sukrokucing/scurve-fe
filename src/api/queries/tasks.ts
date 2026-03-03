@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import { useProjectsQuery } from "./projects";
 
 import { openapi } from "@/api/openapiClient";
@@ -25,6 +25,7 @@ export function useTasksByProject(projectId: string, progress?: boolean, options
             return openapi.listTasksByProject(projectId, { progress });
         },
         enabled: Boolean(projectId) && (options?.enabled ?? true),
+        placeholderData: keepPreviousData,
     });
 }
 
@@ -322,11 +323,11 @@ export function useBatchUpdateTasks(projectId?: string) {
 
                         return {
                             ...task,
-                            ...(update.title !== undefined ? { name: update.title } : {}),
+                            ...(update.title !== undefined ? { name: update.title ?? task.name } : {}),
                             ...(update.start_date !== undefined ? { startDate: update.start_date } : {}),
                             ...(update.end_date !== undefined ? { endDate: update.end_date } : {}),
                             ...(update.due_date !== undefined ? { dueDate: update.due_date } : {}),
-                            ...(update.progress !== undefined ? { progress: update.progress } : {}),
+                            ...(update.progress !== undefined ? { progress: update.progress ?? task.progress } : {}),
                         };
                     }),
                 );

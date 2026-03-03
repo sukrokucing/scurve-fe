@@ -1,13 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Users, Shield, Lock, GitMerge } from "lucide-react";
-
-const SETTINGS_NAV_ITEMS = [
-    { to: "/settings/users", label: "Users", icon: Users },
-    { to: "/settings/roles", label: "Roles", icon: Shield },
-    { to: "/settings/policy", label: "Policy", icon: Lock },
-    { to: "/settings/flow", label: "Access Flow", icon: GitMerge },
-];
+import { SETTINGS_NAV_MENU_ENTRIES } from "@/navigation/menuCatalog";
 
 export function SettingsLayout() {
     return (
@@ -22,7 +15,7 @@ export function SettingsLayout() {
             <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
                 <aside className="lg:w-1/5 overflow-x-auto lg:overflow-visible scrollbar-hide">
                     <nav className="flex lg:flex-col gap-2 p-1 lg:p-0 whitespace-nowrap lg:whitespace-normal">
-                        {SETTINGS_NAV_ITEMS.map((item) => (
+                        {SETTINGS_NAV_MENU_ENTRIES.map((item) => (
                             <NavLink
                                 key={item.to}
                                 to={item.to}

@@ -11,6 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Health
+         * @description Health Handles `GET` requests for `/api/health`. Does not require authentication.
+         */
         get: operations["health"];
         put?: never;
         post?: never;
@@ -49,6 +53,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Login
+         * @description Login Handles `POST` requests for `/auth/login`. Does not require authentication.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -65,6 +73,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Logout
+         * @description Logout Handles `POST` requests for `/auth/logout`. Requires bearer authentication.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -79,6 +91,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Me
+         * @description Me Handles `GET` requests for `/auth/me`. Requires bearer authentication.
+         */
         get: operations["me"];
         put?: never;
         post?: never;
@@ -97,6 +113,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Register
+         * @description Register Handles `POST` requests for `/auth/register`. Does not require authentication.
+         */
         post: operations["register"];
         delete?: never;
         options?: never;
@@ -131,8 +151,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List Projects
+         * @description List Projects Handles `GET` requests for `/projects`. Requires bearer authentication.
+         */
         get: operations["list_projects"];
         put?: never;
+        /**
+         * Create Project
+         * @description Create Project Handles `POST` requests for `/projects`. Requires bearer authentication.
+         */
         post: operations["create_project"];
         delete?: never;
         options?: never;
@@ -147,9 +175,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get Project
+         * @description Get Project Handles `GET` requests for `/projects/{id}`. Requires bearer authentication.
+         */
         get: operations["get_project"];
+        /**
+         * Update Project
+         * @description Update Project Handles `PUT` requests for `/projects/{id}`. Requires bearer authentication.
+         */
         put: operations["update_project"];
         post?: never;
+        /**
+         * Delete Project
+         * @description Delete Project Handles `DELETE` requests for `/projects/{id}`. Requires bearer authentication.
+         */
         delete: operations["delete_project"];
         options?: never;
         head?: never;
@@ -163,6 +203,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get Project Critical Path
+         * @description Get Project Critical Path Handles `GET` requests for `/projects/{id}/critical-path`. Requires bearer authentication.
+         */
         get: operations["get_project_critical_path"];
         put?: never;
         post?: never;
@@ -179,6 +223,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get Project Dashboard
+         * @description Get Project Dashboard Handles `GET` requests for `/projects/{id}/dashboard`. Requires bearer authentication.
+         */
         get: operations["get_project_dashboard"];
         put?: never;
         post?: never;
@@ -197,7 +245,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Update Project Plan
+         * @description Update Project Plan Handles `POST` requests for `/projects/{id}/plan`. Requires bearer authentication.
+         */
         post: operations["update_project_plan"];
+        /**
+         * Clear Project Plan
+         * @description Clear Project Plan Handles `DELETE` requests for `/projects/{id}/plan`. Requires bearer authentication.
+         */
         delete: operations["clear_project_plan"];
         options?: never;
         head?: never;
@@ -211,8 +267,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List Dependencies
+         * @description List Dependencies Handles `GET` requests for `/projects/{project_id}/dependencies`. Requires bearer authentication.
+         */
         get: operations["list_dependencies"];
         put?: never;
+        /**
+         * Create Dependency
+         * @description Create Dependency Handles `POST` requests for `/projects/{project_id}/dependencies`. Requires bearer authentication.
+         */
         post: operations["create_dependency"];
         delete?: never;
         options?: never;
@@ -230,7 +294,31 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Delete Dependency
+         * @description Delete Dependency Handles `DELETE` requests for `/projects/{project_id}/dependencies/{id}`. Requires bearer authentication.
+         */
         delete: operations["delete_dependency"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Project Progress
+         * @description List Project Progress Handles `GET` requests for `/projects/{project_id}/progress`. Requires bearer authentication.
+         */
+        get: operations["list_project_progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -243,8 +331,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List Tasks
+         * @description List Tasks Handles `GET` requests for `/projects/{project_id}/tasks`. Requires bearer authentication.
+         */
         get: operations["list_tasks"];
         put?: never;
+        /**
+         * Create Task
+         * @description Create Task Handles `POST` requests for `/projects/{project_id}/tasks`. Requires bearer authentication.
+         */
         post: operations["create_task"];
         delete?: never;
         options?: never;
@@ -260,6 +356,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Batch Update Tasks
+         * @description Batch Update Tasks Handles `PUT` requests for `/projects/{project_id}/tasks/batch`. Requires bearer authentication.
+         */
         put: operations["batch_update_tasks"];
         post?: never;
         delete?: never;
@@ -275,9 +375,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get Task
+         * @description Get Task Handles `GET` requests for `/projects/{project_id}/tasks/{id}`. Requires bearer authentication.
+         */
         get: operations["get_task"];
+        /**
+         * Update Task
+         * @description Update Task Handles `PUT` requests for `/projects/{project_id}/tasks/{id}`. Requires bearer authentication.
+         */
         put: operations["update_task"];
         post?: never;
+        /**
+         * Delete Task
+         * @description Delete Task Handles `DELETE` requests for `/projects/{project_id}/tasks/{id}`. Requires bearer authentication.
+         */
         delete: operations["delete_task"];
         options?: never;
         head?: never;
@@ -291,8 +403,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List Progress
+         * @description List Progress Handles `GET` requests for `/projects/{project_id}/tasks/{task_id}/progress`. Requires bearer authentication.
+         */
         get: operations["list_progress"];
         put?: never;
+        /**
+         * Create Progress
+         * @description Create Progress Handles `POST` requests for `/projects/{project_id}/tasks/{task_id}/progress`. Requires bearer authentication.
+         */
         post: operations["create_progress"];
         delete?: never;
         options?: never;
@@ -307,9 +427,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get Progress
+         * @description Get Progress Handles `GET` requests for `/projects/{project_id}/tasks/{task_id}/progress/{id}`. Requires bearer authentication.
+         */
         get: operations["get_progress"];
+        /**
+         * Update Progress
+         * @description Update Progress Handles `PUT` requests for `/projects/{project_id}/tasks/{task_id}/progress/{id}`. Requires bearer authentication.
+         */
         put: operations["update_progress"];
         post?: never;
+        /**
+         * Delete Progress
+         * @description Delete Progress Handles `DELETE` requests for `/projects/{project_id}/tasks/{task_id}/progress/{id}`. Requires bearer authentication.
+         */
         delete: operations["delete_progress"];
         options?: never;
         head?: never;
@@ -323,6 +455,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List Audit Logs
+         * @description List Audit Logs Handles `GET` requests for `/rbac/audit-logs`. Requires bearer authentication.
+         */
         get: operations["list_audit_logs"];
         put?: never;
         post?: never;
@@ -339,10 +475,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all permissions */
+        /**
+         * List all permissions
+         * @description List all permissions Handles `GET` requests for `/rbac/permissions`. Requires bearer authentication.
+         */
         get: operations["list_permissions"];
         put?: never;
-        /** Create a new permission */
+        /**
+         * Create a new permission
+         * @description Create a new permission Handles `POST` requests for `/rbac/permissions`. Requires bearer authentication.
+         */
         post: operations["create_permission"];
         delete?: never;
         options?: never;
@@ -357,10 +499,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all roles */
+        /**
+         * List all roles
+         * @description List all roles Handles `GET` requests for `/rbac/roles`. Requires bearer authentication.
+         */
         get: operations["list_roles"];
         put?: never;
-        /** Create a new role */
+        /**
+         * Create a new role
+         * @description Create a new role Handles `POST` requests for `/rbac/roles`. Requires bearer authentication.
+         */
         post: operations["create_role"];
         delete?: never;
         options?: never;
@@ -375,11 +523,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a role by ID */
+        /**
+         * Get a role by ID
+         * @description Get a role by ID Handles `GET` requests for `/rbac/roles/{role_id}`. Requires bearer authentication.
+         */
         get: operations["get_role"];
         put?: never;
         post?: never;
-        /** Delete a role */
+        /**
+         * Delete a role
+         * @description Delete a role Handles `DELETE` requests for `/rbac/roles/{role_id}`. Requires bearer authentication.
+         */
         delete: operations["delete_role"];
         options?: never;
         head?: never;
@@ -393,10 +547,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get permissions assigned to a role */
+        /**
+         * Get permissions assigned to a role
+         * @description Get permissions assigned to a role Handles `GET` requests for `/rbac/roles/{role_id}/permissions`. Requires bearer authentication.
+         */
         get: operations["get_role_permissions"];
         put?: never;
-        /** Assign a permission to a role */
+        /**
+         * Assign a permission to a role
+         * @description Assign a permission to a role Handles `POST` requests for `/rbac/roles/{role_id}/permissions`. Requires bearer authentication.
+         */
         post: operations["assign_permission_to_role"];
         delete?: never;
         options?: never;
@@ -414,7 +574,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a permission from a role */
+        /**
+         * Remove a permission from a role
+         * @description Remove a permission from a role Handles `DELETE` requests for `/rbac/roles/{role_id}/permissions/{permission_id}`. Requires bearer authentication.
+         */
         delete: operations["delete_permission_from_role"];
         options?: never;
         head?: never;
@@ -428,7 +591,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get computed effective permissions for a user */
+        /**
+         * Get computed effective permissions for a user
+         * @description Get computed effective permissions for a user Handles `GET` requests for `/rbac/users/{user_id}/effective-permissions`. Requires bearer authentication.
+         */
         get: operations["get_effective_permissions"];
         put?: never;
         post?: never;
@@ -445,10 +611,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get direct permissions granted to a user */
+        /**
+         * Get direct permissions granted to a user
+         * @description Get direct permissions granted to a user Handles `GET` requests for `/rbac/users/{user_id}/permissions`. Requires bearer authentication.
+         */
         get: operations["get_user_permissions"];
         put?: never;
-        /** Grant a permission directly to a user */
+        /**
+         * Grant a permission directly to a user
+         * @description Grant a permission directly to a user Handles `POST` requests for `/rbac/users/{user_id}/permissions`. Requires bearer authentication.
+         */
         post: operations["grant_permission_to_user"];
         delete?: never;
         options?: never;
@@ -463,10 +635,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get roles assigned to a user */
+        /**
+         * Get roles assigned to a user
+         * @description Get roles assigned to a user Handles `GET` requests for `/rbac/users/{user_id}/roles`. Requires bearer authentication.
+         */
         get: operations["get_user_roles"];
         put?: never;
-        /** Assign a role to a user */
+        /**
+         * Assign a role to a user
+         * @description Assign a role to a user Handles `POST` requests for `/rbac/users/{user_id}/roles`. Requires bearer authentication.
+         */
         post: operations["assign_role_to_user"];
         delete?: never;
         options?: never;
@@ -484,7 +662,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Revoke a role from a user */
+        /**
+         * Revoke a role from a user
+         * @description Revoke a role from a user Handles `DELETE` requests for `/rbac/users/{user_id}/roles/{role_id}`. Requires bearer authentication.
+         */
         delete: operations["revoke_role_from_user"];
         options?: never;
         head?: never;
@@ -1003,6 +1184,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "db_ok": true,
+                     *       "status": "ok"
+                     *     }
+                     */
                     "application/json": components["schemas"]["HealthResponse"];
                 };
             };
@@ -1078,9 +1265,12 @@ export interface operations {
                      * @example {
                      *       "token": "eyJhbGciOiJIUzI1Ni...",
                      *       "user": {
-                     *         "email": "ada@eg.com",
-                     *         "id": "0000-0000...",
-                     *         "name": "Ada"
+                     *         "created_at": "2025-01-15T10:00:00Z",
+                     *         "email": "ada@example.com",
+                     *         "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "name": "Ada Lovelace",
+                     *         "provider": "local",
+                     *         "updated_at": "2025-01-15T10:00:00Z"
                      *       }
                      *     }
                      */
@@ -1129,6 +1319,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "email": "ada@example.com",
+                     *       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "name": "Ada Lovelace",
+                     *       "provider": "local",
+                     *       "updated_at": "2025-01-15T10:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["User"];
                 };
             };
@@ -1164,9 +1364,12 @@ export interface operations {
                      * @example {
                      *       "token": "eyJhbGciOiJIUzI1Ni...",
                      *       "user": {
-                     *         "email": "ada@eg.com",
-                     *         "id": "0000-0000...",
-                     *         "name": "Ada"
+                     *         "created_at": "2025-01-15T10:00:00Z",
+                     *         "email": "ada@example.com",
+                     *         "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "name": "Ada Lovelace",
+                     *         "provider": "local",
+                     *         "updated_at": "2025-01-15T10:00:00Z"
                      *       }
                      *     }
                      */
@@ -1242,9 +1445,12 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "id": "uuid",
+                     *         "created_at": "2025-01-15T10:00:00Z",
+                     *         "id": "44444444-4444-4444-8444-444444444444",
                      *         "name": "Launch Planning",
-                     *         "theme_color": "#3498db"
+                     *         "theme_color": "#3498db",
+                     *         "updated_at": "2025-01-15T10:00:00Z",
+                     *         "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                      *       }
                      *     ]
                      */
@@ -1281,9 +1487,12 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "id": "44444444-4444-4444-8444-444444444444",
                      *       "name": "Launch Planning",
-                     *       "theme_color": "#3498db"
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-01-15T10:00:00Z",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                      *     }
                      */
                     "application/json": components["schemas"]["Project"];
@@ -1314,9 +1523,12 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "id": "44444444-4444-4444-8444-444444444444",
                      *       "name": "Launch Planning",
-                     *       "theme_color": "#3498db"
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-01-15T10:00:00Z",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                      *     }
                      */
                     "application/json": components["schemas"]["Project"];
@@ -1339,6 +1551,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "Launch Planning v2",
+                 *       "theme_color": "#2ecc71"
+                 *     }
+                 */
                 "application/json": components["schemas"]["ProjectUpdateRequest"];
             };
         };
@@ -1351,9 +1569,12 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "id": "44444444-4444-4444-8444-444444444444",
                      *       "name": "Launch Planning",
-                     *       "theme_color": "#3498db"
+                     *       "theme_color": "#3498db",
+                     *       "updated_at": "2025-01-15T10:00:00Z",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                      *     }
                      */
                     "application/json": components["schemas"]["Project"];
@@ -1406,6 +1627,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "task_ids": [
+                     *         "33333333-3333-4333-8333-333333333333",
+                     *         "22222222-2222-4222-8222-222222222222"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["CriticalPathResponse"];
                 };
             };
@@ -1432,6 +1661,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "actual": [
+                     *         {
+                     *           "actual": 15,
+                     *           "date": "2025-12-01"
+                     *         }
+                     *       ],
+                     *       "plan": [
+                     *         {
+                     *           "created_at": "2025-11-20T08:00:00Z",
+                     *           "date": "2025-12-01T00:00:00Z",
+                     *           "id": "77777777-7777-4777-8777-777777777777",
+                     *           "planned_progress": 20,
+                     *           "project_id": "44444444-4444-4444-8444-444444444444",
+                     *           "updated_at": "2025-11-20T08:00:00Z"
+                     *         }
+                     *       ],
+                     *       "project": {
+                     *         "created_at": "2025-01-15T10:00:00Z",
+                     *         "id": "44444444-4444-4444-8444-444444444444",
+                     *         "name": "Launch Planning",
+                     *         "theme_color": "#3498db",
+                     *         "updated_at": "2025-01-15T10:00:00Z",
+                     *         "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["DashboardResponse"];
                 };
             };
@@ -1452,6 +1709,14 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example [
+                 *       {
+                 *         "date": "2025-12-01T00:00:00Z",
+                 *         "planned_progress": 10
+                 *       }
+                 *     ]
+                 */
                 "application/json": components["schemas"]["ProjectPlanCreateRequest"][];
             };
         };
@@ -1462,6 +1727,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-11-20T08:00:00Z",
+                     *         "date": "2025-12-01T00:00:00Z",
+                     *         "id": "77777777-7777-4777-8777-777777777777",
+                     *         "planned_progress": 20,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "updated_at": "2025-11-20T08:00:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["ProjectPlanPoint"][];
                 };
             };
@@ -1512,6 +1789,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-18T09:00:00Z",
+                     *         "id": "88888888-8888-4888-8888-888888888888",
+                     *         "source_task_id": "33333333-3333-4333-8333-333333333333",
+                     *         "target_task_id": "22222222-2222-4222-8222-222222222222",
+                     *         "type_": "finish_to_start"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["TaskDependency"][];
                 };
             };
@@ -1534,9 +1822,9 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "source_task_id": "0000-...",
-                 *       "target_task_id": "1111-...",
-                 *       "type": "finish_to_start"
+                 *       "source_task_id": "11111111-1111-4111-8111-111111111111",
+                 *       "target_task_id": "22222222-2222-4222-8222-222222222222",
+                 *       "type_": "finish_to_start"
                  *     }
                  */
                 "application/json": components["schemas"]["DependencyCreateRequest"];
@@ -1549,6 +1837,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-18T09:00:00Z",
+                     *       "id": "88888888-8888-4888-8888-888888888888",
+                     *       "source_task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "target_task_id": "22222222-2222-4222-8222-222222222222",
+                     *       "type_": "finish_to_start"
+                     *     }
+                     */
                     "application/json": components["schemas"]["TaskDependency"];
                 };
             };
@@ -1583,9 +1880,62 @@ export interface operations {
             };
         };
     };
+    list_project_progress: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Optional task id filter.
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id?: string | null;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List progress entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-19T09:00:00Z",
+                     *         "id": "99999999-9999-4999-8999-999999999999",
+                     *         "note": "Execution started",
+                     *         "progress": 65,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "task_id": "33333333-3333-4333-8333-333333333333",
+                     *         "updated_at": "2025-01-19T09:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Progress"][];
+                };
+            };
+        };
+    };
     list_tasks: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Legacy compatibility flag. When true, task list response is empty; use /progress endpoints instead. */
+                progress?: boolean | null;
+                /**
+                 * @description Optional task filter used only with progress=true.
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id?: string | null;
+            };
             header?: never;
             path: {
                 /**
@@ -1607,10 +1957,13 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "id": "uuid",
+                     *         "created_at": "2025-01-16T09:00:00Z",
+                     *         "id": "33333333-3333-4333-8333-333333333333",
                      *         "progress": 0,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
                      *         "status": "pending",
-                     *         "title": "Define checklist"
+                     *         "title": "Define checklist",
+                     *         "updated_at": "2025-01-16T09:00:00Z"
                      *       }
                      *     ]
                      */
@@ -1652,10 +2005,13 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-16T09:00:00Z",
+                     *       "id": "33333333-3333-4333-8333-333333333333",
                      *       "progress": 0,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
                      *       "status": "pending",
-                     *       "title": "Define checklist"
+                     *       "title": "Define checklist",
+                     *       "updated_at": "2025-01-16T09:00:00Z"
                      *     }
                      */
                     "application/json": components["schemas"]["Task"];
@@ -1682,7 +2038,7 @@ export interface operations {
                  * @example {
                  *       "tasks": [
                  *         {
-                 *           "id": "0000-...",
+                 *           "id": "33333333-3333-4333-8333-333333333333",
                  *           "progress": 50,
                  *           "status": "in_progress"
                  *         }
@@ -1702,10 +2058,13 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "id": "uuid",
+                     *         "created_at": "2025-01-16T09:00:00Z",
+                     *         "id": "33333333-3333-4333-8333-333333333333",
                      *         "progress": 0,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
                      *         "status": "pending",
-                     *         "title": "Define checklist"
+                     *         "title": "Define checklist",
+                     *         "updated_at": "2025-01-16T09:00:00Z"
                      *       }
                      *     ]
                      */
@@ -1742,10 +2101,13 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-16T09:00:00Z",
+                     *       "id": "33333333-3333-4333-8333-333333333333",
                      *       "progress": 0,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
                      *       "status": "pending",
-                     *       "title": "Define checklist"
+                     *       "title": "Define checklist",
+                     *       "updated_at": "2025-01-16T09:00:00Z"
                      *     }
                      */
                     "application/json": components["schemas"]["Task"];
@@ -1773,6 +2135,13 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "progress": 65,
+                 *       "status": "in_progress",
+                 *       "title": "Define final checklist"
+                 *     }
+                 */
                 "application/json": components["schemas"]["TaskUpdateRequest"];
             };
         };
@@ -1785,10 +2154,13 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "id": "uuid",
+                     *       "created_at": "2025-01-16T09:00:00Z",
+                     *       "id": "33333333-3333-4333-8333-333333333333",
                      *       "progress": 0,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
                      *       "status": "pending",
-                     *       "title": "Define checklist"
+                     *       "title": "Define checklist",
+                     *       "updated_at": "2025-01-16T09:00:00Z"
                      *     }
                      */
                     "application/json": components["schemas"]["Task"];
@@ -1851,6 +2223,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-19T09:00:00Z",
+                     *         "id": "99999999-9999-4999-8999-999999999999",
+                     *         "note": "Execution started",
+                     *         "progress": 65,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "task_id": "33333333-3333-4333-8333-333333333333",
+                     *         "updated_at": "2025-01-19T09:00:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["Progress"][];
                 };
             };
@@ -1892,6 +2277,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-19T09:00:00Z",
+                     *       "id": "99999999-9999-4999-8999-999999999999",
+                     *       "note": "Execution started",
+                     *       "progress": 65,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
+                     *       "task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "updated_at": "2025-01-19T09:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Progress"];
                 };
             };
@@ -1928,6 +2324,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-19T09:00:00Z",
+                     *       "id": "99999999-9999-4999-8999-999999999999",
+                     *       "note": "Execution started",
+                     *       "progress": 65,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
+                     *       "task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "updated_at": "2025-01-19T09:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Progress"];
                 };
             };
@@ -1958,6 +2365,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "note": "Adjusted after review",
+                 *       "progress": 75
+                 *     }
+                 */
                 "application/json": components["schemas"]["ProgressUpdateRequest"];
             };
         };
@@ -1968,6 +2381,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-19T09:00:00Z",
+                     *       "id": "99999999-9999-4999-8999-999999999999",
+                     *       "note": "Execution started",
+                     *       "progress": 65,
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
+                     *       "task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "updated_at": "2025-01-19T09:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Progress"];
                 };
             };
@@ -2045,6 +2469,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "action": "role.assign",
+                     *           "actor_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *           "actor_name": "Ada Lovelace",
+                     *           "created_at": "2025-01-20T10:15:00Z",
+                     *           "details": {
+                     *             "role_id": "55555555-5555-4555-8555-555555555555",
+                     *             "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                     *           },
+                     *           "id": "evt_20250120_0001",
+                     *           "target_user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *           "target_user_name": "Ada Lovelace"
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "per_page": 20,
+                     *       "total": 1
+                     *     }
+                     */
                     "application/json": components["schemas"]["PaginatedAuditLogs"];
                 };
             };
@@ -2065,6 +2511,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-01T00:00:00Z",
+                     *         "description": "View projects",
+                     *         "id": "66666666-6666-4666-8666-666666666666",
+                     *         "name": "project.view",
+                     *         "updated_at": "2025-01-01T00:00:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["Permission"][];
                 };
             };
@@ -2095,6 +2552,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-01T00:00:00Z",
+                     *       "description": "View projects",
+                     *       "id": "66666666-6666-4666-8666-666666666666",
+                     *       "name": "project.view",
+                     *       "updated_at": "2025-01-01T00:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Permission"];
                 };
             };
@@ -2125,9 +2591,11 @@ export interface operations {
                     /**
                      * @example [
                      *       {
+                     *         "created_at": "2025-01-01T00:00:00Z",
                      *         "description": "Full access",
-                     *         "id": "uuid",
-                     *         "name": "super_admin"
+                     *         "id": "55555555-5555-4555-8555-555555555555",
+                     *         "name": "super_admin",
+                     *         "updated_at": "2025-01-01T00:00:00Z"
                      *       }
                      *     ]
                      */
@@ -2163,9 +2631,11 @@ export interface operations {
                 content: {
                     /**
                      * @example {
+                     *       "created_at": "2025-01-01T00:00:00Z",
                      *       "description": "Full access",
-                     *       "id": "uuid",
-                     *       "name": "super_admin"
+                     *       "id": "55555555-5555-4555-8555-555555555555",
+                     *       "name": "super_admin",
+                     *       "updated_at": "2025-01-01T00:00:00Z"
                      *     }
                      */
                     "application/json": components["schemas"]["Role"];
@@ -2203,9 +2673,11 @@ export interface operations {
                 content: {
                     /**
                      * @example {
+                     *       "created_at": "2025-01-01T00:00:00Z",
                      *       "description": "Full access",
-                     *       "id": "uuid",
-                     *       "name": "super_admin"
+                     *       "id": "55555555-5555-4555-8555-555555555555",
+                     *       "name": "super_admin",
+                     *       "updated_at": "2025-01-01T00:00:00Z"
                      *     }
                      */
                     "application/json": components["schemas"]["Role"];
@@ -2272,6 +2744,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-01T00:00:00Z",
+                     *         "description": "View projects",
+                     *         "id": "66666666-6666-4666-8666-666666666666",
+                     *         "name": "project.view",
+                     *         "updated_at": "2025-01-01T00:00:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["Permission"][];
                 };
             };
@@ -2292,6 +2775,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "permission_id": "66666666-6666-4666-8666-666666666666"
+                 *     }
+                 */
                 "application/json": components["schemas"]["AssignPermissionToRoleRequest"];
             };
         };
@@ -2374,7 +2862,7 @@ export interface operations {
                      *       "roles": [
                      *         "super_admin"
                      *       ],
-                     *       "user_id": "uuid"
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                      *     }
                      */
                     "application/json": components["schemas"]["EffectivePermissions"];
@@ -2403,6 +2891,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-20T10:00:00Z",
+                     *         "id": "abababab-abab-4bab-8bab-abababababab",
+                     *         "permission_id": "66666666-6666-4666-8666-666666666666",
+                     *         "scope": {
+                     *           "project_id": "44444444-4444-4444-8444-444444444444"
+                     *         },
+                     *         "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["UserPermission"][];
                 };
             };
@@ -2468,9 +2969,11 @@ export interface operations {
                     /**
                      * @example [
                      *       {
+                     *         "created_at": "2025-01-01T00:00:00Z",
                      *         "description": "Full access",
-                     *         "id": "uuid",
-                     *         "name": "super_admin"
+                     *         "id": "55555555-5555-4555-8555-555555555555",
+                     *         "name": "super_admin",
+                     *         "updated_at": "2025-01-01T00:00:00Z"
                      *       }
                      *     ]
                      */
@@ -2565,6 +3068,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-15T10:00:00Z",
+                     *         "email": "ada@example.com",
+                     *         "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "name": "Ada Lovelace",
+                     *         "provider": "local",
+                     *         "updated_at": "2025-01-15T10:00:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["User"][];
                 };
             };
@@ -2596,6 +3111,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "email": "ada@example.com",
+                     *       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "name": "Ada Lovelace",
+                     *       "provider": "local",
+                     *       "updated_at": "2025-01-15T10:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["User"];
                 };
             };
@@ -2639,6 +3164,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2025-01-15T10:00:00Z",
+                     *       "email": "ada@example.com",
+                     *       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "name": "Ada Lovelace",
+                     *       "provider": "local",
+                     *       "updated_at": "2025-01-15T10:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["User"];
                 };
             };

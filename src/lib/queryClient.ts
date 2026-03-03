@@ -6,6 +6,7 @@ export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             staleTime: 5 * 60 * 1000,
+            gcTime: 30 * 60 * 1000,
             refetchOnWindowFocus: false,
             retry: (failureCount, error) => {
                 // If we know the app is offline, don't attempt retries.
@@ -22,6 +23,9 @@ export const queryClient = new QueryClient({
 
                 return true;
             },
+        },
+        mutations: {
+            retry: 0,
         },
     },
 });

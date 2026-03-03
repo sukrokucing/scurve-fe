@@ -368,9 +368,9 @@ export function useTaskDrag({
             if (document.hidden) handleCancel();
         };
 
-        window.addEventListener('pointermove', handleDragMove);
-        window.addEventListener('pointerup', handleCancel);
-        window.addEventListener('pointercancel', handleCancel);
+        window.addEventListener('pointermove', handleDragMove, { passive: true });
+        window.addEventListener('pointerup', handleCancel, { passive: true });
+        window.addEventListener('pointercancel', handleCancel, { passive: true });
         window.addEventListener('blur', handleCancel);
         document.addEventListener('visibilitychange', handleVisibilityChange);
 

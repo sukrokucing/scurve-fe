@@ -19,6 +19,19 @@ S-Curve FE is a React + TypeScript frontend for project planning and delivery tr
 - Playwright for E2E
 - OpenAPI type generation + Zod schema generation
 
+## Performance Approach
+
+- Route-level code splitting: pages/layouts are lazy loaded in `src/routes/index.tsx`.
+- Query caching defaults: `staleTime` + `gcTime` configured in `src/lib/queryClient.ts`.
+- Virtualization for large UI surfaces:
+  - task/project tables (`@tanstack/react-virtual`)
+  - Gantt timeline/table
+  - large combobox option sets
+- Search input smoothing for heavy views:
+  - debounced + deferred filtering in menu search, tasks, and RBAC policy matrix
+  - debounced server-side user search in admin users page
+- Mutation retry disabled globally to avoid accidental duplicate write operations on slow/flaky networks.
+
 ## Prerequisites
 
 - Node.js 20+ (Node 22+ recommended)
@@ -64,21 +77,25 @@ App default URL: `http://localhost:3001`
 
 ## NPM Scripts
 
-- `npm run dev`: start Vite dev server (`3001`)
-- `npm run build`: type-check + production build
-- `npm run preview`: preview production build
-- `npm run lint`: run ESLint
-- `npm run test:e2e`: run all Playwright tests under `e2e/`
-- `npm run test:e2e:flows`: run business flow tests (`e2e/business-flows.spec.ts`)
-- `npm run test:e2e:smoke`: run smoke tests (`e2e/console-smoke.spec.ts`)
-- `npm run generate:e2e:scenario`: generate scenario spec from `business_flow.yaml`
-- `npm run test:e2e:scenario`: run generated scenario spec
-- `npm run generate:types`: generate API types from backend OpenAPI
-- `npm run generate:types:local`: generate API types from local `src/openapi.json`
-- `npm run generate:zod`: generate Zod schemas
-- `npm run generate:schemas`: run types + zod generation
-- `npm run generate:theme`: generate harmony-based theme tokens into `src/index.css`
-- `npm run check:theme`: validate generated token integrity + contrast thresholds
+### Daily commands
+
+- `npm run start` (alias of `dev`): start local app (`3001`)
+- `npm run check`: lint + typecheck + strict perf audit
+- `npm run verify`: `check` + production build
+- `npm run test`: run all Playwright E2E tests
+- `npm run test:e2e:critical`: smoke + runtime perf probes (chromium)
+- `npm run audit`: UI audit gate + strict perf audit gate
+- `npm run generate`: API+Zod schemas + theme tokens
+
+### Specialized commands
+
+- `npm run dev`, `npm run preview`, `npm run build`, `npm run lint`, `npm run typecheck`
+- `npm run test:e2e`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
+- `npm run generate:e2e:scenario`, `npm run test:e2e:scenario`
+- `npm run generate:types`, `npm run generate:types:local`, `npm run generate:zod`, `npm run generate:schemas`
+- `npm run generate:theme`, `npm run check:theme`
+- `npm run audit:ui`, `npm run audit:ui:visual`, `npm run audit:ui:a11y`, `npm run audit:ui:report`
+- `npm run audit:perf`, `npm run audit:perf:strict`
 
 ## Key Routes
 
@@ -90,6 +107,40 @@ App default URL: `http://localhost:3001`
 - `/settings/roles`
 - `/settings/policy`
 - `/settings/flow`
+
+## Global Menu Search (Desktop + Mobile)
+
+Menu navigation is centralized in `src/navigation/menuCatalog.ts` and powers:
+
+- Desktop sidebar links
+- Mobile bottom nav links
+- Settings sub-navigation
+- Global menu search results
+
+### Behavior
+
+- Desktop global command palette opens with `Ctrl+K` / `Cmd+K` or sidebar `Search menu` trigger.
+- Mobile: bottom nav includes a `Search` trigger that opens a full-screen sheet.
+- Press `Enter` in search input to navigate to the first ranked result.
+- Result click/tap uses the same navigation flow.
+
+### Adding New Menu Entries
+
+1. Add a `MenuEntry` in `src/navigation/menuCatalog.ts` with:
+- `label`, `to`, `section`, `keywords`, `priority`, `surfaces`, `icon`
+2. Include `search` in `surfaces` if the entry should be searchable.
+3. Add relevant `keywords` for better matching.
+
+### Ranking Rules
+
+Implemented in `src/navigation/menuSearch.ts`:
+
+- exact label match
+- label starts-with
+- label word-start match
+- label contains
+- keyword contains
+- tie-break: lower `priority`, then alphabetical `label`
 
 ## Gantt Feature Matrix
 
@@ -224,6 +275,39 @@ npm run check:theme
 - Update `harmony.config.json`, then rerun `npm run generate:theme`.
 - Run `npm run check:theme` before commit to ensure format + contrast thresholds remain valid.
 
+## UI Audit Pipeline
+
+This repository includes a Good-UI driven audit system for full-route UI quality checks and phased refactor tracking.
+
+### Matrix
+
+- Routes: `/`, `/projects`, `/tasks`, `/settings/users`, `/settings/roles`, `/settings/policy`, `/settings/flow`, `/login`, `/register`
+- Themes: `light`, `dark`, `glass`
+- Viewports: `390x844`, `768x1024`, `1440x900`
+
+### Commands
+
+```bash
+npm run audit:ui
+npm run audit:ui:visual
+npm run audit:ui:a11y
+npm run audit:ui:report
+```
+
+### Outputs
+
+- `artifacts/ui-audit/findings.static.json`
+- `artifacts/ui-audit/findings.runtime.json`
+- `artifacts/ui-audit/findings.json`
+- `artifacts/ui-audit/scorecard.json`
+- `artifacts/ui-audit/screenshots/*`
+
+### Rulebook and Decisions
+
+- Method: `docs/UI_AUDIT.md`
+- Backlog: `docs/UI_REFACTOR_BACKLOG.md`
+- Decisions: `docs/UI_REFACTOR_DECISIONS.md`
+
 ## Project Structure (High-Level)
 
 - `src/pages`: route pages (dashboard/projects/tasks/admin)
@@ -239,6 +323,8 @@ npm run check:theme
 - `CAPABILITIES.md`: source-code capability inventory
 - `BUSINESS_FLOWS.md`: business flow catalog and testing priorities
 - `BUSINESS_FLOW_GENERATION.md`: rationale and generation workflow
+- `docs/PERFORMANCE_AUDIT.md`: static performance audit rules and workflow
+- `docs/RUNTIME_PERFORMANCE_PROBES.md`: runtime route probe workflow and budgets
 - `CONTRIBUTING.md`: contribution and performance rules
 
 ## Troubleshooting

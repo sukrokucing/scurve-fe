@@ -17,6 +17,7 @@ dist-ssr
 output/
 playwright-report/
 test-results/
+artifacts/ui-audit/screenshots/**/*.png
 
 # Editor directories and files
 .vscode/*

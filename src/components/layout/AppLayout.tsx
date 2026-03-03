@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { GlobalMenuSearchDialog } from "@/components/navigation/GlobalMenuSearchDialog";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 
@@ -31,6 +32,7 @@ export function AppLayout() {
 
             {/* Mobile Bottom Navigation */}
             <BottomNav />
+            <GlobalMenuSearchDialog />
         </div>
     );
 }

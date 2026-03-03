@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { addDays, format, isSameDay } from "date-fns";
 
@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 
 const KANBAN_COLUMNS = [
@@ -44,6 +45,29 @@ const KANBAN_COLUMNS = [
     { id: "blocked", title: "Blocked" },
     { id: "done", title: "Done" },
 ];
+
+const BASE_DURATION_DAYS = [1, 2, 3, 5, 7, 10, 14, 21, 30, 60, 90] as const;
+const EMPTY_TASKS: Task[] = [];
+const EMPTY_PROGRESS: Progress[] = [];
+
+function buildDurationOptions(currentPlan?: number | null) {
+    const values = new Set<number>(BASE_DURATION_DAYS);
+
+    if (typeof currentPlan === "number" && Number.isFinite(currentPlan) && currentPlan > 0) {
+        values.add(Math.round(currentPlan));
+    }
+
+    return Array.from(values)
+        .sort((a, b) => a - b)
+        .map((days) => ({
+            value: String(days),
+            label: days === 1 ? "1 day" : `${days} days`,
+        }));
+}
+
+function getDurationDays(start: Date, end: Date) {
+    return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+}
 
 // Helper to format ISO date strings for datetime-local input
 // Helper to format ISO date strings for datetime-local input
@@ -76,6 +100,7 @@ function getStatusVariant(status: string): "success" | "info" | "error" | "secon
 }
 // Types
 type TaskFormMode = 'today' | 'plan' | 'range';
+type KanbanTaskItem = (Task & { column: TaskStatus }) & Record<string, unknown>;
 
 export function TasksPage() {
     const { data: projects } = useProjectsQuery();
@@ -92,6 +117,8 @@ export function TasksPage() {
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const debouncedSearchQuery = useDebouncedValue(searchQuery, 180);
+    const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
 
     // Fetch tasks
     const { data: tasksData, isLoading: isLoadingTasks, refetch: refetchTasks, isRefetching: isRefetchingTasks } = useTasksByProject(
@@ -99,47 +126,66 @@ export function TasksPage() {
         false,
     );
 
-    // Fetch progress (always fetch if we might need it, or only when in Gantt mode?)
-    // For simplicity, let's fetch it if we are in Gantt mode or showProgress is true
+    // Fetch progress entries only when the Gantt view is active.
     const { data: progressData, isLoading: isLoadingProgress } = useTasksByProject(
         selectedProject ?? "",
         true,
         { enabled: view === "gantt" }
     );
-    // Optimization: We could disable this query if view !== 'gantt'.
-    // However, the hook signature 'useTasksByProject' defines 'enabled: Boolean(projectId)'.
-    // To implement "enabled: view === 'gantt'", we would need to pass options to the hook.
-    // Since we can't change the hook signature easily without affecting other files,
-    // I will modify the HOOK to accept options or modify the call site if possible.
 
     const { data: dependenciesData } = useDependencies(selectedProject ?? "");
 
-    const tasks = (tasksData as Task[]) ?? [];
-    const progress = (progressData as Progress[]) ?? [];
+    const tasks = (tasksData as Task[] | undefined) ?? EMPTY_TASKS;
+    const progress = (progressData as Progress[] | undefined) ?? EMPTY_PROGRESS;
     const isLoading = isLoadingTasks || (view === "gantt" && isLoadingProgress);
 
-    // Filter tasks
-    const filteredTasks = tasks.filter(task => {
-        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
+
+    // Filter tasks once per query/filter change instead of every render path.
+    const filteredTasks = useMemo(() => tasks.filter((task) => {
+        const matchesSearch = task.name.toLowerCase().includes(normalizedSearchQuery);
         const matchesStatus = statusFilter === "all" || task.status === statusFilter;
         return matchesSearch && matchesStatus;
-    });
+    }), [normalizedSearchQuery, statusFilter, tasks]);
+
+    const pagedTasks = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredTasks.slice(start, start + pageSize);
+    }, [filteredTasks, page, pageSize]);
+
+    const kanbanTasks = useMemo<KanbanTaskItem[]>(
+        () => filteredTasks.map((task) => ({ ...task, column: task.status })),
+        [filteredTasks],
+    );
+
+    const kanbanCountByStatus = useMemo(() => {
+        const counts = new Map<string, number>();
+        filteredTasks.forEach((task) => {
+            counts.set(task.status, (counts.get(task.status) ?? 0) + 1);
+        });
+        return counts;
+    }, [filteredTasks]);
 
     // Virtualizer for List View
     const parentRef = useRef<HTMLDivElement>(null);
     const rowVirtualizer = useVirtualizer({
-        count: filteredTasks.slice((page - 1) * pageSize, page * pageSize).length,
+        count: pagedTasks.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 53, // Approximate height of a table row
         overscan: 5,
     });
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const firstVirtualRow = virtualRows[0];
+    const lastVirtualRow = virtualRows[virtualRows.length - 1];
+
+    useEffect(() => {
+        const maxPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
+        if (page > maxPage) {
+            setPage(maxPage);
+        }
+    }, [filteredTasks.length, page, pageSize]);
 
     const isRefetching = isRefetchingTasks;
-
-    // Re-run query when toggling progress view
-    useEffect(() => {
-        void refetchTasks();
-    }, [view, refetchTasks]);
 
     const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
     const [createOpen, setCreateOpen] = useState(false);
@@ -150,13 +196,201 @@ export function TasksPage() {
     const createMutation = useTaskMutation(selectedProject);
     const deleteMutation = useDeleteTask(selectedProject);
     const updateMutation = useUpdateTask();
-    const batchUpdateMutation = useBatchUpdateTasks(selectedProject);
+    const ganttUpdateMutation = useUpdateTask();
+    const ganttBatchUpdateMutation = useBatchUpdateTasks(selectedProject);
     const dependencyMutation = useDependencyMutation(selectedProject);
     const deleteDependencyMutation = useDeleteDependency(selectedProject);
+
+    const [ganttLocalOverrides, setGanttLocalOverrides] = useState<Record<string, Partial<Task>>>({});
+    const ganttQueuedUpdatesRef = useRef<Map<string, GanttTask>>(new Map());
+    const ganttFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const ganttFlushInFlightRef = useRef(false);
+    const [ganttPendingCount, setGanttPendingCount] = useState(0);
+    const [ganttIsSyncing, setGanttIsSyncing] = useState(false);
+    const [ganttSyncError, setGanttSyncError] = useState<string | null>(null);
+    const [ganttLastSyncedAt, setGanttLastSyncedAt] = useState<number | null>(null);
+
+    const mergedGanttTasks = useMemo(
+        () => tasks.map((task) => ({ ...task, ...(ganttLocalOverrides[task.id] ?? {}) })),
+        [tasks, ganttLocalOverrides],
+    );
+
+    const clearGanttFlushTimer = useCallback(() => {
+        if (ganttFlushTimerRef.current) {
+            clearTimeout(ganttFlushTimerRef.current);
+            ganttFlushTimerRef.current = null;
+        }
+    }, []);
+
+    const clearGanttOverridesFor = useCallback((taskIds: string[]) => {
+        if (taskIds.length === 0) return;
+        setGanttLocalOverrides((prev) => {
+            let changed = false;
+            const next = { ...prev };
+            taskIds.forEach((taskId) => {
+                // Keep optimistic state if a newer edit for this task is already queued.
+                if (ganttQueuedUpdatesRef.current.has(taskId)) {
+                    return;
+                }
+                if (next[taskId]) {
+                    delete next[taskId];
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, []);
+
+    const flushQueuedGanttUpdates = useCallback(async () => {
+        if (!selectedProject || ganttFlushInFlightRef.current || ganttQueuedUpdatesRef.current.size === 0) {
+            return;
+        }
+
+        ganttFlushInFlightRef.current = true;
+        setGanttIsSyncing(true);
+
+        try {
+            while (ganttQueuedUpdatesRef.current.size > 0) {
+                const updates = Array.from(ganttQueuedUpdatesRef.current.values());
+                ganttQueuedUpdatesRef.current.clear();
+                setGanttPendingCount(ganttQueuedUpdatesRef.current.size);
+                const updatedTaskIds = updates.map((task) => task.originalId);
+
+                try {
+                    if (updates.length === 1) {
+                        const task = updates[0];
+                        await ganttUpdateMutation.mutateAsync({
+                            id: task.originalId,
+                            projectId: selectedProject,
+                            payload: {
+                                name: task.name,
+                                startDate: task.start.toISOString(),
+                                endDate: task.end.toISOString(),
+                                dueDate: task.end.toISOString(),
+                                progress: task.progress,
+                                durationDays: getDurationDays(task.start, task.end),
+                            },
+                        });
+                    } else {
+                        await ganttBatchUpdateMutation.mutateAsync({
+                            tasks: updates.map((task) => ({
+                                id: task.originalId,
+                                title: task.name,
+                                start_date: task.start.toISOString(),
+                                end_date: task.end.toISOString(),
+                                due_date: task.end.toISOString(),
+                                progress: task.progress,
+                            })),
+                        });
+                    }
+                    clearGanttOverridesFor(updatedTaskIds);
+                    setGanttSyncError(null);
+                    setGanttLastSyncedAt(Date.now());
+                } catch {
+                    // Keep failed updates queued and visible for retry.
+                    updates.forEach((task) => {
+                        ganttQueuedUpdatesRef.current.set(task.originalId, task);
+                    });
+                    setGanttPendingCount(ganttQueuedUpdatesRef.current.size);
+                    setGanttSyncError("Some task updates failed to sync.");
+                    break;
+                }
+            }
+        } finally {
+            ganttFlushInFlightRef.current = false;
+            setGanttIsSyncing(false);
+            setGanttPendingCount(ganttQueuedUpdatesRef.current.size);
+        }
+    }, [clearGanttOverridesFor, ganttBatchUpdateMutation, ganttUpdateMutation, selectedProject]);
+
+    const scheduleGanttFlush = useCallback(() => {
+        clearGanttFlushTimer();
+        ganttFlushTimerRef.current = setTimeout(() => {
+            void flushQueuedGanttUpdates();
+        }, 180);
+    }, [clearGanttFlushTimer, flushQueuedGanttUpdates]);
+
+    const queueGanttUpdates = useCallback((updatedTasks: GanttTask[]) => {
+        if (!selectedProject || updatedTasks.length === 0) return;
+
+        updatedTasks.forEach((task) => {
+            ganttQueuedUpdatesRef.current.set(task.originalId, task);
+        });
+
+        setGanttPendingCount(ganttQueuedUpdatesRef.current.size);
+        setGanttSyncError(null);
+
+        setGanttLocalOverrides((prev) => {
+            const next = { ...prev };
+            updatedTasks.forEach((task) => {
+                next[task.originalId] = {
+                    ...(next[task.originalId] ?? {}),
+                    name: task.name,
+                    startDate: task.start.toISOString(),
+                    endDate: task.end.toISOString(),
+                    dueDate: task.end.toISOString(),
+                    progress: task.progress,
+                    durationDays: getDurationDays(task.start, task.end),
+                };
+            });
+            return next;
+        });
+
+        scheduleGanttFlush();
+    }, [scheduleGanttFlush, selectedProject]);
+
+    const retryGanttSync = useCallback(() => {
+        if (ganttQueuedUpdatesRef.current.size === 0 || ganttFlushInFlightRef.current) {
+            return;
+        }
+        setGanttSyncError(null);
+        void flushQueuedGanttUpdates();
+    }, [flushQueuedGanttUpdates]);
+
+    useEffect(() => {
+        clearGanttFlushTimer();
+        ganttQueuedUpdatesRef.current.clear();
+        setGanttLocalOverrides({});
+        setGanttPendingCount(0);
+        setGanttIsSyncing(false);
+        setGanttSyncError(null);
+        setGanttLastSyncedAt(null);
+    }, [clearGanttFlushTimer, selectedProject]);
+
+    useEffect(() => {
+        return () => {
+            clearGanttFlushTimer();
+        };
+    }, [clearGanttFlushTimer]);
 
     const currentProject = projects?.find((project) => project.id === selectedProject);
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
+
+    const openTaskEditor = useCallback((task: Task) => {
+        setEditing(task);
+        const start = new Date(task.startDate || "");
+        const end = new Date(task.endDate || "");
+        const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        let mode: "plan" | "range" | "today" = "range";
+
+        if (isSameDay(start, end)) {
+            mode = "today";
+        } else if (task.durationDays && diffDays === task.durationDays) {
+            mode = "plan";
+        }
+
+        setEditMode(mode);
+        editForm.reset({
+            title: task.name,
+            plan: task.durationDays ?? 1,
+            start_date: formatDateForInput(task.startDate),
+            end_date: formatDateForInput(task.endDate),
+            progress: typeof task.progress === "number" ? task.progress : 0,
+            status: task.status,
+            projectId: task.projectId,
+        });
+    }, [editForm]);
 
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
@@ -185,9 +419,9 @@ export function TasksPage() {
         if (view === "kanban") {
             return (
                 <div className="h-[calc(100vh-280px)]">
-                    <KanbanProvider
+                    <KanbanProvider<KanbanTaskItem>
                         columns={KANBAN_COLUMNS}
-                        data={filteredTasks.map(t => ({ ...t, column: t.status }))}
+                        data={kanbanTasks}
                         onColumnChange={(taskId, newColumnId) => {
                             updateMutation.mutate({
                                 id: taskId,
@@ -202,18 +436,18 @@ export function TasksPage() {
                                 <KanbanHeader>
                                     {column.title}
                                     <Badge variant="secondary" className="ml-2">
-                                        {filteredTasks.filter(t => t.status === column.id).length}
+                                        {kanbanCountByStatus.get(column.id) ?? 0}
                                     </Badge>
                                 </KanbanHeader>
-                                <KanbanCards id={column.id}>
+                                <KanbanCards<KanbanTaskItem> id={column.id}>
                                     {(task) => {
-                                        const kanbanTask = task as Task;
+                                        const kanbanTask = task;
                                         return (
-                                            <KanbanCard
+                                            <KanbanCard<KanbanTaskItem>
                                                 key={kanbanTask.id}
                                                 item={kanbanTask}
                                                 onDoubleClick={(item) => {
-                                                    const t = item as Task;
+                                                    const t = item;
                                                     setEditing(t);
                                                     const start = t.startDate ? new Date(t.startDate) : new Date();
                                                     const end = t.endDate ? new Date(t.endDate) : new Date();
@@ -241,7 +475,7 @@ export function TasksPage() {
 
                                                 <div className="font-medium text-sm leading-tight">{kanbanTask.name}</div>
                                                 {kanbanTask.description && (
-                                                    <div className="text-xs text-muted-foreground line-clamp-2">{kanbanTask.description}</div>
+                                                    <div className="text-xs text-muted-foreground line-clamp-2" title={kanbanTask.description}>{kanbanTask.description}</div>
                                                 )}
 
                                                 <div className="flex items-center justify-between pt-2">
@@ -276,37 +510,16 @@ export function TasksPage() {
                     projectId={selectedProject || ""}
                     // Keep Gantt on full project task graph so drag/dependency operations
                     // are consistent even when list search/status filters are active.
-                    tasks={tasks}
+                    tasks={mergedGanttTasks}
                     progress={progress}
                     dependencies={dependenciesData ?? []}
+                    pendingChangesCount={ganttPendingCount}
+                    isSyncingChanges={ganttIsSyncing}
+                    syncError={ganttSyncError}
+                    lastSyncedAt={ganttLastSyncedAt}
+                    onRetrySyncChanges={retryGanttSync}
                     onUpdateTasks={(updatedTasks: GanttTask[]) => {
-                        if (!selectedProject) return;
-
-                        if (updatedTasks.length === 1) {
-                            const task = updatedTasks[0];
-                            updateMutation.mutate({
-                                id: task.originalId,
-                                projectId: selectedProject,
-                                payload: {
-                                    name: task.name,
-                                    startDate: task.start.toISOString(),
-                                    endDate: task.end.toISOString(),
-                                    dueDate: task.end.toISOString(),
-                                    progress: task.progress,
-                                },
-                            });
-                        } else if (updatedTasks.length > 1) {
-                            batchUpdateMutation.mutate({
-                                tasks: updatedTasks.map(t => ({
-                                    id: t.originalId,
-                                    title: t.name,
-                                    start_date: t.start.toISOString(),
-                                    end_date: t.end.toISOString(),
-                                    due_date: t.end.toISOString(),
-                                    progress: t.progress,
-                                }))
-                            });
-                        }
+                        queueGanttUpdates(updatedTasks);
                     }}
                     onDeleteTask={(taskId) => {
                         deleteMutation.mutate(taskId);
@@ -324,7 +537,7 @@ export function TasksPage() {
                     }}
                     onDoubleClick={(ganttTask) => {
                         // Find the full task object to edit
-                        const taskToEdit = (tasks as Task[]).find(t => t.id === ganttTask.originalId);
+                        const taskToEdit = mergedGanttTasks.find(t => t.id === ganttTask.originalId);
                         if (taskToEdit) {
                             setEditing(taskToEdit);
                             const start = new Date(taskToEdit.startDate || "");
@@ -356,139 +569,150 @@ export function TasksPage() {
 
         // tasks present
         return (
-            <div
-                ref={parentRef}
-                style={{
-                    height: `calc(100vh - 280px)`,
-                    overflow: 'auto',
-                }}
-            >
-                <Table>
-                    <TableHeader className="sticky top-0 bg-background z-10">
-                        <TableRow>
-                            <TableHead className="w-[50px]">#</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Assignee</TableHead>
-                            <TableHead>Plan</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rowVirtualizer.getVirtualItems().length === 0 && (
-                            <TableRow key="no-tasks">
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    No tasks found.
-                                </TableCell>
+            <div className="space-y-3">
+                <div className="md:hidden space-y-3">
+                    {pagedTasks.map((task, index) => (
+                        <Card key={task.id} className="border-border/70" data-testid="tasks-mobile-card">
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1 min-w-0">
+                                        <p className="text-xs text-muted-foreground">
+                                            #{((page - 1) * pageSize) + index + 1}
+                                        </p>
+                                        <p className="text-sm font-semibold leading-tight line-clamp-2" title={task.name}>
+                                            {task.name}
+                                        </p>
+                                    </div>
+                                    <Badge variant={getStatusVariant(task.status)}>
+                                        {task.status}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-y-1 text-xs">
+                                    <span className="text-muted-foreground">Assignee</span>
+                                    <span className="text-right">{task.assigneeId ?? "—"}</span>
+                                    <span className="text-muted-foreground">Plan</span>
+                                    <span className="text-right">{task.durationDays ? `${task.durationDays}d` : "—"}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-11"
+                                        data-testid="tasks-mobile-edit-button"
+                                        onClick={() => openTaskEditor(task)}
+                                    >
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive-outline"
+                                        className="h-11"
+                                        data-testid="tasks-mobile-delete-button"
+                                        onClick={() => {
+                                            setTaskToDelete(task);
+                                            setConfirmOpen(true);
+                                        }}
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                <div
+                    ref={parentRef}
+                    className="hidden md:block"
+                    style={{
+                        height: `calc(100vh - 280px)`,
+                        overflow: "auto",
+                    }}
+                >
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableRow>
+                                <TableHead className="w-[50px]">#</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Assignee</TableHead>
+                                <TableHead>Plan</TableHead>
+                                <TableHead>Actions</TableHead>
                             </TableRow>
-                        )}
-
-                        {rowVirtualizer.getVirtualItems().length > 0 && (
-                            <TableRow key={`spacer-start-${rowVirtualizer.getVirtualItems()[0].index}`} style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }}>
-                                <TableCell colSpan={6} style={{ padding: 0 }} />
-                            </TableRow>
-                        )}
-
-                        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                            const task = filteredTasks.slice((page - 1) * pageSize, page * pageSize)[virtualItem.index];
-                            if (!task) return null; // Safety check
-                            return (
-                                <TableRow
-                                    key={task.id}
-                                    data-index={virtualItem.index}
-                                    ref={rowVirtualizer.measureElement}
-                                    onDoubleClick={() => {
-                                        setEditing(task);
-                                        const start = new Date(task.startDate || "");
-                                        const end = new Date(task.endDate || "");
-                                        const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                                        let mode: 'plan' | 'range' | 'today' = 'range';
-
-                                        if (isSameDay(start, end)) {
-                                            mode = 'today';
-                                        } else if (task.durationDays && diffDays === task.durationDays) {
-                                            mode = 'plan';
-                                        }
-
-                                        setEditMode(mode);
-                                        editForm.reset({
-                                            title: task.name,
-                                            plan: task.durationDays ?? 1,
-                                            start_date: formatDateForInput(task.startDate),
-                                            end_date: formatDateForInput(task.endDate),
-                                            progress: typeof task.progress === 'number' ? task.progress : 0,
-                                            status: task.status,
-                                            projectId: task.projectId
-                                        });
-                                    }}
-                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                                >
-                                    <TableCell className="text-center text-muted-foreground">{virtualItem.index + 1}</TableCell>
-                                    <TableCell className="font-medium">{task.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={getStatusVariant(task.status)}>
-                                            {task.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{task.assigneeId ?? "—"}</TableCell>
-                                    <TableCell>{task.durationDays ? `${task.durationDays}d` : "—"}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                data-testid="tasks-row-edit-button"
-                                                onClick={() => {
-                                                    setEditing(task);
-                                                    const start = new Date(task.startDate || "");
-                                                    const end = new Date(task.endDate || "");
-                                                    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                                                    let mode: 'plan' | 'range' | 'today' = 'range';
-
-                                                    if (isSameDay(start, end)) {
-                                                        mode = 'today';
-                                                    } else if (task.durationDays && diffDays === task.durationDays) {
-                                                        mode = 'plan';
-                                                    }
-
-                                                    setEditMode(mode);
-                                                    editForm.reset({
-                                                        title: task.name,
-                                                        plan: task.durationDays ?? 1,
-                                                        start_date: formatDateForInput(task.startDate),
-                                                        end_date: formatDateForInput(task.endDate),
-                                                        progress: typeof task.progress === 'number' ? task.progress : 0,
-                                                        status: task.status,
-                                                        projectId: task.projectId
-                                                    });
-                                                }}
-                                            >
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="destructive-outline"
-                                                data-testid="tasks-row-delete-button"
-                                                onClick={() => {
-                                                    setTaskToDelete(task);
-                                                    setConfirmOpen(true);
-                                                }}
-                                            >
-                                                Delete
-                                            </Button>
-                                        </div>
+                        </TableHeader>
+                        <TableBody>
+                            {virtualRows.length === 0 && (
+                                <TableRow key="no-tasks">
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No tasks found.
                                     </TableCell>
                                 </TableRow>
-                            );
-                        })}
+                            )}
 
-                        {rowVirtualizer.getVirtualItems().length > 0 && (
-                            <TableRow key={`spacer-end-${rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].index}`} style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }}>
-                                <TableCell colSpan={6} style={{ padding: 0 }} />
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            {firstVirtualRow ? (
+                                <TableRow key={`spacer-start-${firstVirtualRow.index}`} style={{ height: `${firstVirtualRow.start}px` }}>
+                                    <TableCell colSpan={6} style={{ padding: 0 }} />
+                                </TableRow>
+                            ) : null}
+
+                            {virtualRows.map((virtualItem) => {
+                                const task = pagedTasks[virtualItem.index];
+                                if (!task) return null; // Safety check
+                                return (
+                                    <TableRow
+                                        key={task.id}
+                                        data-index={virtualItem.index}
+                                        ref={rowVirtualizer.measureElement}
+                                        onDoubleClick={() => openTaskEditor(task)}
+                                        className="cursor-pointer hover:bg-surface-hover transition-colors"
+                                    >
+                                        <TableCell className="text-center text-muted-foreground">{virtualItem.index + 1}</TableCell>
+                                        <TableCell className="font-medium">{task.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(task.status)}>
+                                                {task.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{task.assigneeId ?? "—"}</TableCell>
+                                        <TableCell>{task.durationDays ? `${task.durationDays}d` : "—"}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    data-testid="tasks-row-edit-button"
+                                                    onClick={() => openTaskEditor(task)}
+                                                >
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive-outline"
+                                                    data-testid="tasks-row-delete-button"
+                                                    onClick={() => {
+                                                        setTaskToDelete(task);
+                                                        setConfirmOpen(true);
+                                                    }}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+
+                            {lastVirtualRow ? (
+                                <TableRow key={`spacer-end-${lastVirtualRow.index}`} style={{ height: `${rowVirtualizer.getTotalSize() - lastVirtualRow.end}px` }}>
+                                    <TableCell colSpan={6} style={{ padding: 0 }} />
+                                </TableRow>
+                            ) : null}
+                        </TableBody>
+                    </Table>
+                </div>
+
                 <DataTablePagination
                     currentPage={page}
                     totalPages={Math.ceil(filteredTasks.length / pageSize)}
@@ -720,13 +944,7 @@ export function TasksPage() {
                                                         createForm.setValue("end_date", newEndDate.toISOString());
                                                         createForm.setValue("due_date", newEndDate.toISOString());
                                                     }}
-                                                    options={[
-                                                        { value: "1", label: "1 day" },
-                                                        { value: "2", label: "2 days" },
-                                                        { value: "3", label: "3 days" },
-                                                        { value: "4", label: "4 days" },
-                                                        { value: "5", label: "5 days" },
-                                                    ]}
+                                                    options={buildDurationOptions(createForm.watch("plan"))}
                                                     placeholder="Duration"
                                                     searchPlaceholder="Search days..."
                                                     className="w-28"
@@ -1068,13 +1286,7 @@ export function TasksPage() {
                                                 editForm.setValue("end_date", newEndDate.toISOString());
                                                 editForm.setValue("due_date", newEndDate.toISOString());
                                             }}
-                                            options={[
-                                                { value: "1", label: "1 day" },
-                                                { value: "2", label: "2 days" },
-                                                { value: "3", label: "3 days" },
-                                                { value: "4", label: "4 days" },
-                                                { value: "5", label: "5 days" },
-                                            ]}
+                                            options={buildDurationOptions(editForm.watch("plan"))}
                                             placeholder="Duration"
                                             searchPlaceholder="Search days..."
                                             className="w-28"

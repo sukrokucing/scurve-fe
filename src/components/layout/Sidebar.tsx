@@ -1,29 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    LayoutDashboard,
-    FolderKanban,
-    ListTodo,
-    LogOut,
-    Settings
-} from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/useAuth";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { Separator } from "@/components/ui/separator";
+import { SIDEBAR_MENU_ENTRIES } from "@/navigation/menuCatalog";
+import { openGlobalMenuSearch } from "@/navigation/menuSearchEvents";
 
-const NAV_ITEMS = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/projects", label: "Projects", icon: FolderKanban },
-    { to: "/tasks", label: "Tasks", icon: ListTodo },
-];
-
-const ADMIN_NAV_ITEMS = [
-    { to: "/settings", label: "Settings", icon: Settings },
-];
+const MAIN_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "main");
+const SETTINGS_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "settings");
 
 export function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(true); // Default to collapsed Rail
@@ -32,6 +21,10 @@ export function Sidebar() {
 
     // Settings is active if we are on any /settings/* route
     const isSettingsActive = pathname.startsWith("/settings");
+    const searchShortcutLabel = useMemo(
+        () => (typeof navigator !== "undefined" && /mac/i.test(navigator.platform) ? "⌘K" : "Ctrl+K"),
+        []
+    );
 
     const sidebarWidth = isCollapsed ? "w-[72px]" : "w-[260px]";
 
@@ -56,6 +49,7 @@ export function Sidebar() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -10 }}
                             className="font-bold text-xl tracking-tight text-primary truncate"
+                            title={import.meta.env.VITE_APP_NAME ?? "S-Curve"}
                         >
                             {import.meta.env.VITE_APP_NAME ?? "S-Curve"}
                         </motion.div>
@@ -75,7 +69,30 @@ export function Sidebar() {
 
             {/* Navigation Links */}
             <nav className="flex-1 space-y-2 p-3 overflow-y-auto overflow-x-hidden pt-6">
-                {NAV_ITEMS.map((item) => (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                        "mb-3 h-10 w-full text-muted-foreground hover:text-foreground",
+                        isCollapsed ? "justify-center px-0" : "justify-between"
+                    )}
+                    onClick={openGlobalMenuSearch}
+                    data-testid="global-menu-search-trigger"
+                    aria-label="Open global menu search"
+                    title={isCollapsed ? "Search menu" : undefined}
+                >
+                    <span className={cn("flex items-center gap-2", isCollapsed ? "justify-center" : "")}>
+                        <Search className="h-4 w-4 shrink-0" />
+                        {!isCollapsed ? <span className="text-sm">Search menu</span> : null}
+                    </span>
+                    {!isCollapsed ? (
+                        <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {searchShortcutLabel}
+                        </span>
+                    ) : null}
+                </Button>
+
+                {MAIN_NAV_ITEMS.map((item) => (
                     <NavLink
                         key={item.to}
                         to={item.to}
@@ -94,6 +111,7 @@ export function Sidebar() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 className="truncate"
+                                title={item.label}
                             >
                                 {item.label}
                             </motion.span>
@@ -103,7 +121,7 @@ export function Sidebar() {
 
                 <Separator className="my-4" />
 
-                {ADMIN_NAV_ITEMS.map((item) => (
+                {SETTINGS_NAV_ITEMS.map((item) => (
                     <NavLink
                         key={item.to}
                         to={item.to}
@@ -122,6 +140,7 @@ export function Sidebar() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 className="truncate"
+                                title={item.label}
                             >
                                 {item.label}
                             </motion.span>
@@ -145,8 +164,8 @@ export function Sidebar() {
                     </div>
                     {!isCollapsed && (
                         <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-semibold truncate leading-none">{user?.name ?? "User"}</span>
-                            <span className="text-[10px] text-muted-foreground truncate mt-1">{user?.email}</span>
+                            <span className="text-sm font-semibold truncate leading-none" title={user?.name ?? "User"}>{user?.name ?? "User"}</span>
+                            <span className="text-[10px] text-muted-foreground truncate mt-1" title={user?.email ?? ""}>{user?.email}</span>
                         </div>
                     )}
                 </div>

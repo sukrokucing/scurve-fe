@@ -41,7 +41,7 @@ export function DataTablePagination({
                             setPageSize(Number(value));
                             setPage(1); // Reset to first page on size change
                         }}
-                        className="h-8 w-[100px]"
+                        className="h-11 min-h-11 w-[112px]"
                         placeholder={`${pageSize}`}
                         options={[
                             ...pageSizeOptions.map((size) => ({ value: `${size}`, label: `${size}` })),
@@ -55,7 +55,8 @@ export function DataTablePagination({
                 <div className="flex items-center space-x-2">
                     <Button
                         variant="outline"
-                        className="hidden h-8 w-8 p-0 lg:flex"
+                        size="icon"
+                        className="hidden lg:inline-flex"
                         onClick={() => setPage(1)}
                         disabled={currentPage === 1}
                     >
@@ -64,7 +65,7 @@ export function DataTablePagination({
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0"
+                        size="icon"
                         onClick={() => setPage(currentPage - 1)}
                         disabled={currentPage === 1}
                     >
@@ -73,7 +74,7 @@ export function DataTablePagination({
                     </Button>
                     <Button
                         variant="outline"
-                        className="h-8 w-8 p-0"
+                        size="icon"
                         onClick={() => setPage(currentPage + 1)}
                         disabled={currentPage === totalPages}
                     >
@@ -82,7 +83,8 @@ export function DataTablePagination({
                     </Button>
                     <Button
                         variant="outline"
-                        className="hidden h-8 w-8 p-0 lg:flex"
+                        size="icon"
+                        className="hidden lg:inline-flex"
                         onClick={() => setPage(totalPages)}
                         disabled={currentPage === totalPages}
                     >

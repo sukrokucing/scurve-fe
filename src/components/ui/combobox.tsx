@@ -40,6 +40,8 @@ interface ComboboxProps {
     emptyText?: string
     className?: string
     height?: string
+    contentClassName?: string
+    matchTriggerWidth?: boolean
     children?: React.ReactNode // Custom trigger
     triggerTestId?: string
     triggerAriaLabel?: string
@@ -62,6 +64,8 @@ export function Combobox({
     emptyText = "No option found.",
     className,
     height = "300px", // Default max height
+    contentClassName,
+    matchTriggerWidth = true,
     children,
     triggerTestId,
     triggerAriaLabel,
@@ -114,7 +118,7 @@ export function Combobox({
     const rowVirtualizer = useVirtualizer({
         count: shouldVirtualize ? visibleOptions.length : 0,
         getScrollElement: () => parentRef,
-        estimateSize: () => 35, // Estimate row height (px)
+        estimateSize: () => 40,
         overscan: 5,
     })
 
@@ -138,7 +142,7 @@ export function Combobox({
                         aria-expanded={open}
                         aria-label={triggerAriaLabel}
                         data-testid={triggerTestId}
-                        className={cn("w-full justify-between overflow-hidden", className)}
+                        className={cn("min-h-11 w-full justify-between overflow-hidden", className)}
                         title={triggerLabel}
                     >
                         <span className="min-w-0 truncate text-left">{triggerLabel}</span>
@@ -146,7 +150,14 @@ export function Combobox({
                     </Button>
                 )}
             </PopoverTrigger>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <PopoverContent
+                className={cn(
+                    "p-0",
+                    matchTriggerWidth && "w-[var(--radix-popover-trigger-width)]",
+                    contentClassName
+                )}
+                align="start"
+            >
                 <Command shouldFilter={false}>
                     <CommandInput
                         placeholder={searchPlaceholder}
@@ -206,7 +217,9 @@ export function Combobox({
                                                         value === option.value ? "opacity-100" : "opacity-0"
                                                     )}
                                                 />
-                                                {option.label}
+                                                <span className="min-w-0 flex-1 truncate" title={option.label}>
+                                                    {option.label}
+                                                </span>
                                             </CommandItem>
                                         )
                                     })}
@@ -235,7 +248,9 @@ export function Combobox({
                                             value === option.value ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {option.label}
+                                    <span className="min-w-0 flex-1 truncate" title={option.label}>
+                                        {option.label}
+                                    </span>
                                 </CommandItem>
                             ))}
                     </CommandList>

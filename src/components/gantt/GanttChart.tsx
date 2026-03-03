@@ -4,11 +4,13 @@ import type { GanttProps } from './types';
 
 import { HEADER_HEIGHT } from './constants';
 
-import { calculateDateRange, generateColumns } from './utils/dateUtils';
+import { calculateDateRange } from './utils/dateUtils';
 import { useTimelineVirtualizer } from './hooks/useTimelineVirtualizer';
 import { useTaskDrag } from './hooks/useTaskDrag';
 import { TimelineHeader } from './components/TimelineHeader';
 import { TimelineGrid as Grid } from './components/TimelineGrid';
+import { TodayLine } from './components/TodayLine';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { TaskBar } from './components/TaskBar';
 import { DependencyLayer } from './components/DependencyArrow';
@@ -40,24 +42,26 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
     // Calculate date range from tasks
     const dateRange = useMemo(() => calculateDateRange(tasks), [tasks]);
 
-    // Generate all column data
-    const allColumns = useMemo(
-        () => generateColumns(dateRange, viewMode),
-        [dateRange, viewMode]
-    );
-
     // Setup virtualization
     const {
         virtualRows,
         totalHeight,
         virtualColumns,
         totalWidth,
+        columnCount,
     } = useTimelineVirtualizer({
         containerRef: localRef,
         tasks,
         dateRange,
         viewMode,
     });
+    const visibleRowRange = useMemo(() => {
+        if (virtualRows.length === 0) return null;
+        return {
+            start: virtualRows[0].index,
+            end: virtualRows[virtualRows.length - 1].index,
+        };
+    }, [virtualRows]);
 
     // Drag handling
     const { handleDragStart, previewBars } = useTaskDrag({
@@ -92,24 +96,30 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
     const progressHandler = canEditProgress ? handleTaskProgressUpdate : undefined;
 
     return (
-        <div
-            ref={localRef}
-            className="relative flex-1 overflow-auto bg-background/50"
-            onScroll={onScroll}
-            data-testid="gantt-chart-scroll-container"
-        >
+        <TooltipProvider delayDuration={40} skipDelayDuration={120}>
             <div
-                className="relative"
+                ref={localRef}
+                className="relative flex-1 overflow-auto bg-background/50"
                 style={{
-                    width: totalWidth,
-                    height: totalHeight + HEADER_HEIGHT,
+                    contain: 'strict',
+                    overflowAnchor: 'none',
                 }}
+                onScroll={onScroll}
+                data-testid="gantt-chart-scroll-container"
             >
+                <div
+                    className="relative"
+                    style={{
+                        width: totalWidth,
+                        height: totalHeight + HEADER_HEIGHT,
+                    }}
+                >
                 {/* Header */}
                 <TimelineHeader
                     virtualColumns={virtualColumns}
-                    allColumns={allColumns}
+                    dateRange={dateRange}
                     viewMode={viewMode}
+                    columnCount={columnCount}
                     totalWidth={totalWidth}
                 />
 
@@ -118,19 +128,23 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
                     className="relative"
                     style={{
                         height: totalHeight,
-                        marginTop: HEADER_HEIGHT,
                     }}
                 >
                     {/* Grid Lines */}
                     <Grid
                         virtualRows={virtualRows}
                         virtualColumns={virtualColumns}
-                        allColumns={allColumns}
+                        dateRange={dateRange}
                         totalWidth={totalWidth}
                         totalHeight={totalHeight}
                         viewMode={viewMode}
                     />
 
+                    <TodayLine
+                        dateRange={dateRange}
+                        viewMode={viewMode}
+                        totalHeight={totalHeight}
+                    />
 
                     {/* Dependency Layer */}
                     <DependencyLayer
@@ -140,6 +154,7 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
                         viewMode={viewMode}
                         totalWidth={totalWidth}
                         totalHeight={totalHeight}
+                        visibleRowRange={visibleRowRange}
                         previewBars={previewBars}
                     />
 
@@ -171,7 +186,8 @@ export const GanttChart = forwardRef<HTMLDivElement, GanttProps>(function GanttC
                         );
                     })}
                 </div>
+                </div>
             </div>
-        </div>
+        </TooltipProvider>
     );
 });

@@ -104,7 +104,9 @@ export const openapi = {
     // Tasks
     async listTasksByProject(projectId: string, opts?: { progress?: boolean; task_id?: string }): Promise<DomainTask[] | ApiProgress[]> {
         if (opts?.progress) {
-            const { data } = await api.get<ApiProgress[]>(`/projects/${projectId}/tasks`, { params: { progress: true, task_id: opts.task_id } });
+            const { data } = await api.get<ApiProgress[]>(`/projects/${projectId}/progress`, {
+                params: opts.task_id ? { task_id: opts.task_id } : undefined,
+            });
             return data;
         }
         const { data } = await api.get<ApiTask[]>(`/projects/${projectId}/tasks`);

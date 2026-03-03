@@ -1,5 +1,6 @@
 // Task Table component for editing tasks in split view
-import { useState, useEffect, useCallback, forwardRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
     useReactTable,
     getCoreRowModel,
@@ -12,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Combobox } from '@/components/ui/combobox';
 import { Trash2, Plus, X } from 'lucide-react';
-import { HEADER_HEIGHT } from './constants';
+import { HEADER_HEIGHT, ROW_HEIGHT } from './constants';
 import {
     Dialog,
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const columnHelper = createColumnHelper<GanttTask>();
 
@@ -42,9 +44,68 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
     onScroll,
 }, ref) {
     const [data, setData] = useState(() => [...tasks]);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    useImperativeHandle(ref, () => containerRef.current as HTMLDivElement, []);
 
     useEffect(() => {
         setData(tasks);
+    }, [tasks]);
+
+    const taskById = useMemo(() => {
+        const map = new Map<string, GanttTask>();
+        tasks.forEach((task) => {
+            map.set(task.id, task);
+        });
+        return map;
+    }, [tasks]);
+
+    const dependencyBySourceTarget = useMemo(() => {
+        const map = new Map<string, GanttDependency>();
+        dependencies.forEach((dependency) => {
+            map.set(`${dependency.source_task_id}::${dependency.target_task_id}`, dependency);
+        });
+        return map;
+    }, [dependencies]);
+
+    const dependencyReachability = useMemo(() => {
+        const adjacency = new Map<string, string[]>();
+        tasks.forEach((task) => {
+            adjacency.set(task.id, task.dependencies ?? []);
+        });
+
+        const cache = new Map<string, Set<string>>();
+        const visiting = new Set<string>();
+
+        const collectReachable = (taskId: string): Set<string> => {
+            const cached = cache.get(taskId);
+            if (cached) {
+                return cached;
+            }
+
+            // Graph should be acyclic, but guard against accidental loops.
+            if (visiting.has(taskId)) {
+                return new Set<string>();
+            }
+            visiting.add(taskId);
+
+            const reachable = new Set<string>();
+            const nextTasks = adjacency.get(taskId) ?? [];
+            nextTasks.forEach((nextTaskId) => {
+                reachable.add(nextTaskId);
+                const nested = collectReachable(nextTaskId);
+                nested.forEach((nestedTaskId) => reachable.add(nestedTaskId));
+            });
+
+            visiting.delete(taskId);
+            cache.set(taskId, reachable);
+            return reachable;
+        };
+
+        tasks.forEach((task) => {
+            collectReachable(task.id);
+        });
+
+        return cache;
     }, [tasks]);
 
     const [taskToDelete, setTaskToDelete] = useState<GanttTask | null>(null);
@@ -52,38 +113,15 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
 
     const wouldCreateDependencyCycle = useCallback((dependentId: string, predecessorId: string) => {
         if (dependentId === predecessorId) return true;
-
-        const dependencyMap = new Map<string, string[]>();
-        tasks.forEach((task) => {
-            dependencyMap.set(task.id, task.dependencies ?? []);
-        });
-
-        const stack = [predecessorId];
-        const visited = new Set<string>();
-
-        while (stack.length > 0) {
-            const current = stack.pop();
-            if (!current || visited.has(current)) continue;
-            if (current === dependentId) return true;
-            visited.add(current);
-
-            const next = dependencyMap.get(current) ?? [];
-            next.forEach((taskId) => {
-                if (!visited.has(taskId)) {
-                    stack.push(taskId);
-                }
-            });
-        }
-
-        return false;
-    }, [tasks]);
+        return dependencyReachability.get(predecessorId)?.has(dependentId) ?? false;
+    }, [dependencyReachability]);
 
     const updateLocalTask = useCallback((taskId: string, patch: Partial<GanttTask>) => {
         setData((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...patch } : task)));
     }, []);
 
     const commitTaskName = useCallback((taskId: string, rawName: string) => {
-        const sourceTask = tasks.find((task) => task.id === taskId);
+        const sourceTask = taskById.get(taskId);
         if (!sourceTask) return;
 
         const nextName = rawName.trim();
@@ -95,7 +133,7 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
 
         if (nextName === sourceTask.name) return;
         onTasksUpdate([{ ...sourceTask, name: nextName }]);
-    }, [tasks, onTasksUpdate, updateLocalTask]);
+    }, [onTasksUpdate, taskById, updateLocalTask]);
 
     const columns = [
         columnHelper.display({
@@ -128,14 +166,14 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                                 return;
                             }
                             if (e.key === 'Escape') {
-                                const sourceTask = tasks.find((item) => item.id === task.id);
+                                const sourceTask = taskById.get(task.id);
                                 if (sourceTask) {
                                     updateLocalTask(task.id, { name: sourceTask.name });
                                 }
                                 (e.currentTarget as HTMLInputElement).blur();
                             }
                         }}
-                        className="h-8 border-none shadow-none focus-visible:ring-1 min-w-0"
+                        className="h-9 border-none shadow-none focus-visible:ring-1 min-w-0"
                         aria-label={`Task name row ${info.row.index + 1}`}
                         data-testid="gantt-table-task-name-input"
                     />
@@ -176,33 +214,106 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
             cell: (info) => {
                 const task = info.row.original;
                 const currentDeps = task.dependencies || [];
+                const currentDepSet = new Set(currentDeps);
+                const dependencyDetails = currentDeps.map((dependencyTaskId) => {
+                    const dependencyTask = taskById.get(dependencyTaskId);
+                    const dependencyObj = dependencyBySourceTarget.get(`${task.id}::${dependencyTaskId}`);
+                    return {
+                        dependencyTaskId,
+                        label: dependencyTask?.name ?? 'Unknown',
+                        dependencyObj,
+                    };
+                });
+                const primaryDependency = dependencyDetails[0];
+                const primaryDependencyId = primaryDependency?.dependencyObj?.id;
+                const hiddenDependencies = dependencyDetails.slice(1);
+                const hiddenDependencyCount = hiddenDependencies.length;
+                const hiddenDependencyTitle = hiddenDependencies.map((dependency) => dependency.label).join(', ');
+                const predecessorOptions = tasks
+                    .filter((candidateTask) =>
+                        candidateTask.id !== task.id
+                        && !currentDepSet.has(candidateTask.id)
+                        && !wouldCreateDependencyCycle(task.id, candidateTask.id)
+                    )
+                    .map((candidateTask) => ({ value: candidateTask.id, label: candidateTask.name }));
+                const canAddPredecessor = predecessorOptions.length > 0;
 
                 return (
                     <div className="flex w-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap py-1 [scrollbar-width:thin]">
-                        {currentDeps.map((depId) => {
-                            const depTask = tasks.find((t) => t.id === depId);
-                            const depObj = dependencies.find(
-                                (d) => d.source_task_id === task.id && d.target_task_id === depId
-                            );
-                            const depLabel = depTask?.name ?? 'Unknown';
+                        {primaryDependency ? (
+                            <Badge variant="secondary" className="h-7 shrink-0 text-xs gap-1 px-1.5">
+                                <span className="truncate max-w-[140px]" title={primaryDependency.label}>
+                                    {primaryDependency.label}
+                                </span>
+                                {primaryDependencyId ? (
+                                    <button
+                                        type="button"
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-sm cursor-pointer hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong"
+                                        aria-label={`Remove predecessor ${primaryDependency.label}`}
+                                        data-testid="gantt-dependency-remove-button"
+                                        onClick={() => onDeleteDependency(primaryDependencyId)}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                ) : null}
+                            </Badge>
+                        ) : null}
 
-                            return (
-                                <Badge key={depId} variant="secondary" className="h-6 shrink-0 text-xs gap-1 px-1">
-                                    <span className="truncate max-w-[140px]" title={depLabel}>{depLabel}</span>
-                                    {depObj && (
-                                        <button
-                                            type="button"
-                                            className="cursor-pointer hover:text-destructive"
-                                            aria-label={`Remove predecessor ${depTask?.name ?? depId}`}
-                                            data-testid="gantt-dependency-remove-button"
-                                            onClick={() => onDeleteDependency(depObj.id)}
+                        {hiddenDependencyCount > 0 ? (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong"
+                                        aria-label={`Show ${hiddenDependencyCount} more predecessors for ${task.name}`}
+                                        data-testid="gantt-dependency-overflow-trigger"
+                                    >
+                                        <Badge
+                                            variant="outline"
+                                            className="h-7 text-xs px-1.5"
+                                            title={hiddenDependencyTitle}
+                                            data-testid="gantt-dependency-overflow-badge"
                                         >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    )}
-                                </Badge>
-                            );
-                        })}
+                                            +{hiddenDependencyCount}
+                                        </Badge>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="start"
+                                    className="w-[260px] p-2"
+                                    data-testid="gantt-dependency-overflow-popover"
+                                >
+                                    <div className="px-1 pb-1 text-xs text-muted-foreground">Hidden predecessors</div>
+                                    <div className="space-y-1">
+                                        {hiddenDependencies.map((dependency) => {
+                                            const dependencyId = dependency.dependencyObj?.id;
+                                            return (
+                                                <div
+                                                    key={dependency.dependencyTaskId}
+                                                    className="flex items-center gap-2 rounded-md border bg-surface px-2 py-1.5"
+                                                >
+                                                    <span className="min-w-0 flex-1 truncate text-xs" title={dependency.label}>
+                                                        {dependency.label}
+                                                    </span>
+                                                    {dependencyId ? (
+                                                        <button
+                                                            type="button"
+                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-sm cursor-pointer hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong"
+                                                            aria-label={`Remove predecessor ${dependency.label}`}
+                                                            data-testid="gantt-dependency-overflow-remove-button"
+                                                            onClick={() => onDeleteDependency(dependencyId)}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        ) : null}
+
                         <Combobox
                             onChange={(val) => {
                                 if (wouldCreateDependencyCycle(task.id, val)) return;
@@ -210,23 +321,21 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                             }}
                             placeholder="Add Predecessor..."
                             searchPlaceholder="Search tasks..."
-                            options={tasks
-                                .filter((t) =>
-                                    t.id !== task.id
-                                    && !currentDeps.includes(t.id)
-                                    && !wouldCreateDependencyCycle(task.id, t.id)
-                                )
-                                .map(t => ({ value: t.id, label: t.name }))
-                            }
+                            matchTriggerWidth={false}
+                            contentClassName="min-w-[260px] max-w-[420px] w-[min(420px,calc(100vw-2rem))]"
+                            options={predecessorOptions}
                         >
                             <Button
                                 type="button"
-                                className="h-6 w-6 shrink-0 p-0 border-dashed border-2 rounded-full flex items-center justify-center hover:border-primary hover:text-primary"
+                                className="h-9 shrink-0 border-dashed border-2 rounded-md px-2 text-xs font-medium hover:border-primary hover:text-primary"
                                 variant="outline"
+                                disabled={!canAddPredecessor}
+                                title={canAddPredecessor ? "Add predecessor" : "No valid predecessors available"}
                                 aria-label={`Add predecessor to ${task.name}`}
                                 data-testid="gantt-dependency-add-button"
                             >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="mr-1 h-3 w-3" />
+                                {canAddPredecessor ? "Add" : "None"}
                             </Button>
                         </Combobox>
                     </div>
@@ -241,7 +350,7 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive"
                     onClick={() => {
                         setTaskToDelete(info.row.original);
                         setConfirmOpen(true);
@@ -260,11 +369,26 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+    const rows = table.getRowModel().rows;
+    const rowVirtualizer = useVirtualizer({
+        count: rows.length,
+        getScrollElement: () => containerRef.current,
+        estimateSize: () => ROW_HEIGHT,
+        getItemKey: (index) => rows[index]?.id ?? `table-row-${index}`,
+        overscan: 8,
+    });
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const totalVirtualHeight = rowVirtualizer.getTotalSize();
+    const visibleColumnCount = table.getVisibleLeafColumns().length;
+    const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+    const paddingBottom = virtualRows.length > 0
+        ? totalVirtualHeight - virtualRows[virtualRows.length - 1].end
+        : 0;
 
     return (
         <>
             <div
-                ref={ref}
+                ref={containerRef}
                 className="w-full h-full overflow-auto"
                 onScroll={onScroll}
             >
@@ -289,8 +413,21 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                         ))}
                     </thead>
                     <tbody>
-                        {table.getRowModel().rows.map((row) => (
-                            <tr key={row.id} className="border-b hover:bg-muted/50 transition-colors h-[50px]">
+                        {paddingTop > 0 ? (
+                            <tr aria-hidden="true">
+                                <td colSpan={visibleColumnCount} style={{ height: `${paddingTop}px`, padding: 0, border: 0 }} />
+                            </tr>
+                        ) : null}
+
+                        {virtualRows.map((virtualRow) => {
+                            const row = rows[virtualRow.index];
+                            if (!row) return null;
+                            return (
+                            <tr
+                                key={row.id}
+                                className="border-b hover:bg-muted/50 transition-colors h-[50px]"
+                                style={{ height: `${virtualRow.size}px` }}
+                            >
                                 {row.getVisibleCells().map((cell) => (
                                     <td
                                         key={cell.id}
@@ -303,7 +440,14 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                                     </td>
                                 ))}
                             </tr>
-                        ))}
+                            );
+                        })}
+
+                        {paddingBottom > 0 ? (
+                            <tr aria-hidden="true">
+                                <td colSpan={visibleColumnCount} style={{ height: `${paddingBottom}px`, padding: 0, border: 0 }} />
+                            </tr>
+                        ) : null}
                     </tbody>
                 </table>
             </div>

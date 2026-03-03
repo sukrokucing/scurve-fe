@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-03-03T09:47:43.294Z",
+  "budgets": {
+    "tasksLoadMs": 5000,
+    "tasksSearchMs": 1800,
+    "ganttSwitchMs": 2600,
+    "ganttTodayMs": 1800,
+    "policyLoadMs": 5000,
+    "policyFilterMs": 1800,
+    "flowLoadMs": 5000,
+    "flowSelectMs": 1800
+  },
+  "metrics": [
+    {
+      "name": "tasks.route.load",
+      "route": "/tasks",
+      "durationMs": 3060,
+      "budgetMs": 5000,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:38.268Z"
+    },
+    {
+      "name": "tasks.search.filter",
+      "route": "/tasks",
+      "durationMs": 506,
+      "budgetMs": 1800,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:38.776Z"
+    },
+    {
+      "name": "tasks.gantt.switch",
+      "route": "/tasks",
+      "durationMs": 710,
+      "budgetMs": 2600,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:39.487Z"
+    },
+    {
+      "name": "tasks.gantt.today",
+      "route": "/tasks",
+      "durationMs": 317,
+      "budgetMs": 1800,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:39.805Z"
+    },
+    {
+      "name": "policy.route.load",
+      "route": "/settings/policy",
+      "durationMs": 1436,
+      "budgetMs": 5000,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:41.242Z"
+    },
+    {
+      "name": "policy.search.filter",
+      "route": "/settings/policy",
+      "durationMs": 414,
+      "budgetMs": 1800,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:41.657Z"
+    },
+    {
+      "name": "flow.route.load",
+      "route": "/settings/flow",
+      "durationMs": 1424,
+      "budgetMs": 5000,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:43.082Z"
+    },
+    {
+      "name": "flow.user.select",
+      "route": "/settings/flow",
+      "durationMs": 175,
+      "budgetMs": 1800,
+      "ok": true,
+      "recordedAt": "2026-03-03T09:47:43.258Z"
+    }
+  ]
+}

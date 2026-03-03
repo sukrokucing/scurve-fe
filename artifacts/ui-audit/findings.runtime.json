@@ -1,0 +1,1795 @@
+{
+  "generatedAt": "2026-03-03T05:34:06.622Z",
+  "source": "runtime",
+  "mode": "full",
+  "screenshotCount": 171,
+  "findings": [],
+  "observations": [
+    {
+      "route": "/",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": true
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "dark",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "glass",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/login",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "dark",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/register",
+      "theme": "glass",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    }
+  ],
+  "counts": {
+    "total": 0,
+    "bySeverity": {}
+  }
+}

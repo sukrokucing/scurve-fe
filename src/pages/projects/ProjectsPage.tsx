@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -127,7 +127,7 @@ export function ProjectsPage() {
         },
     });
 
-    const rows = useMemo(() => ((projects as unknown) as Project[]) ?? [], [projects]);
+    const rows = (projects as unknown as Project[]) ?? [];
 
     return (
         <div className="space-y-6">
@@ -459,7 +459,7 @@ function VirtualizedProjectsTable({
                                 key={project.id}
                                 data-index={virtualItem.index}
                                 ref={rowVirtualizer.measureElement}
-                                className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                className="hover:bg-surface-hover transition-colors"
                             >
                                 <TableCell className="font-medium">{project.name}</TableCell>
                                 <TableCell className="capitalize">{project.status}</TableCell>

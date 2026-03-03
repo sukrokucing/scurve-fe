@@ -1,14 +1,16 @@
 // Background grid for the Gantt timeline
 import { memo } from 'react';
 import { type VirtualItem } from '@tanstack/react-virtual';
-import type { ViewColumn, ViewMode } from '../types';
+import type { DateRange, ViewMode } from '../types';
 import { ROW_HEIGHT, COLUMN_WIDTH } from '../constants';
 import { cn } from '@/lib/utils';
+import { isToday, isWeekend } from 'date-fns';
+import { getDateForColumn } from '../utils/dateUtils';
 
 interface TimelineGridProps {
     virtualColumns: VirtualItem[];
     virtualRows: VirtualItem[];
-    allColumns: ViewColumn[];
+    dateRange: DateRange;
     viewMode: ViewMode;
     totalWidth: number;
     totalHeight: number;
@@ -17,12 +19,13 @@ interface TimelineGridProps {
 export const TimelineGrid = memo(function TimelineGrid({
     virtualColumns,
     virtualRows,
-    allColumns,
+    dateRange,
     viewMode,
     totalWidth,
     totalHeight,
 }: TimelineGridProps) {
     const columnWidth = COLUMN_WIDTH[viewMode];
+    const alignedColumnWidth = Math.round(columnWidth);
 
     return (
         <div
@@ -31,20 +34,21 @@ export const TimelineGrid = memo(function TimelineGrid({
         >
             {/* Vertical grid lines (column separators) - positioned absolutely */}
             {virtualColumns.map((virtualColumn) => {
-                const column = allColumns[virtualColumn.index];
-                if (!column) return null;
+                const date = getDateForColumn(dateRange, virtualColumn.index, viewMode);
+                const dayWeekend = viewMode === 'day' && isWeekend(date);
+                const dayToday = viewMode === 'day' && isToday(date);
 
                 return (
                     <div
                         key={`col-${virtualColumn.key}`}
                         className={cn(
                             "absolute top-0 border-r border-border/30",
-                            column.isWeekend && "bg-muted/20",
-                            column.isToday && "bg-primary/5"
+                            dayWeekend && "bg-muted/20",
+                            dayToday && "bg-primary/5"
                         )}
                         style={{
-                            left: virtualColumn.start,
-                            width: columnWidth,
+                            left: Math.round(virtualColumn.start),
+                            width: alignedColumnWidth,
                             height: totalHeight,
                         }}
                     />
@@ -57,7 +61,7 @@ export const TimelineGrid = memo(function TimelineGrid({
                     key={`row-${virtualRow.key}`}
                     className="absolute left-0 border-b border-border/20"
                     style={{
-                        top: virtualRow.start,
+                        top: Math.round(virtualRow.start),
                         width: totalWidth,
                         height: ROW_HEIGHT,
                     }}
