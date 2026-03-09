@@ -5,23 +5,35 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+const BUTTON_BASE_CLASS =
+    "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 sm:min-h-0 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+
+const BUTTON_VARIANT_DEFAULT_CLASS =
+    "border border-primary/20 bg-primary text-primary-foreground hover:text-primary-foreground active:text-primary-foreground shadow-sm hover:bg-primary-hover hover:shadow-md active:bg-primary-active active:translate-y-px transition-all duration-200 [.theme-glass_&]:bg-primary/90 [.theme-glass_&]:hover:brightness-95 [.theme-glass_&]:active:brightness-90 [.theme-glass_&]:border-primary/35 [.theme-glass_&]:shadow-md"
+const BUTTON_VARIANT_DESTRUCTIVE_CLASS =
+    "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90"
+const BUTTON_VARIANT_DESTRUCTIVE_OUTLINE_CLASS =
+    "border-2 border-destructive text-destructive hover:bg-destructive/10"
+const BUTTON_VARIANT_OUTLINE_CLASS =
+    "border border-input bg-surface text-foreground hover:text-foreground active:text-foreground shadow-sm hover:bg-surface-hover active:bg-surface-active"
+const BUTTON_VARIANT_SECONDARY_CLASS =
+    "border border-border bg-secondary text-secondary-foreground hover:text-secondary-foreground active:text-secondary-foreground shadow-sm hover:bg-secondary-hover active:bg-secondary-active active:translate-y-px [.theme-glass_&]:bg-secondary/78 [.theme-glass_&]:hover:brightness-95 [.theme-glass_&]:active:brightness-90 [.theme-glass_&]:border-border/85 [.theme-glass_&]:backdrop-blur-sm"
+const BUTTON_VARIANT_GHOST_CLASS =
+    "text-foreground hover:bg-accent-hover active:bg-accent-active hover:text-accent-foreground active:text-accent-foreground"
+const BUTTON_VARIANT_LINK_CLASS = "text-primary underline-offset-4 hover:underline"
+
 const buttonVariants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+    BUTTON_BASE_CLASS,
     {
         variants: {
             variant: {
-                default:
-                    "border border-primary/20 bg-primary text-primary-foreground hover:text-primary-foreground active:text-primary-foreground shadow-sm hover:bg-primary-hover hover:shadow-md active:bg-primary-active active:translate-y-px transition-all duration-200 [.theme-glass_&]:bg-primary/90 [.theme-glass_&]:hover:brightness-95 [.theme-glass_&]:active:brightness-90 [.theme-glass_&]:border-primary/35 [.theme-glass_&]:shadow-md",
-                destructive:
-                    "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-                "destructive-outline":
-                    "border-2 border-destructive text-destructive hover:bg-destructive/10",
-                outline:
-                    "border border-input bg-surface text-foreground hover:text-foreground active:text-foreground shadow-sm hover:bg-surface-hover active:bg-surface-active",
-                secondary:
-                    "border border-border bg-secondary text-secondary-foreground hover:text-secondary-foreground active:text-secondary-foreground shadow-sm hover:bg-secondary-hover active:bg-secondary-active active:translate-y-px [.theme-glass_&]:bg-secondary/78 [.theme-glass_&]:hover:brightness-95 [.theme-glass_&]:active:brightness-90 [.theme-glass_&]:border-border/85 [.theme-glass_&]:backdrop-blur-sm",
-                ghost: "text-foreground hover:bg-accent-hover active:bg-accent-active hover:text-accent-foreground active:text-accent-foreground",
-                link: "text-primary underline-offset-4 hover:underline",
+                default: BUTTON_VARIANT_DEFAULT_CLASS,
+                destructive: BUTTON_VARIANT_DESTRUCTIVE_CLASS,
+                "destructive-outline": BUTTON_VARIANT_DESTRUCTIVE_OUTLINE_CLASS,
+                outline: BUTTON_VARIANT_OUTLINE_CLASS,
+                secondary: BUTTON_VARIANT_SECONDARY_CLASS,
+                ghost: BUTTON_VARIANT_GHOST_CLASS,
+                link: BUTTON_VARIANT_LINK_CLASS,
             },
             size: {
                 default: "h-11 px-4 py-2", // Increased to 44px for accessibility

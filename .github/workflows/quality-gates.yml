@@ -23,14 +23,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Lint
         run: npm run lint
 
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Build
+        run: npm run build
+
+      - name: UI audit gate
+        run: npm run audit:ui
+
       - name: Performance audit gate
         run: npm run audit:perf:strict
 
-      - name: Build
-        run: npm run build
+      - name: Visual parity gate
+        run: npm run visual:compare

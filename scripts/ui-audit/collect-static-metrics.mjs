@@ -16,6 +16,9 @@ const TRUNCATE_PATTERN = /\b(?:truncate|line-clamp-\d+)\b/;
 const ARBITRARY_SPACING_PATTERN = /\b(?:-?m(?:[trblxy])?|-?p(?:[trblxy])?|gap(?:-[xy])?|space-[xy])-\[[^\]]+\]/g;
 const TIGHT_INTERACTIVE_PADDING_PATTERN = /\b(?:p|px|py)-(?:0|0\.5|1|1\.5)\b/g;
 const INLINE_SPACING_STYLE_PATTERN = /style=\{\{[\s\S]*?\b(?:margin(?:Top|Right|Bottom|Left)?|padding(?:Top|Right|Bottom|Left)?)\s*:\s*([^,}]+)[\s\S]*?\}\}/g;
+const NATIVE_CONFIRM_PATTERN = /\b(?:window\.)?confirm\s*\(/;
+const DESKTOP_ONLY_COPY_PATTERN = /best viewed on desktop/i;
+const HARDCODED_THEME_HEX_PATTERN = /theme_color[^#\n]*#[0-9a-f]{3,8}/i;
 
 function toPosixPath(filePath) {
     return filePath.split(path.sep).join("/");
@@ -157,6 +160,45 @@ async function collect() {
                     file: relPath,
                     line: lineNumber,
                     message: "Centered text in content copy may reduce scan speed for multi-line content.",
+                    snippet: line,
+                }));
+                findingCounter += 1;
+            }
+
+            if (NATIVE_CONFIRM_PATTERN.test(line)) {
+                findings.push(createFinding({
+                    id: `STATIC-${String(findingCounter).padStart(4, "0")}`,
+                    ruleId: "flow.confirmation-consistency",
+                    severity: "P1",
+                    file: relPath,
+                    line: lineNumber,
+                    message: "Native confirm() detected; use app dialog patterns for consistent UX and accessibility.",
+                    snippet: line,
+                }));
+                findingCounter += 1;
+            }
+
+            if (DESKTOP_ONLY_COPY_PATTERN.test(line)) {
+                findings.push(createFinding({
+                    id: `STATIC-${String(findingCounter).padStart(4, "0")}`,
+                    ruleId: "layout.mobile-primary-content-overflow",
+                    severity: "P1",
+                    file: relPath,
+                    line: lineNumber,
+                    message: "Desktop-only warning copy detected; provide a mobile-first workflow instead of warning-only fallback.",
+                    snippet: line,
+                }));
+                findingCounter += 1;
+            }
+
+            if (HARDCODED_THEME_HEX_PATTERN.test(line) && !line.includes("example")) {
+                findings.push(createFinding({
+                    id: `STATIC-${String(findingCounter).padStart(4, "0")}`,
+                    ruleId: "good-ui.visual-consistency",
+                    severity: "P2",
+                    file: relPath,
+                    line: lineNumber,
+                    message: "Hardcoded theme color fallback detected; prefer semantic tokens or centralized defaults.",
                     snippet: line,
                 }));
                 findingCounter += 1;

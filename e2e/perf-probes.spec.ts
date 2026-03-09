@@ -170,6 +170,28 @@ async function ensureAuthenticated(page: Page) {
     await page.goto("/tasks");
 }
 
+async function openTasksAdvancedFilters(page: Page) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    if (await panel.isVisible().catch(() => false)) return;
+
+    await page.getByTestId("tasks-advanced-filters-toggle").click();
+    await expect(panel).toBeVisible();
+}
+
+async function closeTasksAdvancedFilters(page: Page) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    if (!(await panel.isVisible().catch(() => false))) return;
+
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+}
+
+async function ensurePolicyPageReady(page: Page) {
+    await expect(page).toHaveURL(/\/settings\/policy(?:\?|$)/, { timeout: 15000 });
+    await expect(page.getByTestId("rbac-permission-search-input")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Access Policy/i })).toBeVisible({ timeout: 15000 });
+}
+
 test.describe("Runtime Perf Probes", () => {
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {
@@ -286,23 +308,24 @@ test.describe("Runtime Perf Probes", () => {
 
         await measureProbe("tasks.search.filter", "/tasks", BUDGETS.tasksSearchMs, async () => {
             await page.getByTestId("tasks-search-input").fill("Perf Task 12");
-            await expect(page.getByRole("cell", { name: "Perf Task 12" })).toBeVisible();
+            await expect(page.getByRole("cell", { name: "Perf Task 12", exact: true })).toBeVisible();
         });
 
         await measureProbe("tasks.gantt.switch", "/tasks", BUDGETS.ganttSwitchMs, async () => {
+            await openTasksAdvancedFilters(page);
             await page.getByTestId("tasks-view-gantt-button").click();
             await expect(page.getByTestId("gantt-chart-scroll-container")).toBeVisible();
         });
 
         await measureProbe("tasks.gantt.today", "/tasks", BUDGETS.ganttTodayMs, async () => {
+            await closeTasksAdvancedFilters(page);
             await page.getByTestId("gantt-today-button").click();
             await page.waitForTimeout(100);
         });
 
         await measureProbe("policy.route.load", "/settings/policy", BUDGETS.policyLoadMs, async () => {
             await page.goto("/settings/policy");
-            await expect(page.getByRole("heading", { name: "Access Policy" })).toBeVisible();
-            await expect(page.getByTestId("rbac-permission-search-input")).toBeVisible();
+            await ensurePolicyPageReady(page);
         });
 
         await measureProbe("policy.search.filter", "/settings/policy", BUDGETS.policyFilterMs, async () => {

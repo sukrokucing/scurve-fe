@@ -1,13 +1,27 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { addDays, format, isSameDay } from "date-fns";
 
 import { useProjectsQuery } from "@/api/queries/projects";
-import { useTasksByProject, useTaskMutation, useDeleteTask, useUpdateTask, useBatchUpdateTasks, useDependencies, useDependencyMutation, useDeleteDependency } from "@/api/queries/tasks";
+import {
+    useTasksByProject,
+    useTasksByProjectList,
+    useTaskMutation,
+    useDeleteTask,
+    useUpdateTask,
+    useBatchUpdateTasks,
+    useDependencies,
+    useDependencyMutation,
+    useDeleteDependency,
+} from "@/api/queries/tasks";
+import { usersApi } from "@/api/users";
+import { openapi } from "@/api/openapiClient";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
 import type { Task, TaskStatus } from "@/types/domain";
 import type { components } from "@/types/api";
+import { toast } from "sonner";
 
 type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
@@ -20,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     Table,
     TableBody,
@@ -33,10 +48,20 @@ import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
-import { Search, List, Kanban, CalendarRange, ListTodo } from "lucide-react";
+import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAuthStore } from "@/store/authStore";
+import {
+    abandonTimeToTaskSession,
+    clearTimeToTaskRecords,
+    completeTimeToTaskSession,
+    formatDurationMs,
+    getTimeToTaskSummary,
+    markTimeToTaskIntent,
+    startTimeToTaskSession,
+} from "@/lib/timeToTask";
 
 
 const KANBAN_COLUMNS = [
@@ -98,11 +123,67 @@ function getStatusVariant(status: string): "success" | "info" | "error" | "secon
             return "secondary";
     }
 }
+
+function getStatusLabel(status: TaskStatus): string {
+    switch (status) {
+        case "todo":
+            return "To Do";
+        case "in_progress":
+            return "In Progress";
+        case "blocked":
+            return "Blocked";
+        case "done":
+            return "Done";
+        default:
+            return status;
+    }
+}
+
+function clampProgress(value: number): number {
+    return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function isWithinDateRange(value: string | null | undefined, from?: string, to?: string): boolean {
+    if (!value) return true;
+    const candidateDate = new Date(value);
+    if (Number.isNaN(candidateDate.getTime())) return true;
+
+    if (from) {
+        const fromDate = new Date(from);
+        fromDate.setHours(0, 0, 0, 0);
+        if (candidateDate < fromDate) return false;
+    }
+
+    if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        if (candidateDate > toDate) return false;
+    }
+
+    return true;
+}
+
+function mapTaskStatusToApi(status: TaskStatus): "pending" | "in_progress" | "blocked" | "done" {
+    switch (status) {
+        case "todo":
+            return "pending";
+        case "in_progress":
+            return "in_progress";
+        case "blocked":
+            return "blocked";
+        case "done":
+            return "done";
+        default:
+            return "pending";
+    }
+}
 // Types
 type TaskFormMode = 'today' | 'plan' | 'range';
 type KanbanTaskItem = (Task & { column: TaskStatus }) & Record<string, unknown>;
 
 export function TasksPage() {
+    const queryClient = useQueryClient();
+    const currentUserId = useAuthStore((state) => state.user?.id);
     const { data: projects } = useProjectsQuery();
     const [selectedProject, setSelectedProject] = useState<string>("");
     const [createMode, setCreateMode] = useState<'plan' | 'range' | 'today'>('plan');
@@ -117,13 +198,70 @@ export function TasksPage() {
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+    const [startFromFilter, setStartFromFilter] = useState("");
+    const [startToFilter, setStartToFilter] = useState("");
+    const [dueFromFilter, setDueFromFilter] = useState("");
+    const [dueToFilter, setDueToFilter] = useState("");
     const debouncedSearchQuery = useDebouncedValue(searchQuery, 180);
     const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
+    const normalizedSearchQuery = deferredSearchQuery.trim();
+    const normalizedSearchQueryLower = normalizedSearchQuery.toLowerCase();
+    const apiStatusFilter = useMemo(
+        () => (statusFilter === "all" ? undefined : mapTaskStatusToApi(statusFilter as TaskStatus)),
+        [statusFilter],
+    );
+    const apiAssigneeFilter = assigneeFilter === "all" ? undefined : assigneeFilter;
 
-    // Fetch tasks
-    const { data: tasksData, isLoading: isLoadingTasks, refetch: refetchTasks, isRefetching: isRefetchingTasks } = useTasksByProject(
+    const listQueryParams = useMemo(
+        () => ({
+            q: normalizedSearchQuery || undefined,
+            status: apiStatusFilter,
+            assignee_id: apiAssigneeFilter,
+            start_from: startFromFilter || undefined,
+            start_to: startToFilter || undefined,
+            due_from: dueFromFilter || undefined,
+            due_to: dueToFilter || undefined,
+            page,
+            per_page: pageSize,
+            sort_by: "updated_at",
+            sort_dir: "desc" as const,
+        }),
+        [
+            apiAssigneeFilter,
+            apiStatusFilter,
+            dueFromFilter,
+            dueToFilter,
+            normalizedSearchQuery,
+            page,
+            pageSize,
+            startFromFilter,
+            startToFilter,
+        ],
+    );
+
+    // Fetch full task graph for Kanban/Gantt (list view uses server-side pagination query below).
+    const {
+        data: allTasksData,
+        isLoading: isLoadingAllTasks,
+        refetch: refetchAllTasks,
+        isRefetching: isRefetchingAllTasks,
+    } = useTasksByProject(
         selectedProject ?? "",
         false,
+        { enabled: view !== "list" },
+    );
+
+    // Fetch list view with backend-side filtering/pagination/sorting.
+    const {
+        data: listTasksData,
+        isLoading: isLoadingListTasks,
+        refetch: refetchListTasks,
+        isRefetching: isRefetchingListTasks,
+    } = useTasksByProjectList(
+        selectedProject ?? "",
+        listQueryParams,
+        { enabled: view === "list" },
     );
 
     // Fetch progress entries only when the Gantt view is active.
@@ -135,23 +273,148 @@ export function TasksPage() {
 
     const { data: dependenciesData } = useDependencies(selectedProject ?? "");
 
-    const tasks = (tasksData as Task[] | undefined) ?? EMPTY_TASKS;
+    const allTasks = (allTasksData as Task[] | undefined) ?? EMPTY_TASKS;
+    const listTasks = listTasksData?.tasks ?? EMPTY_TASKS;
+    const listTotalCount = listTasksData?.total ?? listTasks.length;
+    const tasks = view === "list" ? listTasks : allTasks;
     const progress = (progressData as Progress[] | undefined) ?? EMPTY_PROGRESS;
-    const isLoading = isLoadingTasks || (view === "gantt" && isLoadingProgress);
+    const isLoading = (view === "list" ? isLoadingListTasks : isLoadingAllTasks) || (view === "gantt" && isLoadingProgress);
+    const { data: usersLookup } = useQuery({
+        queryKey: ["users", "lookup"],
+        queryFn: () => usersApi.listUsers({ page: 1, per_page: 500 }),
+        staleTime: 5 * 60 * 1000,
+    });
+    const assigneeById = useMemo(
+        () => new Map((usersLookup?.users ?? []).map((user) => [user.id, user])),
+        [usersLookup?.users]
+    );
 
-    const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
+    const getAssigneeLabel = useCallback((assigneeId?: string) => {
+        if (!assigneeId) return "—";
+        const user = assigneeById.get(assigneeId);
+        if (user?.name?.trim()) return user.name;
+        if (user?.email?.trim()) return user.email;
+        return `Unknown (${assigneeId.slice(0, 8)})`;
+    }, [assigneeById]);
 
-    // Filter tasks once per query/filter change instead of every render path.
-    const filteredTasks = useMemo(() => tasks.filter((task) => {
-        const matchesSearch = task.name.toLowerCase().includes(normalizedSearchQuery);
-        const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    }), [normalizedSearchQuery, statusFilter, tasks]);
+    const getAssigneeInitial = useCallback((assigneeId?: string) => {
+        if (!assigneeId) return "U";
+        const user = assigneeById.get(assigneeId);
+        const display = user?.name?.trim() || user?.email?.trim();
+        return display ? display.charAt(0).toUpperCase() : "U";
+    }, [assigneeById]);
+
+    // List view is already server-filtered + paginated; other views keep client-side filtering for full graph.
+    const filteredTasks = useMemo(() => {
+        if (view === "list") return listTasks;
+        return allTasks.filter((task) => {
+            const matchesSearch = task.name.toLowerCase().includes(normalizedSearchQueryLower);
+            const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+            const matchesAssignee = assigneeFilter === "all" || task.assigneeId === assigneeFilter;
+            const matchesStartDate = isWithinDateRange(task.startDate, startFromFilter || undefined, startToFilter || undefined);
+            const matchesDueDate = isWithinDateRange(task.dueDate, dueFromFilter || undefined, dueToFilter || undefined);
+            return matchesSearch && matchesStatus && matchesAssignee && matchesStartDate && matchesDueDate;
+        });
+    }, [
+        allTasks,
+        assigneeFilter,
+        dueFromFilter,
+        dueToFilter,
+        listTasks,
+        normalizedSearchQueryLower,
+        startFromFilter,
+        startToFilter,
+        statusFilter,
+        view,
+    ]);
 
     const pagedTasks = useMemo(() => {
+        if (view === "list") return filteredTasks;
         const start = (page - 1) * pageSize;
         return filteredTasks.slice(start, start + pageSize);
-    }, [filteredTasks, page, pageSize]);
+    }, [filteredTasks, page, pageSize, view]);
+
+    const totalFilteredCount = view === "list" ? listTotalCount : filteredTasks.length;
+    const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+    const hasAdvancedFilters = assigneeFilter !== "all"
+        || startFromFilter !== ""
+        || startToFilter !== ""
+        || dueFromFilter !== ""
+        || dueToFilter !== "";
+    const activeAdvancedFilterCount = useMemo(() => {
+        let count = 0;
+        if (assigneeFilter !== "all") count += 1;
+        if (startFromFilter) count += 1;
+        if (startToFilter) count += 1;
+        if (dueFromFilter) count += 1;
+        if (dueToFilter) count += 1;
+        return count;
+    }, [assigneeFilter, dueFromFilter, dueToFilter, startFromFilter, startToFilter]);
+    const currentViewLabel = useMemo(() => {
+        if (view === "kanban") return "Board";
+        if (view === "gantt") return "Gantt";
+        return "List";
+    }, [view]);
+    const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+    const [isSelectionActionsOpen, setIsSelectionActionsOpen] = useState(false);
+    const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+    const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
+    const [bulkStatus, setBulkStatus] = useState<string>("");
+    const [bulkAssignee, setBulkAssignee] = useState<string>("");
+    const [bulkProgress, setBulkProgress] = useState<number>(0);
+    const [isBulkStatusUpdating, setIsBulkStatusUpdating] = useState(false);
+    const [isBulkAssigneeUpdating, setIsBulkAssigneeUpdating] = useState(false);
+    const [isBulkProgressUpdating, setIsBulkProgressUpdating] = useState(false);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+    const isBulkBusy = isBulkStatusUpdating || isBulkAssigneeUpdating || isBulkProgressUpdating || isBulkDeleting;
+
+    const selectedOnPageCount = useMemo(
+        () => pagedTasks.reduce((count, task) => (selectedTaskIdSet.has(task.id) ? count + 1 : count), 0),
+        [pagedTasks, selectedTaskIdSet]
+    );
+    const selectedFilteredCount = useMemo(
+        () => (view === "list"
+            ? selectedOnPageCount
+            : filteredTasks.reduce((count, task) => (selectedTaskIdSet.has(task.id) ? count + 1 : count), 0)),
+        [filteredTasks, selectedOnPageCount, selectedTaskIdSet, view]
+    );
+    const selectionScopeLabel = useMemo(() => {
+        if (view === "list") {
+            return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
+        }
+        const parts: string[] = [];
+        if (selectedOnPageCount > 0) parts.push(`${selectedOnPageCount} on this page`);
+        if (selectedFilteredCount > 0) parts.push(`${selectedFilteredCount} in filtered set`);
+        return parts.length > 0 ? ` (${parts.join(", ")})` : "";
+    }, [selectedFilteredCount, selectedOnPageCount, view]);
+    const allPageSelected = pagedTasks.length > 0 && selectedOnPageCount === pagedTasks.length;
+    const allFilteredSelected = view === "list"
+        ? allPageSelected
+        : (filteredTasks.length > 0 && selectedFilteredCount === filteredTasks.length);
+    const assigneeOptions = useMemo(
+        () => [
+            { value: "__unassigned__", label: "Unassigned" },
+            ...(usersLookup?.users ?? []).map((user) => ({
+                value: user.id,
+                label: user.name?.trim()
+                    ? `${user.name} (${user.email})`
+                    : user.email,
+            })),
+        ],
+        [usersLookup?.users]
+    );
+    const assigneeFilterOptions = useMemo(
+        () => [
+            { value: "all", label: "All Assignees" },
+            ...(usersLookup?.users ?? []).map((user) => ({
+                value: user.id,
+                label: user.name?.trim()
+                    ? `${user.name} (${user.email})`
+                    : user.email,
+            })),
+        ],
+        [usersLookup?.users]
+    );
 
     const kanbanTasks = useMemo<KanbanTaskItem[]>(
         () => filteredTasks.map((task) => ({ ...task, column: task.status })),
@@ -179,17 +442,94 @@ export function TasksPage() {
     const lastVirtualRow = virtualRows[virtualRows.length - 1];
 
     useEffect(() => {
-        const maxPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
-        if (page > maxPage) {
-            setPage(maxPage);
+        if (page > totalPages) {
+            setPage(totalPages);
         }
-    }, [filteredTasks.length, page, pageSize]);
+    }, [page, totalPages]);
 
-    const isRefetching = isRefetchingTasks;
+    useEffect(() => {
+        setPage(1);
+    }, [
+        assigneeFilter,
+        dueFromFilter,
+        dueToFilter,
+        normalizedSearchQuery,
+        selectedProject,
+        startFromFilter,
+        startToFilter,
+        statusFilter,
+    ]);
+
+    useEffect(() => {
+        setSelectedTaskIds((current) => current.filter((taskId) => filteredTasks.some((task) => task.id === taskId)));
+    }, [filteredTasks]);
+
+    useEffect(() => {
+        if (selectedTaskIds.length === 0) {
+            setIsSelectionActionsOpen(false);
+        }
+    }, [selectedTaskIds.length]);
+
+    useEffect(() => {
+        setSelectedTaskIds([]);
+        setBulkStatus("");
+        setBulkAssignee("");
+        setBulkProgress(0);
+        setIsSelectionActionsOpen(false);
+    }, [selectedProject, view]);
+
+    const toggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
+        setSelectedTaskIds((current) => {
+            if (checked) {
+                if (current.includes(taskId)) return current;
+                return [...current, taskId];
+            }
+            return current.filter((id) => id !== taskId);
+        });
+    }, []);
+
+    const toggleSelectAllOnPage = useCallback((checked: boolean) => {
+        const pageTaskIds = pagedTasks.map((task) => task.id);
+        setSelectedTaskIds((current) => {
+            if (checked) {
+                return Array.from(new Set([...current, ...pageTaskIds]));
+            }
+            const pageTaskSet = new Set(pageTaskIds);
+            return current.filter((id) => !pageTaskSet.has(id));
+        });
+    }, [pagedTasks]);
+
+    const toggleSelectAllFiltered = useCallback((checked: boolean) => {
+        if (view === "list") {
+            toggleSelectAllOnPage(checked);
+            return;
+        }
+        const filteredTaskIds = filteredTasks.map((task) => task.id);
+        setSelectedTaskIds((current) => {
+            if (checked) {
+                return Array.from(new Set([...current, ...filteredTaskIds]));
+            }
+            const filteredTaskSet = new Set(filteredTaskIds);
+            return current.filter((id) => !filteredTaskSet.has(id));
+        });
+    }, [filteredTasks, toggleSelectAllOnPage, view]);
+
+    const isRefetching = view === "list" ? isRefetchingListTasks : isRefetchingAllTasks;
+    const refreshTasks = useCallback(() => {
+        if (view === "list") {
+            void refetchListTasks();
+            return;
+        }
+        void refetchAllTasks();
+    }, [refetchAllTasks, refetchListTasks, view]);
 
     const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
     const [createOpen, setCreateOpen] = useState(false);
     const createRef = useRef<HTMLInputElement | null>(null);
+    const timeToTaskSessionIdRef = useRef<string | null>(null);
+    const [timeToTaskSummary, setTimeToTaskSummary] = useState(() =>
+        getTimeToTaskSummary(currentUserId),
+    );
     const [editing, setEditing] = useState<Task | null>(null);
     const editForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
 
@@ -200,6 +540,46 @@ export function TasksPage() {
     const ganttBatchUpdateMutation = useBatchUpdateTasks(selectedProject);
     const dependencyMutation = useDependencyMutation(selectedProject);
     const deleteDependencyMutation = useDeleteDependency(selectedProject);
+
+    const refreshTimeToTaskSummary = useCallback(() => {
+        setTimeToTaskSummary(getTimeToTaskSummary(currentUserId));
+    }, [currentUserId]);
+
+    const beginTimeToTaskSession = useCallback(() => {
+        const nextSessionId = startTimeToTaskSession({
+            route: "/tasks",
+            userId: currentUserId,
+            projectId: selectedProject || undefined,
+            view,
+        });
+        timeToTaskSessionIdRef.current = nextSessionId;
+        return nextSessionId;
+    }, [currentUserId, selectedProject, view]);
+
+    useEffect(() => {
+        refreshTimeToTaskSummary();
+        const sessionId = startTimeToTaskSession({
+            route: "/tasks",
+            userId: currentUserId,
+        });
+        timeToTaskSessionIdRef.current = sessionId;
+
+        return () => {
+            if (timeToTaskSessionIdRef.current) {
+                abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "leave-tasks-page" });
+                timeToTaskSessionIdRef.current = null;
+            }
+        };
+    }, [currentUserId, refreshTimeToTaskSummary]);
+
+    useEffect(() => {
+        if (!createOpen) return;
+        const sessionId = timeToTaskSessionIdRef.current ?? beginTimeToTaskSession();
+        markTimeToTaskIntent(sessionId, {
+            projectId: selectedProject || undefined,
+            view,
+        });
+    }, [beginTimeToTaskSession, createOpen, selectedProject, view]);
 
     const [ganttLocalOverrides, setGanttLocalOverrides] = useState<Record<string, Partial<Task>>>({});
     const ganttQueuedUpdatesRef = useRef<Map<string, GanttTask>>(new Map());
@@ -366,6 +746,8 @@ export function TasksPage() {
     const currentProject = projects?.find((project) => project.id === selectedProject);
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+    const [bulkDeleteTaskIds, setBulkDeleteTaskIds] = useState<string[]>([]);
 
     const openTaskEditor = useCallback((task: Task) => {
         setEditing(task);
@@ -391,6 +773,115 @@ export function TasksPage() {
             projectId: task.projectId,
         });
     }, [editForm]);
+
+    const handleBulkStatusApply = useCallback(async () => {
+        if (!selectedProject || !bulkStatus || selectedTaskIds.length === 0) return;
+        const targetStatus = bulkStatus as TaskStatus;
+        setIsBulkStatusUpdating(true);
+
+        try {
+            await openapi.batchUpdateTasks(selectedProject, {
+                tasks: selectedTaskIds.map((taskId) => ({
+                    id: taskId,
+                    status: mapTaskStatusToApi(targetStatus),
+                })),
+            });
+            toast.success(`Updated ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"} to ${getStatusLabel(targetStatus)}.`);
+            setSelectedTaskIds([]);
+            setBulkStatus("");
+            setBulkAssignee("");
+            setBulkProgress(0);
+            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update tasks: ${message}`);
+        } finally {
+            setIsBulkStatusUpdating(false);
+        }
+    }, [bulkStatus, queryClient, selectedProject, selectedTaskIds]);
+
+    const handleBulkAssigneeApply = useCallback(async () => {
+        if (!selectedProject || !bulkAssignee || selectedTaskIds.length === 0) return;
+        const targetAssignee = bulkAssignee === "__unassigned__" ? "" : bulkAssignee;
+        setIsBulkAssigneeUpdating(true);
+
+        try {
+            await openapi.batchUpdateTasks(selectedProject, {
+                tasks: selectedTaskIds.map((taskId) => ({
+                    id: taskId,
+                    assignee: targetAssignee || null,
+                })),
+            });
+            const assigneeLabel = bulkAssignee === "__unassigned__" ? "Unassigned" : getAssigneeLabel(targetAssignee);
+            toast.success(`Updated assignee for ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"} to ${assigneeLabel}.`);
+            setSelectedTaskIds([]);
+            setBulkStatus("");
+            setBulkAssignee("");
+            setBulkProgress(0);
+            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update assignees: ${message}`);
+        } finally {
+            setIsBulkAssigneeUpdating(false);
+        }
+    }, [bulkAssignee, getAssigneeLabel, queryClient, selectedProject, selectedTaskIds]);
+
+    const handleBulkProgressApply = useCallback(async () => {
+        if (!selectedProject || selectedTaskIds.length === 0) return;
+        const targetProgress = clampProgress(bulkProgress);
+        setIsBulkProgressUpdating(true);
+
+        try {
+            await openapi.batchUpdateTasks(selectedProject, {
+                tasks: selectedTaskIds.map((taskId) => ({
+                    id: taskId,
+                    progress: targetProgress,
+                })),
+            });
+            toast.success(`Updated progress to ${targetProgress}% for ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"}.`);
+            setSelectedTaskIds([]);
+            setBulkStatus("");
+            setBulkAssignee("");
+            setBulkProgress(0);
+            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update progress: ${message}`);
+        } finally {
+            setIsBulkProgressUpdating(false);
+        }
+    }, [bulkProgress, queryClient, selectedProject, selectedTaskIds]);
+
+    const handleBulkDelete = useCallback(async (taskIds: string[]) => {
+        if (!selectedProject || taskIds.length === 0) return;
+        setIsBulkDeleting(true);
+
+        try {
+            const result = await openapi.batchDeleteTasks(selectedProject, taskIds);
+            const deletedCount = Number.isFinite(result?.deleted) ? result.deleted : taskIds.length;
+            toast.success(`Deleted ${deletedCount} task${deletedCount === 1 ? "" : "s"}.`);
+            setSelectedTaskIds([]);
+            setBulkStatus("");
+            setBulkAssignee("");
+            setBulkProgress(0);
+            setBulkDeleteTaskIds([]);
+            setBulkDeleteConfirmOpen(false);
+
+            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to delete selected tasks: ${message}`);
+        } finally {
+            setIsBulkDeleting(false);
+        }
+    }, [queryClient, selectedProject]);
+
+    const requestBulkDelete = useCallback(() => {
+        if (!selectedProject || selectedTaskIds.length === 0) return;
+        setBulkDeleteTaskIds(selectedTaskIds);
+        setBulkDeleteConfirmOpen(true);
+    }, [selectedProject, selectedTaskIds]);
 
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
@@ -480,8 +971,11 @@ export function TasksPage() {
 
                                                 <div className="flex items-center justify-between pt-2">
                                                     {kanbanTask.assigneeId && (
-                                                        <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
-                                                            U
+                                                        <div
+                                                            className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold"
+                                                            title={getAssigneeLabel(kanbanTask.assigneeId)}
+                                                        >
+                                                            {getAssigneeInitial(kanbanTask.assigneeId)}
                                                         </div>
                                                     )}
 
@@ -575,13 +1069,23 @@ export function TasksPage() {
                         <Card key={task.id} className="border-border/70" data-testid="tasks-mobile-card">
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1 min-w-0">
-                                        <p className="text-xs text-muted-foreground">
-                                            #{((page - 1) * pageSize) + index + 1}
-                                        </p>
-                                        <p className="text-sm font-semibold leading-tight line-clamp-2" title={task.name}>
-                                            {task.name}
-                                        </p>
+                                    <div className="flex items-start gap-2 min-w-0">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+                                            checked={selectedTaskIdSet.has(task.id)}
+                                            onChange={(event) => toggleTaskSelection(task.id, event.target.checked)}
+                                            aria-label={`Select task ${task.name}`}
+                                            data-testid="tasks-row-select-checkbox"
+                                        />
+                                        <div className="space-y-1 min-w-0">
+                                            <p className="text-xs text-muted-foreground">
+                                                #{((page - 1) * pageSize) + index + 1}
+                                            </p>
+                                            <p className="text-sm font-semibold leading-tight line-clamp-2" title={task.name}>
+                                                {task.name}
+                                            </p>
+                                        </div>
                                     </div>
                                     <Badge variant={getStatusVariant(task.status)}>
                                         {task.status}
@@ -590,7 +1094,7 @@ export function TasksPage() {
 
                                 <div className="grid grid-cols-2 gap-y-1 text-xs">
                                     <span className="text-muted-foreground">Assignee</span>
-                                    <span className="text-right">{task.assigneeId ?? "—"}</span>
+                                    <span className="text-right">{getAssigneeLabel(task.assigneeId)}</span>
                                     <span className="text-muted-foreground">Plan</span>
                                     <span className="text-right">{task.durationDays ? `${task.durationDays}d` : "—"}</span>
                                 </div>
@@ -634,7 +1138,19 @@ export function TasksPage() {
                     <Table>
                         <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
-                                <TableHead className="w-[50px]">#</TableHead>
+                                <TableHead className="w-[90px]">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-border accent-primary"
+                                            checked={allPageSelected}
+                                            onChange={(event) => toggleSelectAllOnPage(event.target.checked)}
+                                            aria-label="Select all tasks on current page"
+                                            data-testid="tasks-select-all-page-checkbox"
+                                        />
+                                        <span>#</span>
+                                    </div>
+                                </TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Assignee</TableHead>
@@ -668,14 +1184,27 @@ export function TasksPage() {
                                         onDoubleClick={() => openTaskEditor(task)}
                                         className="cursor-pointer hover:bg-surface-hover transition-colors"
                                     >
-                                        <TableCell className="text-center text-muted-foreground">{virtualItem.index + 1}</TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-border accent-primary"
+                                                    checked={selectedTaskIdSet.has(task.id)}
+                                                    onChange={(event) => toggleTaskSelection(task.id, event.target.checked)}
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    aria-label={`Select task ${task.name}`}
+                                                    data-testid="tasks-row-select-checkbox"
+                                                />
+                                                <span>{((page - 1) * pageSize) + virtualItem.index + 1}</span>
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="font-medium">{task.name}</TableCell>
                                         <TableCell>
                                             <Badge variant={getStatusVariant(task.status)}>
                                                 {task.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{task.assigneeId ?? "—"}</TableCell>
+                                        <TableCell>{getAssigneeLabel(task.assigneeId)}</TableCell>
                                         <TableCell>{task.durationDays ? `${task.durationDays}d` : "—"}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
@@ -715,11 +1244,11 @@ export function TasksPage() {
 
                 <DataTablePagination
                     currentPage={page}
-                    totalPages={Math.ceil(filteredTasks.length / pageSize)}
+                    totalPages={totalPages}
                     pageSize={pageSize}
                     setPage={setPage}
                     setPageSize={setPageSize}
-                    totalItems={filteredTasks.length}
+                    totalItems={totalFilteredCount}
                 />
             </div>
         );
@@ -735,6 +1264,44 @@ export function TasksPage() {
                     <p className="text-muted-foreground leading-relaxed">
                         Track execution status and unblock your teams quickly.
                     </p>
+                    <div
+                        className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                        data-testid="tasks-time-to-task-summary"
+                    >
+                        <Badge variant="outline">
+                            Time to Task p50: {formatDurationMs(timeToTaskSummary.p50Ms)}
+                        </Badge>
+                        <Badge variant="outline">
+                            Last: {formatDurationMs(timeToTaskSummary.lastMs)}
+                        </Badge>
+                        <Badge variant="outline">
+                            Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
+                        </Badge>
+                        <Badge variant="outline">
+                            Intent samples: {timeToTaskSummary.intentSampleCount}
+                        </Badge>
+                        <Badge variant="outline">
+                            Passive exits: {timeToTaskSummary.passiveExitCount}
+                        </Badge>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 px-3"
+                            onClick={() => {
+                                clearTimeToTaskRecords(currentUserId);
+                                if (timeToTaskSessionIdRef.current) {
+                                    abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
+                                }
+                                beginTimeToTaskSession();
+                                refreshTimeToTaskSummary();
+                            }}
+                            data-testid="tasks-time-to-task-reset-button"
+                            disabled={timeToTaskSummary.trackedSessionCount === 0}
+                        >
+                            Reset Time to Task
+                        </Button>
+                    </div>
                 </div>
                 <div className="flex items-center gap-4">
                     <Combobox
@@ -748,7 +1315,7 @@ export function TasksPage() {
                     <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => refetchTasks()}
+                        onClick={refreshTasks}
                         disabled={!selectedProject || isRefetching || isRateLimited}
                     >
                         {isRateLimited ? "Cooling down..." : (isRefetching ? "Refreshing…" : "Refresh")}
@@ -804,6 +1371,15 @@ export function TasksPage() {
                                             progress: parsed.data.progress || 0,
                                         })
                                             .then(() => {
+                                                const activeSessionId = timeToTaskSessionIdRef.current;
+                                                if (activeSessionId) {
+                                                    completeTimeToTaskSession(activeSessionId, {
+                                                        projectId: targetProjectId,
+                                                        view,
+                                                    });
+                                                }
+                                                beginTimeToTaskSession();
+                                                refreshTimeToTaskSummary();
                                                 setCreateOpen(false);
                                                 createForm.reset();
                                             })
@@ -1071,14 +1647,13 @@ export function TasksPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        {/* Search and Filter Toolbar */}
-                        <div className="flex items-center gap-3 flex-1">
+                    <div className="mb-6 flex flex-col gap-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center" data-testid="tasks-primary-toolbar">
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search tasks..."
-                                    className="pl-9 h-10"
+                                    className="h-10 pl-9"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     data-testid="tasks-search-input"
@@ -1096,41 +1671,313 @@ export function TasksPage() {
                                 ]}
                                 placeholder="Status"
                                 searchPlaceholder="Search status..."
-                                className="w-[140px]"
+                                className="w-full lg:w-[180px]"
                             />
+                            <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant={hasAdvancedFilters || view !== "list" ? "secondary" : "outline"}
+                                        className="h-10 w-full justify-between gap-2 lg:w-[220px]"
+                                        data-testid="tasks-advanced-filters-toggle"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <SlidersHorizontal className="h-4 w-4" />
+                                            Advanced
+                                        </span>
+                                        {activeAdvancedFilterCount > 0 ? (
+                                            <Badge variant="outline" className="rounded-full px-2 py-0 text-[11px]">
+                                                {activeAdvancedFilterCount}
+                                            </Badge>
+                                        ) : null}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    className="w-[min(94vw,760px)] space-y-5 p-4"
+                                    data-testid="tasks-advanced-filters-panel"
+                                >
+                                    <div className="space-y-3">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                            View mode
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Button
+                                                variant={view === "list" ? "default" : "outline"}
+                                                onClick={() => setView("list")}
+                                                className="h-9"
+                                                data-testid="tasks-view-list-button"
+                                            >
+                                                <List className="mr-2 h-4 w-4" />
+                                                List
+                                            </Button>
+                                            <Button
+                                                variant={view === "kanban" ? "default" : "outline"}
+                                                onClick={() => setView("kanban")}
+                                                className="h-9"
+                                                data-testid="tasks-view-board-button"
+                                            >
+                                                <Kanban className="mr-2 h-4 w-4" />
+                                                Board
+                                            </Button>
+                                            <Button
+                                                variant={view === "gantt" ? "default" : "outline"}
+                                                onClick={() => setView("gantt")}
+                                                className="h-9"
+                                                data-testid="tasks-view-gantt-button"
+                                            >
+                                                <CalendarRange className="mr-2 h-4 w-4" />
+                                                Gantt
+                                            </Button>
+                                        </div>
+                                        {view === "list" ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="h-9"
+                                                onClick={() => toggleSelectAllFiltered(!allFilteredSelected)}
+                                                disabled={pagedTasks.length === 0}
+                                                data-testid="tasks-select-all-filtered-button"
+                                            >
+                                                {allFilteredSelected ? "Unselect page" : `Select page (${pagedTasks.length})`}
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                    <div className="h-px bg-border" />
+                                    <div className="space-y-3">
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                            Filters
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Assignee</Label>
+                                                <Combobox
+                                                    value={assigneeFilter}
+                                                    onChange={setAssigneeFilter}
+                                                    options={assigneeFilterOptions}
+                                                    placeholder="Assignee"
+                                                    searchPlaceholder="Search assignee..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-filter-assignee-combobox"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Start from</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={startFromFilter}
+                                                    onChange={(event) => setStartFromFilter(event.target.value)}
+                                                    className="h-10"
+                                                    data-testid="tasks-filter-start-from-input"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Start to</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={startToFilter}
+                                                    onChange={(event) => setStartToFilter(event.target.value)}
+                                                    className="h-10"
+                                                    data-testid="tasks-filter-start-to-input"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Due from</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={dueFromFilter}
+                                                    onChange={(event) => setDueFromFilter(event.target.value)}
+                                                    className="h-10"
+                                                    data-testid="tasks-filter-due-from-input"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Due to</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={dueToFilter}
+                                                    onChange={(event) => setDueToFilter(event.target.value)}
+                                                    className="h-10"
+                                                    data-testid="tasks-filter-due-to-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="text-xs text-muted-foreground">
+                                                Use this panel for non-primary controls to keep the default toolbar focused.
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                className="h-10 w-full sm:w-auto"
+                                                onClick={() => {
+                                                    setAssigneeFilter("all");
+                                                    setStartFromFilter("");
+                                                    setStartToFilter("");
+                                                    setDueFromFilter("");
+                                                    setDueToFilter("");
+                                                    setIsAdvancedFiltersOpen(false);
+                                                }}
+                                                disabled={!hasAdvancedFilters}
+                                                data-testid="tasks-clear-advanced-filters-button"
+                                            >
+                                                Clear filters
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
-
-                        {/* View Toggle */}
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant={view === "list" ? "default" : "outline"}
-                                onClick={() => setView("list")}
-                                className="h-10"
-                                data-testid="tasks-view-list-button"
-                            >
-                                <List className="mr-2 h-4 w-4" />
-                                List
-                            </Button>
-                            <Button
-                                variant={view === "kanban" ? "default" : "outline"}
-                                onClick={() => setView("kanban")}
-                                className="h-10"
-                                data-testid="tasks-view-board-button"
-                            >
-                                <Kanban className="mr-2 h-4 w-4" />
-                                Board
-                            </Button>
-                            <Button
-                                variant={view === "gantt" ? "default" : "outline"}
-                                onClick={() => setView("gantt")}
-                                className="h-10"
-                                data-testid="tasks-view-gantt-button"
-                            >
-                                <CalendarRange className="mr-2 h-4 w-4" />
-                                Gantt
-                            </Button>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
+                            <Badge variant="outline">View: {currentViewLabel}</Badge>
+                            {activeAdvancedFilterCount > 0 ? (
+                                <Badge variant="outline">Filters: {activeAdvancedFilterCount}</Badge>
+                            ) : null}
                         </div>
                     </div>
+
+                    {view === "list" && selectedTaskIds.length > 0 ? (
+                        <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
+                            <div className="text-sm text-foreground">
+                                {selectedTaskIds.length} task{selectedTaskIds.length === 1 ? "" : "s"} selected
+                                {selectionScopeLabel}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Popover open={isSelectionActionsOpen} onOpenChange={setIsSelectionActionsOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-10"
+                                            data-testid="tasks-selection-actions-toggle"
+                                        >
+                                            <ListTodo className="mr-2 h-4 w-4" />
+                                            Selection actions
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="end"
+                                        className="w-[min(95vw,860px)] space-y-4 p-4"
+                                        data-testid="tasks-selection-actions-panel"
+                                    >
+                                        <p className="text-xs text-muted-foreground">
+                                            Apply bulk updates to selected tasks in one place.
+                                        </p>
+                                        <div className="grid gap-4 xl:grid-cols-3">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">Status</Label>
+                                                <Combobox
+                                                    value={bulkStatus}
+                                                    onChange={setBulkStatus}
+                                                    options={[
+                                                        { value: "todo", label: "To Do" },
+                                                        { value: "in_progress", label: "In Progress" },
+                                                        { value: "blocked", label: "Blocked" },
+                                                        { value: "done", label: "Done" },
+                                                    ]}
+                                                    placeholder="Bulk status"
+                                                    searchPlaceholder="Search status..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-bulk-status-combobox"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        void handleBulkStatusApply();
+                                                    }}
+                                                    disabled={!bulkStatus || isBulkBusy}
+                                                    data-testid="tasks-bulk-apply-button"
+                                                >
+                                                    {isBulkStatusUpdating ? "Applying..." : "Apply status"}
+                                                </Button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">Assignee</Label>
+                                                <Combobox
+                                                    value={bulkAssignee}
+                                                    onChange={setBulkAssignee}
+                                                    options={assigneeOptions}
+                                                    placeholder="Bulk assignee"
+                                                    searchPlaceholder="Search assignee..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-bulk-assignee-combobox"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        void handleBulkAssigneeApply();
+                                                    }}
+                                                    disabled={!bulkAssignee || isBulkBusy}
+                                                    data-testid="tasks-bulk-apply-assignee-button"
+                                                >
+                                                    {isBulkAssigneeUpdating ? "Applying..." : "Apply assignee"}
+                                                </Button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">Progress</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        step={5}
+                                                        value={bulkProgress}
+                                                        onChange={(event) => {
+                                                            const parsed = Number(event.target.value);
+                                                            setBulkProgress(Number.isFinite(parsed) ? clampProgress(parsed) : 0);
+                                                        }}
+                                                        className="h-10 w-24"
+                                                        data-testid="tasks-bulk-progress-input"
+                                                        aria-label="Bulk progress value"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        className="flex-1"
+                                                        onClick={() => {
+                                                            void handleBulkProgressApply();
+                                                        }}
+                                                        disabled={isBulkBusy}
+                                                        data-testid="tasks-bulk-apply-progress-button"
+                                                    >
+                                                        {isBulkProgressUpdating ? "Applying..." : "Apply progress"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <Button
+                                                type="button"
+                                                variant="destructive-outline"
+                                                onClick={() => {
+                                                    requestBulkDelete();
+                                                }}
+                                                disabled={isBulkBusy}
+                                                data-testid="tasks-bulk-delete-button"
+                                            >
+                                                {isBulkDeleting ? "Deleting..." : "Delete selected"}
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setSelectedTaskIds([]);
+                                        setBulkStatus("");
+                                        setBulkAssignee("");
+                                        setBulkProgress(0);
+                                        setIsSelectionActionsOpen(false);
+                                    }}
+                                    data-testid="tasks-bulk-clear-selection-button"
+                                >
+                                    Clear
+                                </Button>
+                            </div>
+                        </div>
+                    ) : null}
                     {content}
                 </CardContent>
             </Card>
@@ -1413,6 +2260,44 @@ export function TasksPage() {
                             setConfirmOpen(false);
                         }} data-testid="tasks-delete-confirm-button">
                             Delete
+                        </Button>
+                    </div>
+                    <DialogFooter />
+                    <DialogClose />
+                </AppDialogContent>
+            </Dialog>
+            <Dialog
+                open={bulkDeleteConfirmOpen}
+                onOpenChange={(open) => {
+                    if (!open) setBulkDeleteTaskIds([]);
+                    setBulkDeleteConfirmOpen(open);
+                }}
+            >
+                <AppDialogContent
+                    title="Delete selected tasks"
+                    description={`Delete ${bulkDeleteTaskIds.length} selected task${bulkDeleteTaskIds.length === 1 ? "" : "s"}? This action cannot be undone.`}
+                >
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                                setBulkDeleteConfirmOpen(false);
+                                setBulkDeleteTaskIds([]);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                void handleBulkDelete(bulkDeleteTaskIds);
+                            }}
+                            disabled={isBulkDeleting || bulkDeleteTaskIds.length === 0}
+                            data-testid="tasks-bulk-delete-confirm-button"
+                        >
+                            {isBulkDeleting ? "Deleting..." : "Delete"}
                         </Button>
                     </div>
                     <DialogFooter />

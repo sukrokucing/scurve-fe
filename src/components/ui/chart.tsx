@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
+const CHART_CONTAINER_CLASS =
+  "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none"
+const CHART_TOOLTIP_ITEM_CLASS =
+  "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground"
+const CHART_LEGEND_ITEM_CLASS =
+  "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
 
 export type ChartConfig = {
   [k in string]: {
@@ -32,6 +38,33 @@ function useChart() {
   return context
 }
 
+function buildChartThemeCss(id: string, config: ChartConfig) {
+  const colorConfig = Object.entries(config).filter(
+    ([, itemConfig]) => itemConfig.theme || itemConfig.color
+  )
+
+  if (!colorConfig.length) {
+    return null
+  }
+
+  return Object.entries(THEMES)
+    .map(
+      ([theme, prefix]) => `
+${prefix} [data-chart=${id}] {
+${colorConfig
+  .map(([key, itemConfig]) => {
+    const color =
+      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+      itemConfig.color
+    return color ? `  --color-${key}: ${color};` : null
+  })
+  .join("\n")}
+}
+`
+    )
+    .join("\n")
+}
+
 const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -49,10 +82,7 @@ const ChartContainer = React.forwardRef<
       <div
         data-chart={chartId}
         ref={ref}
-        className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
-          className
-        )}
+        className={cn(CHART_CONTAINER_CLASS, className)}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
@@ -66,33 +96,15 @@ const ChartContainer = React.forwardRef<
 ChartContainer.displayName = "Chart"
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme || config.color
-  )
-
-  if (!colorConfig.length) {
+  const css = buildChartThemeCss(id, config)
+  if (!css) {
     return null
   }
 
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
+        __html: css,
       }}
     />
   )
@@ -194,7 +206,7 @@ const ChartTooltipContent = React.forwardRef<
                 <div
                   key={item.dataKey}
                   className={cn(
-                    "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
+                    CHART_TOOLTIP_ITEM_CLASS,
                     indicator === "dot" && "items-center"
                   )}
                 >
@@ -294,9 +306,7 @@ const ChartLegendContent = React.forwardRef<
             return (
               <div
                 key={item.value}
-                className={cn(
-                  "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
-                )}
+                className={cn(CHART_LEGEND_ITEM_CLASS)}
               >
                 {itemConfig?.icon && !hideIcon ? (
                   <itemConfig.icon />

@@ -17,9 +17,9 @@
 
 ## Commands
 - Full gate run: `npm run audit:ui`
-- Visual-only scan: `npm run audit:ui:visual`
-- A11y-focused scan: `npm run audit:ui:a11y`
-- Aggregate existing outputs: `npm run audit:ui:report`
+- Visual-only scan: `npm run audit:ui:mode -- --mode=visual`
+- A11y-focused scan: `npm run audit:ui:mode -- --mode=a11y`
+- Aggregate existing outputs: `npm run audit:ui:mode -- --mode=report`
 
 `BASE_URL` defaults to `http://localhost:3001` when not set.
 The app must be running and reachable at `BASE_URL`; route/load errors fail the Playwright audit run directly.

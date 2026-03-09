@@ -11,7 +11,7 @@ export function AppLayout() {
             {/* Skip link for keyboard users */}
             <a
                 href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-4 focus:rounded-md focus:bg-primary-dark focus:px-4 focus:py-2 focus:text-primary-foreground focus:ring-2 focus:ring-ring"
+                className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-4 focus:min-h-11 focus:rounded-md focus:bg-primary-dark focus:px-4 focus:py-3 focus:text-primary-foreground focus:ring-2 focus:ring-ring"
             >
                 Skip to main content
             </a>

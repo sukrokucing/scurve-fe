@@ -40,7 +40,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 
-import { rbacApi } from "@/api/rbac";
+import { rbacApi, type Role } from "@/api/rbac";
 
 
 
@@ -56,6 +56,8 @@ export const UserAccessPage = () => {
     const safeUserId = userId ?? "";
     const queryClient = useQueryClient();
     const [assignOpen, setAssignOpen] = useState(false);
+    const [revokeRole, setRevokeRole] = useState<Role | null>(null);
+    const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
 
     // --- Queries ---
     const { data: userRoles, isLoading: loadingRoles } = useQuery({
@@ -201,9 +203,8 @@ export const UserAccessPage = () => {
                                             size="sm"
                                             className="text-muted-foreground hover:text-destructive"
                                             onClick={() => {
-                                                if (confirm(`Revoke role "${role.name}"?`)) {
-                                                    revokeRoleMutation.mutate(role.id);
-                                                }
+                                                setRevokeRole(role);
+                                                setRevokeConfirmOpen(true);
                                             }}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -266,6 +267,46 @@ export const UserAccessPage = () => {
                     </CardContent>
                 </Card>
             </div>
+            <Dialog
+                open={revokeConfirmOpen}
+                onOpenChange={(open) => {
+                    if (!open) setRevokeRole(null);
+                    setRevokeConfirmOpen(open);
+                }}
+            >
+                <AppDialogContent
+                    title="Revoke role"
+                    description={`Revoke role "${revokeRole?.name ?? ""}" from this user?`}
+                >
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                                setRevokeConfirmOpen(false);
+                                setRevokeRole(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                if (!revokeRole) return;
+                                revokeRoleMutation.mutate(revokeRole.id);
+                                setRevokeConfirmOpen(false);
+                                setRevokeRole(null);
+                            }}
+                            disabled={revokeRoleMutation.isPending || !revokeRole}
+                            data-testid="user-access-revoke-role-confirm-button"
+                        >
+                            {revokeRoleMutation.isPending ? "Revoking..." : "Revoke"}
+                        </Button>
+                    </div>
+                    <DialogFooter />
+                </AppDialogContent>
+            </Dialog>
         </div>
     );
 };

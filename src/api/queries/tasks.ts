@@ -4,7 +4,13 @@ import { useProjectsQuery } from "./projects";
 import { openapi } from "@/api/openapiClient";
 import type { Task } from "@/types/domain";
 import type { components } from "@/types/api";
-import type { TaskCreateRequest, TaskUpdateRequest, DependencyCreateRequest } from "@/api/openapiClient";
+import type {
+    TaskCreateRequest,
+    TaskUpdateRequest,
+    DependencyCreateRequest,
+    TaskListQueryParams,
+    PaginatedTasksResult,
+} from "@/api/openapiClient";
 
 type Progress = components["schemas"]["Progress"];
 import { toast } from "sonner";
@@ -15,6 +21,8 @@ const TASKS_QUERY_KEY = ["tasks"] as const;
 export const tasksKeys = {
     all: TASKS_QUERY_KEY,
     byProject: (projectId: string, progress?: boolean) => [...TASKS_QUERY_KEY, "project", projectId, progress ? "progress" : "tasks"] as const,
+    byProjectList: (projectId: string, params: TaskListQueryParams) =>
+        [...tasksKeys.byProject(projectId), "list", params] as const,
 };
 
 export function useTasksByProject(projectId: string, progress?: boolean, options?: { enabled?: boolean }) {
@@ -23,6 +31,22 @@ export function useTasksByProject(projectId: string, progress?: boolean, options
         queryFn: async () => {
             if (!projectId) return [];
             return openapi.listTasksByProject(projectId, { progress });
+        },
+        enabled: Boolean(projectId) && (options?.enabled ?? true),
+        placeholderData: keepPreviousData,
+    });
+}
+
+export function useTasksByProjectList(
+    projectId: string,
+    params: TaskListQueryParams,
+    options?: { enabled?: boolean },
+) {
+    return useQuery<PaginatedTasksResult>({
+        queryKey: tasksKeys.byProjectList(projectId, params),
+        queryFn: async () => {
+            if (!projectId) return { tasks: [], total: 0 };
+            return openapi.listTasksByProjectPaginated(projectId, params);
         },
         enabled: Boolean(projectId) && (options?.enabled ?? true),
         placeholderData: keepPreviousData,
@@ -155,6 +179,11 @@ export function useUpdateTask() {
             }
             if (args.payload.dueDate !== undefined) {
                 body.due_date = args.payload.dueDate as string | null | undefined;
+            }
+            if (Object.prototype.hasOwnProperty.call(args.payload, "assigneeId")) {
+                body.assignee = args.payload.assigneeId === ""
+                    ? null
+                    : (args.payload.assigneeId as string | null | undefined);
             }
 
 

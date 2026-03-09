@@ -34,7 +34,7 @@ S-Curve FE is a React + TypeScript frontend for project planning and delivery tr
 
 ## Prerequisites
 
-- Node.js 20+ (Node 22+ recommended)
+- Node.js 20.19+ (Node 22+ recommended)
 - npm
 - Running backend API (default expected at `https://localhost:8800`)
 
@@ -59,6 +59,12 @@ PLAYWRIGHT_PASSWORD=...
 # Fallback keys used by test generator/runtime
 TEST_EMAIL=...
 TEST_PASSWORD=...
+
+# Optional telemetry sink for Time-to-Task events
+VITE_TELEMETRY_ENABLED=false
+VITE_TELEMETRY_ENDPOINT=/api/telemetry/events
+VITE_TELEMETRY_SAMPLE_RATE=1
+VITE_TELEMETRY_FLUSH_MS=2000
 ```
 
 3. Start dev server:
@@ -79,23 +85,82 @@ App default URL: `http://localhost:3001`
 
 ### Daily commands
 
-- `npm run start` (alias of `dev`): start local app (`3001`)
+- `npm run dev`: start local app (`3001`)
 - `npm run check`: lint + typecheck + strict perf audit
-- `npm run verify`: `check` + production build
-- `npm run test`: run all Playwright E2E tests
+- `npm run build`: production build
+- `npm run test:e2e`: run all Playwright E2E tests
 - `npm run test:e2e:critical`: smoke + runtime perf probes (chromium)
-- `npm run audit`: UI audit gate + strict perf audit gate
-- `npm run generate`: API+Zod schemas + theme tokens
+- `npm run audit:ui && npm run audit:perf:strict`: full audit gate
+- `npm run generate:schemas && npm run generate:theme`: regenerate API+Zod schemas + theme tokens
 
 ### Specialized commands
 
 - `npm run dev`, `npm run preview`, `npm run build`, `npm run lint`, `npm run typecheck`
 - `npm run test:e2e`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
 - `npm run generate:e2e:scenario`, `npm run test:e2e:scenario`
-- `npm run generate:types`, `npm run generate:types:local`, `npm run generate:zod`, `npm run generate:schemas`
+- `npm run sync:openapi`, `npm run generate:types`, `npm run generate:types:remote`, `npm run generate:zod`, `npm run generate:schemas`, `npm run generate:schemas:remote`
 - `npm run generate:theme`, `npm run check:theme`
-- `npm run audit:ui`, `npm run audit:ui:visual`, `npm run audit:ui:a11y`, `npm run audit:ui:report`
+- `npm run audit:ui`, `npm run audit:ui:mode -- --mode=visual|a11y|report`
 - `npm run audit:perf`, `npm run audit:perf:strict`
+- `npm run perf:baseline`, `npm run perf:compare`
+- `npm run visual:baseline`, `npm run visual:compare`
+- `npm run upgrade:tailwind4:canary`, `npm run upgrade:gate`
+
+### OpenAPI + Zod Generation Flow
+
+1. Pull latest backend spec to local snapshots:
+
+```bash
+npm run sync:openapi
+```
+
+2. Regenerate TypeScript types + Zod schemas from the same `src/openapi.json` source:
+
+```bash
+npm run generate:schemas
+```
+
+Notes:
+
+- `generate:types` is now local/deterministic (`src/openapi.json`) so CI and local output stay aligned.
+- Use `generate:types:remote` only when you need direct URL-based type generation.
+- One-shot backend refresh + regen: `npm run generate:schemas:remote`.
+
+## Zero-Breakage Upgrade Workflow
+
+For toolchain and styling upgrades, use the two-track process:
+
+1. Capture baseline:
+
+```bash
+npm run perf:baseline
+npm run visual:baseline
+```
+
+2. Verify current branch does not regress:
+
+```bash
+npm run perf:compare
+npm run visual:compare
+```
+
+3. Run full local gate:
+
+```bash
+npm run upgrade:gate
+```
+
+4. Tailwind v4 canary (isolated temp workspace, non-default):
+
+```bash
+npm run upgrade:tailwind4:canary
+```
+
+Notes:
+
+- `upgrade:tailwind4:canary` does not mutate your main working tree.
+- If canary fails, keep Tailwind v3 and ship Vite/performance upgrades first.
+- `audit:ui` now starts a managed local dev server automatically; set `UI_AUDIT_MANAGED_SERVER=0` to use an already-running app server.
 
 ## Key Routes
 
@@ -289,9 +354,9 @@ This repository includes a Good-UI driven audit system for full-route UI quality
 
 ```bash
 npm run audit:ui
-npm run audit:ui:visual
-npm run audit:ui:a11y
-npm run audit:ui:report
+npm run audit:ui:mode -- --mode=visual
+npm run audit:ui:mode -- --mode=a11y
+npm run audit:ui:mode -- --mode=report
 ```
 
 ### Outputs
@@ -308,6 +373,39 @@ npm run audit:ui:report
 - Backlog: `docs/UI_REFACTOR_BACKLOG.md`
 - Decisions: `docs/UI_REFACTOR_DECISIONS.md`
 
+## Time to Task Telemetry
+
+The Tasks page now includes built-in friction telemetry for the core flow:
+
+- Session start: when user enters `/tasks`
+- Intent: when user opens `New task`
+- Completion: when task creation succeeds
+- Abandon: when user leaves `/tasks` before create success
+
+Implementation files:
+
+- `src/lib/timeToTask.ts`
+- `src/pages/tasks/TasksPage.tsx`
+
+What is shown in UI (`/tasks` header):
+
+- `Time to Task p50`
+- `Last`
+- `Intent completion %`
+- `Intent samples`
+- `Passive exits`
+
+Notes:
+
+- Metrics are stored locally in browser `localStorage` (per user/browser).
+- Use `Reset Time to Task` in the Tasks header to clear local samples.
+- Raw records key: `scurve.time_to_task.records.v1`.
+- Outbound telemetry is optional and disabled by default.
+- When `VITE_TELEMETRY_ENABLED=true`, events are batched and posted to `VITE_TELEMETRY_ENDPOINT` with payload shape `{ "events": [...] }`.
+- Event transport uses `fetch` during runtime and `navigator.sendBeacon` on page hide/unload fallback.
+- For local backend (`https://localhost:8800`), keep `VITE_TELEMETRY_ENDPOINT=/api/telemetry/events` in FE env (dev proxy rewrites to `/telemetry/events`).
+- Completion KPI is intent-qualified (sessions that reached create intent); passive route exits are tracked separately.
+
 ## Project Structure (High-Level)
 
 - `src/pages`: route pages (dashboard/projects/tasks/admin)
@@ -323,8 +421,10 @@ npm run audit:ui:report
 - `CAPABILITIES.md`: source-code capability inventory
 - `BUSINESS_FLOWS.md`: business flow catalog and testing priorities
 - `BUSINESS_FLOW_GENERATION.md`: rationale and generation workflow
+- `docs/TIME_TO_TASK_TELEMETRY_API.md`: backend contract for friction telemetry ingestion
 - `docs/PERFORMANCE_AUDIT.md`: static performance audit rules and workflow
 - `docs/RUNTIME_PERFORMANCE_PROBES.md`: runtime route probe workflow and budgets
+- `docs/TAILWIND_V4_REFACTOR_PLAN.md`: file-level migration blockers, applied fixes, and hardening phases
 - `CONTRIBUTING.md`: contribution and performance rules
 
 ## Troubleshooting

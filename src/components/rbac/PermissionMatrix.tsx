@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2 } from "lucide-react";
 import clsx from "clsx";
@@ -35,7 +35,7 @@ type BulkState = { roleId: string; mode: "grant" | "revoke" } | null;
 export const PermissionMatrix = () => {
     const queryClient = useQueryClient();
 
-    const [editMode, setEditMode] = useState(true);
+    const [editMode, setEditMode] = useState(false);
     const [allowGrant, setAllowGrant] = useState(true);
     const [allowRevoke, setAllowRevoke] = useState(true);
     const [roleFilter, setRoleFilter] = useState(ALL_ROLES);
@@ -44,6 +44,8 @@ export const PermissionMatrix = () => {
     const [assignedOnly, setAssignedOnly] = useState(false);
     const [toggling, setToggling] = useState<ToggleState>(null);
     const [bulkAction, setBulkAction] = useState<BulkState>(null);
+    const [isMobileViewport, setIsMobileViewport] = useState(false);
+    const [showAdvancedMatrix, setShowAdvancedMatrix] = useState(false);
     const debouncedPermissionQuery = useDebouncedValue(permissionQueryInput, 180);
     const deferredPermissionQuery = useDeferredValue(debouncedPermissionQuery);
     const normalizedPermissionQuery = useMemo(
@@ -233,6 +235,54 @@ export const PermissionMatrix = () => {
     const totalVisiblePermissions = visiblePermissionIds.length;
     const totalVisibleCells = filteredRoles.length * totalVisiblePermissions;
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const media = window.matchMedia("(max-width: 1023px)");
+        const update = () => setIsMobileViewport(media.matches);
+
+        update();
+        if (typeof media.addEventListener === "function") {
+            media.addEventListener("change", update);
+            return () => media.removeEventListener("change", update);
+        }
+
+        media.addListener(update);
+        return () => media.removeListener(update);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileViewport) {
+            setShowAdvancedMatrix(false);
+        }
+    }, [isMobileViewport]);
+
+    useEffect(() => {
+        if (isMobileViewport && editMode) {
+            setShowAdvancedMatrix(true);
+        }
+    }, [editMode, isMobileViewport]);
+
+    const summaryRole = filteredRoles.length === 1 ? filteredRoles[0] : null;
+    const resourceSummaries = useMemo(() => {
+        const assignedSet = summaryRole ? rolePermissionsMap?.[summaryRole.id] : undefined;
+        return visibleResources.map((resource) => {
+            const permissionsForResource = filteredGroupedPermissions[resource] ?? [];
+            const assignedCount = assignedSet
+                ? permissionsForResource.reduce(
+                    (count, permission) => (assignedSet.has(permission.id) ? count + 1 : count),
+                    0,
+                )
+                : null;
+
+            return {
+                resource,
+                totalPermissions: permissionsForResource.length,
+                assignedCount,
+                preview: permissionsForResource.slice(0, 3).map((permission) => permission.name),
+            };
+        });
+    }, [filteredGroupedPermissions, rolePermissionsMap, summaryRole, visibleResources]);
+
     const canToggleCell = (isAssigned: boolean) => {
         if (!canMutate) return false;
         if (isAssigned) return allowRevoke;
@@ -269,7 +319,7 @@ export const PermissionMatrix = () => {
 
     return (
         <div className="rounded-md border bg-card shadow-sm overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-3">
+            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-3" data-testid="rbac-controls-bar">
                 <Button
                     type="button"
                     variant={editMode ? "secondary" : "outline"}
@@ -277,33 +327,39 @@ export const PermissionMatrix = () => {
                     onClick={() => setEditMode((prev) => !prev)}
                     data-testid="rbac-edit-mode-toggle"
                 >
-                    Edit
+                    {editMode ? "Exit edit mode" : "Edit permissions"}
                 </Button>
-                <Button
-                    type="button"
-                    variant={allowGrant ? "secondary" : "outline"}
-                    size="sm"
-                    disabled={!editMode}
-                    onClick={() => setAllowGrant((prev) => !prev)}
-                    data-testid="rbac-grant-toggle"
-                >
-                    Grant
-                </Button>
-                <Button
-                    type="button"
-                    variant={allowRevoke ? "secondary" : "outline"}
-                    size="sm"
-                    disabled={!editMode}
-                    onClick={() => setAllowRevoke((prev) => !prev)}
-                    data-testid="rbac-revoke-toggle"
-                >
-                    Revoke
-                </Button>
+                {editMode ? (
+                    <>
+                        <Button
+                            type="button"
+                            variant={allowGrant ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setAllowGrant((prev) => !prev)}
+                            data-testid="rbac-grant-toggle"
+                        >
+                            Grant
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={allowRevoke ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setAllowRevoke((prev) => !prev)}
+                            data-testid="rbac-revoke-toggle"
+                        >
+                            Revoke
+                        </Button>
+                    </>
+                ) : (
+                    <Badge variant="outline" className="h-8 px-2 text-[11px]">
+                        Review mode
+                    </Badge>
+                )}
                 <Combobox
                     value={roleFilter}
                     onChange={setRoleFilter}
                     options={roleOptions}
-                    className="w-[170px]"
+                    className="w-full sm:w-[170px]"
                     placeholder="All roles"
                     searchPlaceholder="Search roles..."
                     triggerAriaLabel="Filter roles"
@@ -313,7 +369,7 @@ export const PermissionMatrix = () => {
                     value={resourceFilter}
                     onChange={setResourceFilter}
                     options={resourceOptions}
-                    className="w-[190px]"
+                    className="w-full sm:w-[190px]"
                     placeholder="All resources"
                     searchPlaceholder="Search resources..."
                     triggerAriaLabel="Filter resources"
@@ -323,24 +379,96 @@ export const PermissionMatrix = () => {
                     value={permissionQueryInput}
                     onChange={(event) => setPermissionQueryInput(event.target.value)}
                     placeholder="Search permissions..."
-                    className="h-11 w-[240px]"
+                    className="h-11 w-full sm:w-[240px]"
                     data-testid="rbac-permission-search-input"
                 />
                 <Button
                     type="button"
                     variant={assignedOnly ? "secondary" : "outline"}
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={() => setAssignedOnly((prev) => !prev)}
                     data-testid="rbac-assigned-only-toggle"
                 >
                     Assigned only
                 </Button>
-                <div className="ml-auto text-xs text-muted-foreground">
+                <div className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
                     {filteredRoles.length} role(s) • {totalVisiblePermissions} permission(s) • {totalVisibleCells} cell(s)
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {isMobileViewport && !showAdvancedMatrix ? (
+                <div className="space-y-3 border-b bg-background px-3 py-3" data-testid="rbac-mobile-basic-mode">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-sm font-medium">Mobile basic mode</div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAdvancedMatrix(true)}
+                            data-testid="rbac-mobile-open-matrix-button"
+                        >
+                            Open full matrix
+                        </Button>
+                    </div>
+                    {summaryRole ? (
+                        <p className="text-xs text-muted-foreground">
+                            Summary is scoped to role <span className="font-medium text-foreground">{summaryRole.name}</span>.
+                        </p>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                            Filter to a single role to view assignment coverage per resource.
+                        </p>
+                    )}
+                    <div className="grid gap-2">
+                        {resourceSummaries.length === 0 ? (
+                            <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                                No resources match current filters.
+                            </div>
+                        ) : (
+                            resourceSummaries.map((summary) => (
+                                <div key={summary.resource} className="space-y-1 rounded-md border bg-card px-3 py-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-sm font-medium capitalize">{summary.resource}</span>
+                                        <Badge variant="outline" className="text-[11px]">
+                                            {summary.totalPermissions} permission(s)
+                                        </Badge>
+                                    </div>
+                                    {typeof summary.assignedCount === "number" ? (
+                                        <div className="text-xs text-muted-foreground">
+                                            {summary.assignedCount} assigned
+                                        </div>
+                                    ) : null}
+                                    <div
+                                        className="text-xs text-muted-foreground line-clamp-1"
+                                        title={summary.preview.join(", ")}
+                                    >
+                                        {summary.preview.join(", ") || "No visible permissions"}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            ) : null}
+
+            {isMobileViewport && showAdvancedMatrix ? (
+                <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
+                    <span className="text-xs text-muted-foreground">Advanced matrix mode</span>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowAdvancedMatrix(false)}
+                        data-testid="rbac-mobile-close-matrix-button"
+                    >
+                        Back to basic
+                    </Button>
+                </div>
+            ) : null}
+
+            {!isMobileViewport || showAdvancedMatrix ? (
+                <div className="overflow-x-auto" data-testid="rbac-matrix-scroll">
                 <Table className="min-w-[900px]">
                     <TableHeader>
                         <TableRow className="bg-muted/50">
@@ -354,30 +482,36 @@ export const PermissionMatrix = () => {
                                             <span className="text-xs font-normal text-muted-foreground line-clamp-1" title={role.description || "No desc"}>
                                                 {role.description || "No desc"}
                                             </span>
-                                            <div className="flex items-center gap-1 pt-1">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-9 px-2 text-xs"
-                                                    disabled={!editMode || !allowGrant || totalVisiblePermissions === 0 || roleBusy}
-                                                    onClick={() => handleBulkForRole(role.id, "grant")}
-                                                    data-testid={`rbac-role-grant-visible-${role.id}`}
-                                                >
-                                                    + Visible
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-9 px-2 text-xs"
-                                                    disabled={!editMode || !allowRevoke || totalVisiblePermissions === 0 || roleBusy}
-                                                    onClick={() => handleBulkForRole(role.id, "revoke")}
-                                                    data-testid={`rbac-role-revoke-visible-${role.id}`}
-                                                >
-                                                    - Visible
-                                                </Button>
-                                            </div>
+                                            {editMode ? (
+                                                <div className="flex items-center gap-1 pt-1">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-9 px-2 text-xs"
+                                                        disabled={!allowGrant || totalVisiblePermissions === 0 || roleBusy}
+                                                        onClick={() => handleBulkForRole(role.id, "grant")}
+                                                        data-testid={`rbac-role-grant-visible-${role.id}`}
+                                                    >
+                                                        + Visible
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-9 px-2 text-xs"
+                                                        disabled={!allowRevoke || totalVisiblePermissions === 0 || roleBusy}
+                                                        onClick={() => handleBulkForRole(role.id, "revoke")}
+                                                        data-testid={`rbac-role-revoke-visible-${role.id}`}
+                                                    >
+                                                        - Visible
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <span className="pt-1 text-[11px] text-muted-foreground">
+                                                    Read-only
+                                                </span>
+                                            )}
                                         </div>
                                     </TableHead>
                                 );
@@ -445,7 +579,7 @@ export const PermissionMatrix = () => {
                                                     : `${permissionAction} ${permission.name} permission for role ${role.name} (${permissionState})`;
 
                                                 return (
-                                                    <TableCell key={`${roleId}-${permission.id}`} className="text-center p-0">
+                                                    <TableCell key={`${roleId}-${permission.id}`} className="text-center p-2">
                                                         <button
                                                             type="button"
                                                             className={clsx(
@@ -482,7 +616,8 @@ export const PermissionMatrix = () => {
                         )}
                     </TableBody>
                 </Table>
-            </div>
+                </div>
+            ) : null}
         </div>
     );
 };

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-03-03T05:34:06.622Z",
+  "generatedAt": "2026-03-09T10:16:18.223Z",
   "source": "runtime",
-  "mode": "full",
-  "screenshotCount": 171,
+  "mode": "visual",
+  "screenshotCount": 180,
   "findings": [],
   "observations": [
     {
@@ -11,447 +11,7 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/projects",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/projects",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/projects",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/tasks",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/tasks",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/tasks",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/users",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/users",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/users",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/roles",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/roles",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/roles",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/policy",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/policy",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/policy",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/flow",
-      "theme": "light",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/flow",
-      "theme": "dark",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": false
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/flow",
-      "theme": "glass",
-      "viewport": "mobile",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -469,34 +29,12 @@
     },
     {
       "route": "/",
-      "theme": "light",
-      "viewport": "tablet",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -514,11 +52,11 @@
     {
       "route": "/",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -536,11 +74,11 @@
     {
       "route": "/projects",
       "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -558,11 +96,11 @@
     {
       "route": "/projects",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -580,11 +118,11 @@
     {
       "route": "/projects",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -602,11 +140,11 @@
     {
       "route": "/tasks",
       "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -615,20 +153,23 @@
         "overflowingTableCount": 0,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
+        "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
       }
     },
     {
       "route": "/tasks",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -637,38 +178,19 @@
         "overflowingTableCount": 0,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
+        "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
       }
     },
     {
       "route": "/tasks",
       "theme": "glass",
-      "viewport": "tablet",
-      "states": {
-        "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
-      },
-      "metrics": {
-        "hasHorizontalOverflow": false,
-        "smallTargetCount": 0,
-        "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
-        "truncationRiskCount": 0,
-        "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
-        "searchSurfaceSmallTargetCount": 0,
-        "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
-      }
-    },
-    {
-      "route": "/settings/users",
-      "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
@@ -679,6 +201,31 @@
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
         "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": true,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "light",
+      "viewport": "mobile",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -690,17 +237,17 @@
     {
       "route": "/settings/users",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -712,17 +259,17 @@
     {
       "route": "/settings/users",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -734,10 +281,10 @@
     {
       "route": "/settings/roles",
       "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -756,10 +303,10 @@
     {
       "route": "/settings/roles",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -778,10 +325,10 @@
     {
       "route": "/settings/roles",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -800,7 +347,7 @@
     {
       "route": "/settings/policy",
       "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
@@ -816,13 +363,17 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
       "route": "/settings/policy",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
@@ -838,13 +389,17 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
       "route": "/settings/policy",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
@@ -860,16 +415,20 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
       "route": "/settings/flow",
       "theme": "light",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -888,10 +447,10 @@
     {
       "route": "/settings/flow",
       "theme": "dark",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -910,10 +469,10 @@
     {
       "route": "/settings/flow",
       "theme": "glass",
-      "viewport": "tablet",
+      "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -932,11 +491,494 @@
     {
       "route": "/",
       "theme": "light",
-      "viewport": "desktop",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/projects",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "light",
+      "viewport": "tablet",
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": true,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": true,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
+      }
+    },
+    {
+      "route": "/tasks",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": true,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/users",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/roles",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/policy",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": false,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": true,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "light",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "dark",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/settings/flow",
+      "theme": "glass",
+      "viewport": "tablet",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
+      },
+      "metrics": {
+        "hasHorizontalOverflow": false,
+        "smallTargetCount": 0,
+        "unlabeledButtonCount": 0,
+        "overflowingTableCount": 0,
+        "truncationRiskCount": 0,
+        "focusedElementHasVisibleRing": true,
+        "searchSurfaceOpened": false,
+        "searchSurfaceSmallTargetCount": 0,
+        "searchSurfaceUnlabeledButtonCount": 0,
+        "searchSurfaceHasHorizontalOverflow": false
+      }
+    },
+    {
+      "route": "/",
+      "theme": "light",
+      "viewport": "desktop",
+      "states": {
+        "loadingVisible": false,
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -957,8 +999,8 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -979,8 +1021,8 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1001,8 +1043,8 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1023,8 +1065,8 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1045,8 +1087,8 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
-        "errorVisible": true
+        "emptyVisible": true,
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1068,7 +1110,7 @@
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1077,10 +1119,13 @@
         "overflowingTableCount": 0,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
+        "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
       }
     },
     {
@@ -1090,7 +1135,7 @@
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1099,10 +1144,13 @@
         "overflowingTableCount": 0,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
+        "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
       }
     },
     {
@@ -1112,7 +1160,7 @@
       "states": {
         "loadingVisible": false,
         "emptyVisible": false,
-        "errorVisible": true
+        "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
@@ -1121,10 +1169,13 @@
         "overflowingTableCount": 0,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
-        "searchSurfaceOpened": false,
+        "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "tasksPrimaryControlCount": 3,
+        "tasksTelemetryHasIntentLabel": true,
+        "tasksTelemetryHasPassiveExitLabel": true
       }
     },
     {
@@ -1133,7 +1184,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1155,7 +1206,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1177,7 +1228,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1199,7 +1250,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1221,7 +1272,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1243,7 +1294,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1278,7 +1329,11 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": false,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
@@ -1300,7 +1355,11 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": false,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
@@ -1322,7 +1381,11 @@
         "searchSurfaceOpened": false,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
-        "searchSurfaceHasHorizontalOverflow": false
+        "searchSurfaceHasHorizontalOverflow": false,
+        "rbacControlCount": 5,
+        "rbacBasicModeVisible": false,
+        "rbacAdvancedMatrixVisible": false,
+        "rbacMatrixHasHorizontalOverflow": false
       }
     },
     {
@@ -1331,7 +1394,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1353,7 +1416,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {
@@ -1375,7 +1438,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": false,
+        "emptyVisible": true,
         "errorVisible": false
       },
       "metrics": {

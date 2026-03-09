@@ -1,12 +1,31 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
+type ThemeName = "glass" | "dark" | "light";
+
+const THEME_STORAGE_KEY = "theme";
+const DEFAULT_THEME: ThemeName = "glass";
+const THEME_TOGGLE_CLASS = "min-w-[70px]";
+const THEME_SEQUENCE: ThemeName[] = ["glass", "dark", "light"];
+const THEME_LABELS: Record<ThemeName, string> = {
+    glass: "Glass",
+    dark: "Dark",
+    light: "Light",
+};
+
+function normalizeTheme(value: string | null): ThemeName {
+    if (value === "glass" || value === "dark" || value === "light") {
+        return value;
+    }
+    return DEFAULT_THEME;
+}
+
 export function ThemeToggle() {
-    const [theme, setTheme] = useState<string>(() => {
+    const [theme, setTheme] = useState<ThemeName>(() => {
         try {
-            return window.localStorage.getItem("theme") || "glass";
+            return normalizeTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
         } catch {
-            return "glass";
+            return DEFAULT_THEME;
         }
     });
 
@@ -22,7 +41,7 @@ export function ThemeToggle() {
                 root.classList.add("dark");
             }
 
-            window.localStorage.setItem("theme", theme);
+            window.localStorage.setItem(THEME_STORAGE_KEY, theme);
         } catch {
             // ignore
         }
@@ -30,16 +49,10 @@ export function ThemeToggle() {
 
     const toggleTheme = () => {
         setTheme((current) => {
-            if (current === "glass") return "dark";
-            if (current === "dark") return "light";
-            return "glass";
+            const currentIndex = THEME_SEQUENCE.indexOf(current);
+            const nextIndex = (currentIndex + 1) % THEME_SEQUENCE.length;
+            return THEME_SEQUENCE[nextIndex];
         });
-    };
-
-    const getThemeLabel = () => {
-        if (theme === "glass") return "Glass";
-        if (theme === "dark") return "Dark";
-        return "Light";
     };
 
     return (
@@ -47,9 +60,9 @@ export function ThemeToggle() {
             variant="outline"
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="min-w-[70px]"
+            className={THEME_TOGGLE_CLASS}
         >
-            {getThemeLabel()}
+            {THEME_LABELS[theme]}
         </Button>
     );
 }

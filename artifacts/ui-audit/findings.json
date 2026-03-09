@@ -1,97 +1,19 @@
 {
-  "generatedAt": "2026-03-03T05:38:28.911Z",
-  "mode": "report",
-  "findings": [
-    {
-      "id": "STATIC-0001",
-      "source": "static",
-      "ruleId": "spacing.scale-consistency",
-      "severity": "P2",
-      "route": null,
-      "theme": null,
-      "viewport": null,
-      "file": "src/components/layout/SettingsLayout.tsx",
-      "line": 17,
-      "message": "Very tight interactive padding detected; verify tap comfort and spacing rhythm.",
-      "evidence": {
-        "snippet": "<nav className=\"flex lg:flex-col gap-2 p-1 lg:p-0 whitespace-nowrap lg:whitespace-normal\">"
-      }
-    },
-    {
-      "id": "STATIC-0002",
-      "source": "static",
-      "ruleId": "spacing.scale-consistency",
-      "severity": "P2",
-      "route": null,
-      "theme": null,
-      "viewport": null,
-      "file": "src/components/rbac/PermissionMatrix.tsx",
-      "line": 441,
-      "message": "Very tight interactive padding detected; verify tap comfort and spacing rhythm.",
-      "evidence": {
-        "snippet": "<TableCell key={`${roleId}-${permission.id}`} className=\"text-center p-0\">"
-      }
-    },
-    {
-      "id": "STATIC-0003",
-      "source": "static",
-      "ruleId": "spacing.scale-consistency",
-      "severity": "P2",
-      "route": null,
-      "theme": null,
-      "viewport": null,
-      "file": "src/components/ui/calendar.tsx",
-      "line": 63,
-      "message": "Arbitrary spacing utility detected; prefer spacing scale tokens for padding/margin/gap.",
-      "evidence": {
-        "snippet": "\"flex h-[--cell-size] w-full items-center justify-center px-[--cell-size]\","
-      }
-    },
-    {
-      "id": "STATIC-0004",
-      "source": "static",
-      "ruleId": "spacing.scale-consistency",
-      "severity": "P2",
-      "route": null,
-      "theme": null,
-      "viewport": null,
-      "file": "src/components/ui/scroll-area.tsx",
-      "line": 39,
-      "message": "Arbitrary spacing utility detected; prefer spacing scale tokens for padding/margin/gap.",
-      "evidence": {
-        "snippet": "\"h-full w-2.5 border-l border-l-transparent p-[1px]\","
-      }
-    },
-    {
-      "id": "STATIC-0005",
-      "source": "static",
-      "ruleId": "spacing.scale-consistency",
-      "severity": "P2",
-      "route": null,
-      "theme": null,
-      "viewport": null,
-      "file": "src/components/ui/scroll-area.tsx",
-      "line": 41,
-      "message": "Arbitrary spacing utility detected; prefer spacing scale tokens for padding/margin/gap.",
-      "evidence": {
-        "snippet": "\"h-2.5 flex-col border-t border-t-transparent p-[1px]\","
-      }
-    }
-  ],
+  "generatedAt": "2026-03-09T10:16:20.095Z",
+  "mode": "visual",
+  "findings": [],
   "inputs": {
-    "static": "2026-03-03T05:38:28.189Z",
-    "runtime": "2026-03-03T05:34:06.622Z"
+    "static": "2026-03-09T10:14:45.639Z",
+    "runtime": "2026-03-09T10:16:18.223Z"
   },
   "counts": {
-    "total": 5,
+    "total": 0,
     "bySeverity": {
       "P0": 0,
       "P1": 0,
-      "P2": 5,
+      "P2": 0,
       "P3": 0
     },
-    "byRule": {
-      "spacing.scale-consistency": 5
-    }
+    "byRule": {}
   }
 }

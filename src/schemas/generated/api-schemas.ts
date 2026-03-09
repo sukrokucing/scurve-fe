@@ -224,6 +224,30 @@ export const TaskSchema = z.object({
     updated_at: z.string().datetime(),
   });
 
+export const TaskActivityEntrySchema = z.object({
+    action: z.string(),
+    actor_id: z.string().nullable().optional(),
+    details: z.object({
+
+  }),
+    id: z.string(),
+    occurred_at: z.string().datetime(),
+  });
+
+export const TaskAssigneeSchema = z.object({
+    email: z.string(),
+    id: z.string(),
+    name: z.string(),
+  });
+
+export const TaskBatchDeleteRequestSchema = z.object({
+    ids: z.array(z.string()),
+  });
+
+export const TaskBatchDeleteResponseSchema = z.object({
+    deleted: z.number(),
+  });
+
 export const TaskBatchUpdatePayloadSchema = z.object({
     tasks: z.array(z.lazy(() => TaskBatchUpdateRequestSchema)),
   });
@@ -259,6 +283,10 @@ export const TaskDependencySchema = z.object({
     type_: z.string(),
   });
 
+export const TaskSortBySchema = z.string();
+
+export const TaskSortDirSchema = z.string();
+
 export const TaskUpdateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
     due_date: z.string().datetime().nullable().optional(), // example: "2025-11-01T10:00:00Z"
@@ -268,6 +296,38 @@ export const TaskUpdateRequestSchema = z.object({
     start_date: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
     status: z.string().nullable().optional(),
     title: z.string().nullable().optional(),
+  });
+
+export const TelemetryBatchRequestSchema = z.object({
+    events: z.array(z.lazy(() => TelemetryEventRequestSchema)),
+  });
+
+export const TelemetryErrorResponseSchema = z.object({
+    message: z.string(), // example: "invalid telemetry payload"
+  });
+
+export const TelemetryEventNameSchema = z.string();
+
+export const TelemetryEventRequestSchema = z.object({
+    duration_ms: z.number().optional(), // example: 9234
+    event_id: z.string(), // example: "time-to-task-start-c6f53fe6-1823-4f90-b03f-77e8e20de34d"
+    event_name: z.lazy(() => TelemetryEventNameSchema),
+    intent_to_complete_ms: z.number().optional(), // example: 4033
+    metadata: z.object({
+
+  }),
+    occurred_at: z.string().datetime(), // example: "2026-03-04T05:38:12.232Z"
+    outcome: z.string().nullable().optional(), // example: "completed"
+    project_id: z.string().nullable().optional(),
+    reason: z.string().nullable().optional(), // example: "leave-tasks-page"
+    route: z.string().nullable().optional(), // example: "/tasks"
+    session_id: z.string().nullable().optional(), // example: "c6f53fe6-1823-4f90-b03f-77e8e20de34d"
+    user_id: z.string().nullable().optional(),
+    view: z.string().nullable().optional(), // example: "list"
+  });
+
+export const TelemetryIngestResponseSchema = z.object({
+    accepted: z.number(), // example: 12
   });
 
 export const UpdateUserRequestSchema = z.object({
@@ -338,11 +398,22 @@ export const components = { schemas: {
   RoleCreateRequest: RoleCreateRequestSchema,
   RolePermission: RolePermissionSchema,
   Task: TaskSchema,
+  TaskActivityEntry: TaskActivityEntrySchema,
+  TaskAssignee: TaskAssigneeSchema,
+  TaskBatchDeleteRequest: TaskBatchDeleteRequestSchema,
+  TaskBatchDeleteResponse: TaskBatchDeleteResponseSchema,
   TaskBatchUpdatePayload: TaskBatchUpdatePayloadSchema,
   TaskBatchUpdateRequest: TaskBatchUpdateRequestSchema,
   TaskCreateRequest: TaskCreateRequestSchema,
   TaskDependency: TaskDependencySchema,
+  TaskSortBy: TaskSortBySchema,
+  TaskSortDir: TaskSortDirSchema,
   TaskUpdateRequest: TaskUpdateRequestSchema,
+  TelemetryBatchRequest: TelemetryBatchRequestSchema,
+  TelemetryErrorResponse: TelemetryErrorResponseSchema,
+  TelemetryEventName: TelemetryEventNameSchema,
+  TelemetryEventRequest: TelemetryEventRequestSchema,
+  TelemetryIngestResponse: TelemetryIngestResponseSchema,
   UpdateUserRequest: UpdateUserRequestSchema,
   User: UserSchema,
   UserPermission: UserPermissionSchema,

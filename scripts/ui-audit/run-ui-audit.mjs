@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { goodUiRuleMap } from "./good-ui-rules.mjs";
+import { startDevServer, stopDevServer } from "../upgrade/utils.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,52 +115,73 @@ async function main() {
     const args = parseArgs(process.argv.slice(2));
     const mode = args.get("mode") ?? "full";
     const gateEnabled = args.get("gate") === "true";
+    const manageDevServer = process.env.UI_AUDIT_MANAGED_SERVER !== "0";
+    let devServer = null;
 
-    await fs.mkdir(artifactsDir, { recursive: true });
+    try {
+        await fs.mkdir(artifactsDir, { recursive: true });
 
-    if (mode !== "report") {
-        runNodeScript(path.join(projectRoot, "scripts", "ui-audit", "collect-static-metrics.mjs"));
-
-        if (mode === "full" || mode === "visual" || mode === "a11y") {
-            runPlaywrightAudit(mode);
+        if (mode !== "report" && manageDevServer) {
+            const requestedBaseUrl = process.env.BASE_URL ?? process.env.VITE_BASE_URL ?? "http://127.0.0.1:3001";
+            devServer = await startDevServer(projectRoot, {
+                baseUrl: requestedBaseUrl,
+                host: "127.0.0.1",
+            });
+            const resolvedBaseUrl = devServer.baseUrl.toString();
+            process.env.BASE_URL = resolvedBaseUrl;
+            process.env.VITE_BASE_URL = resolvedBaseUrl;
+            console.log(`[ui-audit] managed dev server started: ${resolvedBaseUrl}`);
         }
-    }
 
-    const staticPayload = await readJson(staticFindingsPath);
-    const runtimePayload = await readJson(runtimeFindingsPath);
+        if (mode !== "report") {
+            runNodeScript(path.join(projectRoot, "scripts", "ui-audit", "collect-static-metrics.mjs"));
 
-    const mergedFindings = [
-        ...(staticPayload?.findings ?? []),
-        ...(runtimePayload?.findings ?? []),
-    ];
+            if (mode === "full" || mode === "visual" || mode === "a11y") {
+                runPlaywrightAudit(mode);
+            }
+        }
 
-    const scorecard = computeScorecard(mergedFindings);
-    const mergedPayload = {
-        generatedAt: new Date().toISOString(),
-        mode,
-        findings: mergedFindings,
-        inputs: {
-            static: staticPayload?.generatedAt ?? null,
-            runtime: runtimePayload?.generatedAt ?? null,
-        },
-        counts: scorecard.counts,
-    };
+        const staticPayload = await readJson(staticFindingsPath);
+        const runtimePayload = await readJson(runtimeFindingsPath);
 
-    await fs.writeFile(mergedFindingsPath, JSON.stringify(mergedPayload, null, 2));
-    await fs.writeFile(scorecardPath, JSON.stringify({
-        generatedAt: new Date().toISOString(),
-        mode,
-        ...scorecard,
-    }, null, 2));
+        const mergedFindings = [
+            ...(staticPayload?.findings ?? []),
+            ...(runtimePayload?.findings ?? []),
+        ];
 
-    console.log(`[ui-audit] merged findings written: ${mergedFindingsPath}`);
-    console.log(`[ui-audit] scorecard written: ${scorecardPath}`);
-    console.log(`[ui-audit] severity counts: ${JSON.stringify(scorecard.counts.bySeverity)}`);
-    console.log(`[ui-audit] score: ${scorecard.score}`);
+        const scorecard = computeScorecard(mergedFindings);
+        const mergedPayload = {
+            generatedAt: new Date().toISOString(),
+            mode,
+            findings: mergedFindings,
+            inputs: {
+                static: staticPayload?.generatedAt ?? null,
+                runtime: runtimePayload?.generatedAt ?? null,
+            },
+            counts: scorecard.counts,
+        };
 
-    if (gateEnabled && !scorecard.pass) {
-        console.error("[ui-audit] quality gate failed (P0/P1 findings present).");
-        process.exit(1);
+        await fs.writeFile(mergedFindingsPath, JSON.stringify(mergedPayload, null, 2));
+        await fs.writeFile(scorecardPath, JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            mode,
+            ...scorecard,
+        }, null, 2));
+
+        console.log(`[ui-audit] merged findings written: ${mergedFindingsPath}`);
+        console.log(`[ui-audit] scorecard written: ${scorecardPath}`);
+        console.log(`[ui-audit] severity counts: ${JSON.stringify(scorecard.counts.bySeverity)}`);
+        console.log(`[ui-audit] score: ${scorecard.score}`);
+
+        if (gateEnabled && !scorecard.pass) {
+            console.error("[ui-audit] quality gate failed (P0/P1 findings present).");
+            process.exit(1);
+        }
+    } finally {
+        if (devServer?.process) {
+            await stopDevServer(devServer.process);
+            console.log("[ui-audit] managed dev server stopped");
+        }
     }
 }
 

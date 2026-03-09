@@ -2,7 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { UI_AUDIT_CONFIG, getViewportTargetSize, type UiAuditTheme, type UiAuditViewport } from "../scripts/ui-audit/config";
+import {
+    UI_AUDIT_CONFIG,
+    getViewportTargetSize,
+    type UiAuditRoute,
+    type UiAuditTheme,
+    type UiAuditViewport,
+} from "../scripts/ui-audit/config";
 
 type UiAuditSeverity = "P0" | "P1" | "P2" | "P3";
 
@@ -40,7 +46,24 @@ type RuntimeObservation = {
         searchSurfaceSmallTargetCount?: number;
         searchSurfaceUnlabeledButtonCount?: number;
         searchSurfaceHasHorizontalOverflow?: boolean;
+        tasksPrimaryControlCount?: number;
+        tasksTelemetryHasIntentLabel?: boolean;
+        tasksTelemetryHasPassiveExitLabel?: boolean;
+        rbacControlCount?: number;
+        rbacBasicModeVisible?: boolean;
+        rbacAdvancedMatrixVisible?: boolean;
+        rbacMatrixHasHorizontalOverflow?: boolean;
     };
+};
+
+type RouteSpecificMetrics = {
+    tasksPrimaryControlCount?: number;
+    tasksTelemetryHasIntentLabel?: boolean;
+    tasksTelemetryHasPassiveExitLabel?: boolean;
+    rbacControlCount?: number;
+    rbacBasicModeVisible?: boolean;
+    rbacAdvancedMatrixVisible?: boolean;
+    rbacMatrixHasHorizontalOverflow?: boolean;
 };
 
 const artifactsDir = path.resolve(process.cwd(), "artifacts", "ui-audit");
@@ -221,6 +244,15 @@ async function collectRuntimeMetrics(page: Page, minTargetSize: number) {
             if (!(element instanceof HTMLElement)) return false;
             const style = window.getComputedStyle(element);
             if (style.visibility === "hidden" || style.display === "none") return false;
+            if (style.opacity === "0" || style.pointerEvents === "none") return false;
+            // Skip screen-reader-only elements unless currently focused.
+            if (
+                element.classList.contains("sr-only")
+                && !element.matches(":focus")
+                && !element.matches(":focus-visible")
+            ) {
+                return false;
+            }
             const rect = element.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
         };
@@ -329,6 +361,14 @@ async function collectScopedMetrics(page: Page, minTargetSize: number, scopeSele
             if (!(element instanceof HTMLElement)) return false;
             const style = window.getComputedStyle(element);
             if (style.visibility === "hidden" || style.display === "none") return false;
+            if (style.opacity === "0" || style.pointerEvents === "none") return false;
+            if (
+                element.classList.contains("sr-only")
+                && !element.matches(":focus")
+                && !element.matches(":focus-visible")
+            ) {
+                return false;
+            }
             const rect = element.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
         };
@@ -393,6 +433,69 @@ async function collectScopedMetrics(page: Page, minTargetSize: number, scopeSele
     }, { minTarget: minTargetSize, selector: scopeSelector });
 }
 
+async function collectRouteSpecificMetrics(page: Page, routePath: string): Promise<RouteSpecificMetrics> {
+    return await page.evaluate((path) => {
+        const isVisible = (element: Element | null) => {
+            if (!(element instanceof HTMLElement)) return false;
+            const style = window.getComputedStyle(element);
+            if (style.visibility === "hidden" || style.display === "none") return false;
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        };
+
+        const countInteractiveControls = (root: Element | null) => {
+            if (!root) return 0;
+            const selector = [
+                "button",
+                "a[href]",
+                "input:not([type=hidden])",
+                "select",
+                "textarea",
+                "[role='button']",
+                "[role='combobox']",
+                "[tabindex]:not([tabindex='-1'])",
+            ].join(", ");
+
+            return Array.from(root.querySelectorAll(selector))
+                .filter((element) => isVisible(element))
+                .length;
+        };
+
+        if (path === "/tasks") {
+            const toolbar = document.querySelector("[data-testid='tasks-primary-toolbar']");
+            const telemetrySummary = document.querySelector("[data-testid='tasks-time-to-task-summary']");
+            const telemetryText = (telemetrySummary?.textContent ?? "").toLowerCase();
+
+            return {
+                tasksPrimaryControlCount: countInteractiveControls(toolbar),
+                tasksTelemetryHasIntentLabel: telemetryText.includes("intent completion"),
+                tasksTelemetryHasPassiveExitLabel: telemetryText.includes("passive exits"),
+            };
+        }
+
+        if (path === "/settings/policy") {
+            const controlsBar = document.querySelector("[data-testid='rbac-controls-bar']");
+            const basicMode = document.querySelector("[data-testid='rbac-mobile-basic-mode']");
+            const advancedToggle = document.querySelector("[data-testid='rbac-mobile-close-matrix-button']");
+            const matrixScroll = document.querySelector("[data-testid='rbac-matrix-scroll']");
+
+            const matrixVisible = isVisible(matrixScroll);
+            const matrixHasHorizontalOverflow = matrixVisible
+                ? (matrixScroll instanceof HTMLElement && matrixScroll.scrollWidth > matrixScroll.clientWidth + 1)
+                : false;
+
+            return {
+                rbacControlCount: countInteractiveControls(controlsBar),
+                rbacBasicModeVisible: isVisible(basicMode),
+                rbacAdvancedMatrixVisible: isVisible(advancedToggle),
+                rbacMatrixHasHorizontalOverflow: matrixHasHorizontalOverflow,
+            };
+        }
+
+        return {};
+    }, routePath);
+}
+
 async function auditMenuSearchSurface(
     page: Page,
     route: { path: string; label: string },
@@ -437,11 +540,19 @@ async function auditMenuSearchSurface(
     }
 
     if (!openedSurfaceTestId) {
+        const bodyPreview = await page.locator("body").innerText()
+            .then((text) => text.replace(/\s+/g, " ").trim().slice(0, 220))
+            .catch(() => "");
         return {
             smallTargetCount: 0,
             unlabeledButtonCount: 0,
             hasHorizontalOverflow: false,
             opened: false,
+            debug: {
+                viewport,
+                url: page.url(),
+                bodyPreview,
+            },
         };
     }
 
@@ -455,6 +566,11 @@ async function auditMenuSearchSurface(
             unlabeledButtonCount: 0,
             hasHorizontalOverflow: false,
             opened: false,
+            debug: {
+                viewport,
+                url: page.url(),
+                bodyPreview: "scope selector not found",
+            },
         };
     }
 
@@ -528,6 +644,7 @@ async function auditMenuSearchSurface(
         unlabeledButtonCount: scopedMetrics.unlabeledButtons.length,
         hasHorizontalOverflow: scopedMetrics.hasHorizontalOverflow,
         opened: true,
+        debug: null,
     };
 }
 
@@ -543,7 +660,7 @@ async function maybeCaptureHoverFocusState(page: Page, routeLabel: string, theme
     return focus;
 }
 
-async function auditRoute(page: Page, route: { path: string; label: string }, theme: UiAuditTheme, viewport: UiAuditViewport) {
+async function auditRoute(page: Page, route: UiAuditRoute, theme: UiAuditTheme, viewport: UiAuditViewport) {
     const minTargetSize = getViewportTargetSize(viewport);
 
     await applyTheme(page, theme);
@@ -555,6 +672,26 @@ async function auditRoute(page: Page, route: { path: string; label: string }, th
 
     const focusState = await maybeCaptureHoverFocusState(page, route.label, theme, viewport);
     const runtimeMetrics = await collectRuntimeMetrics(page, minTargetSize);
+    const routeSpecificMetrics = await collectRouteSpecificMetrics(page, route.path);
+
+    if (route.requiresAuth && runtimeMetrics.errorVisible) {
+        findings.push({
+            id: nextFindingId(),
+            source: "runtime",
+            ruleId: "audit.route-error-state",
+            severity: "P1",
+            route: route.path,
+            theme,
+            viewport,
+            file: null,
+            line: null,
+            message: "Authenticated route rendered with generic error-state copy during baseline audit.",
+            evidence: {
+                route: route.path,
+                viewport,
+            },
+        });
+    }
 
     if (runtimeMetrics.hasHorizontalOverflow) {
         findings.push({
@@ -658,6 +795,133 @@ async function auditRoute(page: Page, route: { path: string; label: string }, th
         });
     }
 
+    if (
+        route.path === "/tasks"
+        && viewport === "desktop"
+        && typeof routeSpecificMetrics.tasksPrimaryControlCount === "number"
+        && routeSpecificMetrics.tasksPrimaryControlCount > 5
+    ) {
+        findings.push({
+            id: nextFindingId(),
+            source: "runtime",
+            ruleId: "friction.control-density",
+            severity: "P1",
+            route: route.path,
+            theme,
+            viewport,
+            file: null,
+            line: null,
+            message: "Tasks primary toolbar exceeds expected control density for the default workflow.",
+            evidence: {
+                controlCount: routeSpecificMetrics.tasksPrimaryControlCount,
+                maxRecommended: 5,
+            },
+        });
+    }
+
+    if (
+        route.path === "/tasks"
+        && (
+            routeSpecificMetrics.tasksTelemetryHasIntentLabel === false
+            || routeSpecificMetrics.tasksTelemetryHasPassiveExitLabel === false
+        )
+    ) {
+        findings.push({
+            id: nextFindingId(),
+            source: "runtime",
+            ruleId: "friction.telemetry-signal-quality",
+            severity: "P1",
+            route: route.path,
+            theme,
+            viewport,
+            file: null,
+            line: null,
+            message: "Time-to-task summary is missing intent-qualified metric labels.",
+            evidence: {
+                hasIntentLabel: routeSpecificMetrics.tasksTelemetryHasIntentLabel,
+                hasPassiveExitLabel: routeSpecificMetrics.tasksTelemetryHasPassiveExitLabel,
+            },
+        });
+    }
+
+    if (route.path === "/settings/policy" && viewport === "mobile") {
+        if (routeSpecificMetrics.rbacBasicModeVisible === false) {
+            findings.push({
+                id: nextFindingId(),
+                source: "runtime",
+                ruleId: "friction.control-density",
+                severity: "P1",
+                route: route.path,
+                theme,
+                viewport,
+                file: null,
+                line: null,
+                message: "Policy mobile view no longer defaults to basic mode.",
+                evidence: {
+                    basicModeVisible: routeSpecificMetrics.rbacBasicModeVisible,
+                },
+            });
+        }
+
+        if (routeSpecificMetrics.rbacAdvancedMatrixVisible === true) {
+            findings.push({
+                id: nextFindingId(),
+                source: "runtime",
+                ruleId: "friction.control-density",
+                severity: "P1",
+                route: route.path,
+                theme,
+                viewport,
+                file: null,
+                line: null,
+                message: "Policy advanced matrix is open by default on mobile.",
+                evidence: {
+                    advancedMatrixVisible: routeSpecificMetrics.rbacAdvancedMatrixVisible,
+                },
+            });
+        }
+
+        if (routeSpecificMetrics.rbacMatrixHasHorizontalOverflow === true) {
+            findings.push({
+                id: nextFindingId(),
+                source: "runtime",
+                ruleId: "layout.mobile-primary-content-overflow",
+                severity: "P1",
+                route: route.path,
+                theme,
+                viewport,
+                file: null,
+                line: null,
+                message: "Policy matrix is horizontally overflowing while visible on mobile.",
+                evidence: {
+                    matrixHasHorizontalOverflow: routeSpecificMetrics.rbacMatrixHasHorizontalOverflow,
+                },
+            });
+        }
+
+        if (
+            typeof routeSpecificMetrics.rbacControlCount === "number"
+            && routeSpecificMetrics.rbacControlCount > 8
+        ) {
+            findings.push({
+                id: nextFindingId(),
+                source: "runtime",
+                ruleId: "friction.control-density",
+                severity: "P2",
+                route: route.path,
+                theme,
+                viewport,
+                file: null,
+                line: null,
+                message: "Policy controls bar has high control density for mobile.",
+                evidence: {
+                    controlCount: routeSpecificMetrics.rbacControlCount,
+                    maxRecommended: 8,
+                },
+            });
+        }
+    }
+
     let searchSurfaceMetrics = {
         opened: false,
         smallTargetCount: 0,
@@ -695,6 +959,13 @@ async function auditRoute(page: Page, route: { path: string; label: string }, th
             searchSurfaceSmallTargetCount: searchSurfaceMetrics.smallTargetCount,
             searchSurfaceUnlabeledButtonCount: searchSurfaceMetrics.unlabeledButtonCount,
             searchSurfaceHasHorizontalOverflow: searchSurfaceMetrics.hasHorizontalOverflow,
+            tasksPrimaryControlCount: routeSpecificMetrics.tasksPrimaryControlCount,
+            tasksTelemetryHasIntentLabel: routeSpecificMetrics.tasksTelemetryHasIntentLabel,
+            tasksTelemetryHasPassiveExitLabel: routeSpecificMetrics.tasksTelemetryHasPassiveExitLabel,
+            rbacControlCount: routeSpecificMetrics.rbacControlCount,
+            rbacBasicModeVisible: routeSpecificMetrics.rbacBasicModeVisible,
+            rbacAdvancedMatrixVisible: routeSpecificMetrics.rbacAdvancedMatrixVisible,
+            rbacMatrixHasHorizontalOverflow: routeSpecificMetrics.rbacMatrixHasHorizontalOverflow,
         },
     });
 
@@ -736,6 +1007,7 @@ test.describe.configure({ mode: "serial" });
 test("UI audit matrix (authenticated routes)", async ({ page }) => {
     test.setTimeout(20 * 60 * 1000);
     await setAuthSession(page);
+    await installAuditApiMocks(page);
 
     const routes = UI_AUDIT_CONFIG.routes.filter((route) => route.requiresAuth);
     for (const [viewportName, viewportSize] of Object.entries(UI_AUDIT_CONFIG.viewports) as Array<[UiAuditViewport, { width: number; height: number }]>) {
@@ -792,7 +1064,10 @@ test("UI audit menu-search surfaces (targeted regression)", async ({ page }) => 
                 minTargetSize,
             );
 
-            expect(searchSurfaceMetrics.opened).toBeTruthy();
+            expect(
+                searchSurfaceMetrics.opened,
+                `Search surface failed to open: ${JSON.stringify(searchSurfaceMetrics.debug ?? {})}`,
+            ).toBeTruthy();
         }
     }
 });

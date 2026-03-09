@@ -1,0 +1,38 @@
+name: Tailwind v4 Canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Tailwind v4 canary
+        run: npm run upgrade:tailwind4:canary
+
+      - name: Upload Tailwind v4 canary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tailwind4-canary-report
+          path: artifacts/perf-upgrade/tailwind4-canary-report.json
+          if-no-files-found: ignore

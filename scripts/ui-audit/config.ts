@@ -46,7 +46,7 @@ export const UI_AUDIT_CONFIG = {
 };
 
 export function getViewportTargetSize(viewport: UiAuditViewport): number {
-    return viewport === "desktop"
-        ? UI_AUDIT_CONFIG.thresholds.targetSize.desktop
-        : UI_AUDIT_CONFIG.thresholds.targetSize.mobile;
+    return viewport === "mobile"
+        ? UI_AUDIT_CONFIG.thresholds.targetSize.mobile
+        : UI_AUDIT_CONFIG.thresholds.targetSize.desktop;
 }

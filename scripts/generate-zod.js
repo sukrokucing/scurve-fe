@@ -2,9 +2,14 @@ import fs from "fs";
 import path from "path";
 
 const root = process.cwd();
-const openapiPath = path.join(root, "openapi.json");
 const outDir = path.join(root, "src/schemas/generated");
 const outFile = path.join(outDir, "api-schemas.ts");
+const openapiCandidates = [
+  process.env.OPENAPI_SPEC_PATH ? path.resolve(root, process.env.OPENAPI_SPEC_PATH) : null,
+  path.join(root, "src/openapi.json"),
+  path.join(root, "openapi.json"),
+].filter(Boolean);
+const openapiPath = openapiCandidates.find((candidate) => fs.existsSync(candidate));
 
 function ensureDir(dir) {
   try {
@@ -54,8 +59,8 @@ function toZod(schema, name, components) {
 }
 
 function generate() {
-  if (!fs.existsSync(openapiPath)) {
-    console.error('openapi.json not found at', openapiPath);
+  if (!openapiPath) {
+    console.error('OpenAPI schema file not found. Checked:', openapiCandidates.join(", "));
     process.exit(2);
   }
   const doc = JSON.parse(fs.readFileSync(openapiPath, 'utf-8'));

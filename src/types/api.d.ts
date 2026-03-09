@@ -260,6 +260,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Project Assignees
+         * @description List Project Assignees Handles `GET` requests for `/projects/{project_id}/assignees`. Requires bearer authentication.
+         */
+        get: operations["list_project_assignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/dependencies": {
         parameters: {
             query?: never;
@@ -362,7 +382,11 @@ export interface paths {
          */
         put: operations["batch_update_tasks"];
         post?: never;
-        delete?: never;
+        /**
+         * Batch Delete Tasks
+         * @description Batch Delete Tasks Handles `DELETE` requests for `/projects/{project_id}/tasks/batch`. Requires bearer authentication.
+         */
+        delete: operations["batch_delete_tasks"];
         options?: never;
         head?: never;
         patch?: never;
@@ -391,6 +415,26 @@ export interface paths {
          * @description Delete Task Handles `DELETE` requests for `/projects/{project_id}/tasks/{id}`. Requires bearer authentication.
          */
         delete: operations["delete_task"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Task Activity
+         * @description List Task Activity Handles `GET` requests for `/projects/{project_id}/tasks/{id}/activity`. Requires bearer authentication.
+         */
+        get: operations["list_task_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -667,6 +711,46 @@ export interface paths {
          * @description Revoke a role from a user Handles `DELETE` requests for `/rbac/users/{user_id}/roles/{role_id}`. Requires bearer authentication.
          */
         delete: operations["revoke_role_from_user"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Progress By Task
+         * @description List Progress By Task Handles `GET` requests for `/tasks/{task_id}/progress`. Requires bearer authentication.
+         */
+        get: operations["list_progress_by_task"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telemetry/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest Events
+         * @description Ingest Events Handles `POST` requests for `/telemetry/events`. Requires bearer authentication.
+         */
+        post: operations["ingest_events"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1022,6 +1106,27 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        TaskActivityEntry: {
+            action: string;
+            /** Format: uuid */
+            actor_id?: string | null;
+            details: Record<string, never>;
+            id: string;
+            /** Format: date-time */
+            occurred_at: string;
+        };
+        TaskAssignee: {
+            email: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        TaskBatchDeleteRequest: {
+            ids: string[];
+        };
+        TaskBatchDeleteResponse: {
+            deleted: number;
+        };
         TaskBatchUpdatePayload: {
             tasks: components["schemas"]["TaskBatchUpdateRequest"][];
         };
@@ -1093,6 +1198,10 @@ export interface components {
             target_task_id: string;
             type_: string;
         };
+        /** @enum {string} */
+        TaskSortBy: "start_date" | "due_date" | "created_at" | "updated_at" | "title" | "status" | "progress";
+        /** @enum {string} */
+        TaskSortDir: "asc" | "desc";
         TaskUpdateRequest: {
             /** Format: uuid */
             assignee?: string | null;
@@ -1117,6 +1226,54 @@ export interface components {
             start_date?: string | null;
             status?: string | null;
             title?: string | null;
+        };
+        TelemetryBatchRequest: {
+            events: components["schemas"]["TelemetryEventRequest"][];
+        };
+        TelemetryErrorResponse: {
+            /** @example invalid telemetry payload */
+            message: string;
+        };
+        /** @enum {string} */
+        TelemetryEventName: "time_to_task.session_started" | "time_to_task.intent_marked" | "time_to_task.completed" | "time_to_task.abandoned";
+        TelemetryEventRequest: {
+            /**
+             * Format: int64
+             * @example 9234
+             */
+            duration_ms?: number | null;
+            /** @example time-to-task-start-c6f53fe6-1823-4f90-b03f-77e8e20de34d */
+            event_id: string;
+            event_name: components["schemas"]["TelemetryEventName"];
+            /**
+             * Format: int64
+             * @example 4033
+             */
+            intent_to_complete_ms?: number | null;
+            metadata: Record<string, never>;
+            /**
+             * Format: date-time
+             * @example 2026-03-04T05:38:12.232Z
+             */
+            occurred_at: string;
+            /** @example completed */
+            outcome?: string | null;
+            /** Format: uuid */
+            project_id?: string | null;
+            /** @example leave-tasks-page */
+            reason?: string | null;
+            /** @example /tasks */
+            route?: string | null;
+            /** @example c6f53fe6-1823-4f90-b03f-77e8e20de34d */
+            session_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+            /** @example list */
+            view?: string | null;
+        };
+        TelemetryIngestResponse: {
+            /** @example 12 */
+            accepted: number;
         };
         UpdateUserRequest: {
             /** @example updated@example.com */
@@ -1768,6 +1925,41 @@ export interface operations {
             };
         };
     };
+    list_project_assignees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List assignees in project tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "email": "ada@example.com",
+                     *         "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "name": "Ada Lovelace"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["TaskAssignee"][];
+                };
+            };
+        };
+    };
     list_dependencies: {
         parameters: {
             query?: never;
@@ -1935,6 +2127,31 @@ export interface operations {
                  * @example 00000000-0000-0000-0000-000000000000
                  */
                 task_id?: string | null;
+                /** @description Title search keyword. */
+                q?: string | null;
+                /** @description Filter by task status. Supports comma-separated values (e.g. todo,done). */
+                status?: string | null;
+                /**
+                 * @description Filter by assignee user id.
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                assignee_id?: string | null;
+                /** @description Filter tasks with start_date >= this timestamp (RFC3339 or YYYY-MM-DD). */
+                start_from?: string | null;
+                /** @description Filter tasks with start_date <= this timestamp (RFC3339 or YYYY-MM-DD). */
+                start_to?: string | null;
+                /** @description Filter tasks with due_date >= this timestamp (RFC3339 or YYYY-MM-DD). */
+                due_from?: string | null;
+                /** @description Filter tasks with due_date <= this timestamp (RFC3339 or YYYY-MM-DD). */
+                due_to?: string | null;
+                /** @description Sort field. */
+                sort_by?: components["schemas"]["TaskSortBy"] | null;
+                /** @description Sort direction. */
+                sort_dir?: components["schemas"]["TaskSortDir"] | null;
+                /** @description Page number (1-based, default 1). */
+                page?: number | null;
+                /** @description Items per page (default 50, max 100). */
+                per_page?: number | null;
             };
             header?: never;
             path: {
@@ -1951,6 +2168,8 @@ export interface operations {
             /** @description List tasks */
             200: {
                 headers: {
+                    /** @description Total number of matching tasks */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2069,6 +2288,49 @@ export interface operations {
                      *     ]
                      */
                     "application/json": components["schemas"]["Task"][];
+                };
+            };
+        };
+    };
+    batch_delete_tasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "ids": [
+                 *         "33333333-3333-4333-8333-333333333333",
+                 *         "22222222-2222-4222-8222-222222222222"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["TaskBatchDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Tasks soft deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "deleted": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TaskBatchDeleteResponse"];
                 };
             };
         };
@@ -2194,6 +2456,57 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_task_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task activity timeline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "action": "task.updated",
+                     *         "actor_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "details": {
+                     *           "payload": {
+                     *             "new": {
+                     *               "title": "Define final checklist"
+                     *             },
+                     *             "old": {
+                     *               "title": "Define checklist"
+                     *             }
+                     *           }
+                     *         },
+                     *         "id": "evt_20250120_0002",
+                     *         "occurred_at": "2025-01-20T10:16:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["TaskActivityEntry"][];
+                };
             };
         };
     };
@@ -3041,6 +3354,78 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_progress_by_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List progress entries by task id */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2025-01-19T09:00:00Z",
+                     *         "id": "99999999-9999-4999-8999-999999999999",
+                     *         "note": "Execution started",
+                     *         "progress": 65,
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "task_id": "33333333-3333-4333-8333-333333333333",
+                     *         "updated_at": "2025-01-19T09:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["Progress"][];
+                };
+            };
+        };
+    };
+    ingest_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelemetryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted telemetry events */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryIngestResponse"];
+                };
+            };
+            /** @description Invalid telemetry payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryErrorResponse"];
+                };
             };
         };
     };

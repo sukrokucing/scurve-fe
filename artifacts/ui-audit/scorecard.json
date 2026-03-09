@@ -1,18 +1,16 @@
 {
-  "generatedAt": "2026-03-03T05:38:28.912Z",
-  "mode": "report",
-  "score": 86.5,
+  "generatedAt": "2026-03-09T10:16:20.124Z",
+  "mode": "visual",
+  "score": 100,
   "pass": true,
   "counts": {
-    "total": 5,
+    "total": 0,
     "bySeverity": {
       "P0": 0,
       "P1": 0,
-      "P2": 5,
+      "P2": 0,
       "P3": 0
     },
-    "byRule": {
-      "spacing.scale-consistency": 5
-    }
+    "byRule": {}
   }
 }

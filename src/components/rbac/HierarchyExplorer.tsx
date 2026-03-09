@@ -71,14 +71,9 @@ export const HierarchyExplorer = () => {
     );
 
     return (
-        <div className="rounded-lg border bg-card shadow-sm h-[600px] flex overflow-hidden flex-col md:flex-row text-foreground">
-            {/* Disclaimer */}
-            <div className="md:hidden p-2 bg-warning/15 text-warning-foreground text-xs text-center border-b">
-                Best viewed on desktop
-            </div>
-
+        <div className="rounded-lg border bg-card shadow-sm h-auto md:h-[600px] flex overflow-hidden flex-col md:flex-row text-foreground">
             {/* --- Column 1: Users --- */}
-            <div className="flex-1 min-w-[300px] border-r flex flex-col bg-card">
+            <div className="flex flex-col bg-card border-b md:border-b-0 md:flex-1 md:min-w-[300px] md:border-r">
                 <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
                     <UserIcon className="h-4 w-4" />
                     Users
@@ -109,7 +104,7 @@ export const HierarchyExplorer = () => {
                         triggerTestId="access-flow-user-search-combobox"
                     />
                 </div>
-                <ScrollArea className="flex-1">
+                <ScrollArea className="max-h-[260px] md:max-h-none md:flex-1">
                     {loadingUsers ? <ColumnLoading /> : (
                         <div className="p-2 space-y-1">
                             {users.length === 0 ? <ColumnEmpty msg="No users found" /> : (
@@ -188,7 +183,7 @@ export const HierarchyExplorer = () => {
             </div>
 
             {/* --- Column 2: Roles --- */}
-            <div className="flex-1 min-w-[300px] border-r flex flex-col bg-card/50">
+            <div className="flex flex-col bg-card/50 border-b md:border-b-0 md:flex-1 md:min-w-[300px] md:border-r">
                 <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
                     <Shield className="h-4 w-4" />
                     Assigned Roles
@@ -196,7 +191,7 @@ export const HierarchyExplorer = () => {
                 {!selectedUser ? (
                     <ColumnEmpty msg="Select a user to view roles" />
                 ) : (
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="max-h-[220px] md:max-h-none md:flex-1">
                         {loadingUserRoles ? <ColumnLoading /> : (
                             <div className="p-2 space-y-1">
                                 {!userRoles || userRoles.length === 0 ? (
@@ -234,7 +229,7 @@ export const HierarchyExplorer = () => {
             </div>
 
             {/* --- Column 3: Permissions --- */}
-            <div className="flex-1 min-w-[300px] flex flex-col bg-card/30">
+            <div className="flex flex-col bg-card/30 md:flex-1 md:min-w-[300px]">
                 <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
                     <Lock className="h-4 w-4" />
                     Role Permissions
@@ -242,7 +237,7 @@ export const HierarchyExplorer = () => {
                 {!selectedRole ? (
                     <ColumnEmpty msg="Select a role to view permissions" />
                 ) : (
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="max-h-[220px] md:max-h-none md:flex-1">
                         {loadingRolePerms ? <ColumnLoading /> : (
                             <div className="p-2 space-y-1">
                                 {!rolePermissions || rolePermissions.length === 0 ? (
@@ -251,7 +246,7 @@ export const HierarchyExplorer = () => {
                                     rolePermissions.map(perm => (
                                         <div
                                             key={perm.id}
-                                            className="p-3 rounded-md border bg-background flex items-center gap-3 text-sm animate-in fade-in slide-in-from-left-2 duration-300"
+                                            className="p-3 rounded-md border bg-background flex items-center gap-3 text-sm motion-static-list animate-in fade-in slide-in-from-left-2"
                                         >
                                             <div className="h-6 w-6 rounded-full bg-success/15 flex items-center justify-center shrink-0">
                                                 <Check className="h-3 w-3 text-success" />

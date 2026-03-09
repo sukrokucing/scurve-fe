@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Search } from "lucide-react";
+import { motion } from "framer-motion";
+import { LogOut, Pin, PinOff, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,21 @@ import { openGlobalMenuSearch } from "@/navigation/menuSearchEvents";
 
 const MAIN_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "main");
 const SETTINGS_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "settings");
+const SIDEBAR_PIN_STORAGE_KEY = "sidebar-pinned";
 
 export function Sidebar() {
-    const [isCollapsed, setIsCollapsed] = useState(true); // Default to collapsed Rail
+    const [isPinned, setIsPinned] = useState(() => {
+        if (typeof window === "undefined") {
+            return false;
+        }
+        return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) === "true";
+    });
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        if (typeof window === "undefined") {
+            return true;
+        }
+        return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) !== "true";
+    });
     const { logout, user } = useAuth();
     const { pathname } = useLocation();
 
@@ -27,6 +39,16 @@ export function Sidebar() {
     );
 
     const sidebarWidth = isCollapsed ? "w-[72px]" : "w-[260px]";
+    const pinLabel = isPinned ? "Unpin sidebar" : "Pin sidebar";
+
+    const togglePinned = () => {
+        const nextPinned = !isPinned;
+        setIsPinned(nextPinned);
+        setIsCollapsed(!nextPinned);
+        if (typeof window !== "undefined") {
+            window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, String(nextPinned));
+        }
+    };
 
     return (
         <motion.aside
@@ -36,35 +58,54 @@ export function Sidebar() {
             )}
             initial={false}
             animate={{ width: isCollapsed ? 72 : 260 }}
-            onMouseEnter={() => setIsCollapsed(false)}
-            onMouseLeave={() => setIsCollapsed(true)}
+            onMouseEnter={() => {
+                if (!isPinned) {
+                    setIsCollapsed(false);
+                }
+            }}
+            onMouseLeave={() => {
+                if (!isPinned) {
+                    setIsCollapsed(true);
+                }
+            }}
         >
             {/* Logo Section */}
-            <div className="flex h-16 items-center px-6 border-b shrink-0">
-                <AnimatePresence mode="wait">
-                    {!isCollapsed ? (
-                        <motion.div
-                            key="full-logo"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="font-bold text-xl tracking-tight text-primary truncate"
-                            title={import.meta.env.VITE_APP_NAME ?? "S-Curve"}
-                        >
-                            {import.meta.env.VITE_APP_NAME ?? "S-Curve"}
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="mini-logo"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full flex justify-center font-bold text-xl text-primary"
-                        >
-                            S
-                        </motion.div>
+            <div
+                className={cn(
+                    "flex h-16 items-center border-b shrink-0",
+                    isCollapsed ? "justify-center px-2" : "justify-between px-4"
+                )}
+            >
+                {!isCollapsed ? (
+                    <div
+                        className="font-bold text-xl tracking-tight text-foreground truncate"
+                        title={import.meta.env.VITE_APP_NAME ?? "S-Curve"}
+                    >
+                        {import.meta.env.VITE_APP_NAME ?? "S-Curve"}
+                    </div>
+                ) : (
+                    <div className="w-full flex justify-center font-bold text-xl text-foreground">
+                        S
+                    </div>
+                )}
+
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground transition-opacity duration-150",
+                        !isPinned && isCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
+                        isCollapsed ? "absolute right-2 top-4" : ""
                     )}
-                </AnimatePresence>
+                    onClick={togglePinned}
+                    aria-label={pinLabel}
+                    aria-pressed={isPinned}
+                    data-testid="sidebar-pin-toggle"
+                    title={pinLabel}
+                >
+                    {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                </Button>
             </div>
 
             {/* Navigation Links */}
@@ -73,7 +114,7 @@ export function Sidebar() {
                     type="button"
                     variant="outline"
                     className={cn(
-                        "mb-3 h-10 w-full text-muted-foreground hover:text-foreground",
+                        "mb-3 h-11 w-full text-muted-foreground hover:text-foreground",
                         isCollapsed ? "justify-center px-0" : "justify-between"
                     )}
                     onClick={openGlobalMenuSearch}
@@ -98,8 +139,10 @@ export function Sidebar() {
                         to={item.to}
                         className={({ isActive }) =>
                             cn(
-                                "flex items-center gap-4 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group",
-                                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                                "flex min-h-11 items-center gap-4 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group",
+                                isActive
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 dark:text-foreground/90 hover:bg-accent hover:text-foreground",
                                 isCollapsed && "justify-center px-0"
                             )
                         }
@@ -107,14 +150,9 @@ export function Sidebar() {
                     >
                         <item.icon className={cn("h-5 w-5 shrink-0 transition-transform group-hover:scale-110", isCollapsed ? "mr-0" : "")} />
                         {!isCollapsed && (
-                            <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="truncate"
-                                title={item.label}
-                            >
+                            <span className="truncate" title={item.label}>
                                 {item.label}
-                            </motion.span>
+                            </span>
                         )}
                     </NavLink>
                 ))}
@@ -127,8 +165,10 @@ export function Sidebar() {
                         to={item.to}
                         className={() =>
                             cn(
-                                "flex items-center gap-4 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group",
-                                isSettingsActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                                "flex min-h-11 items-center gap-4 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group",
+                                isSettingsActive
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-foreground/80 dark:text-foreground/90 hover:bg-accent hover:text-foreground",
                                 isCollapsed && "justify-center px-0"
                             )
                         }
@@ -136,14 +176,9 @@ export function Sidebar() {
                     >
                         <item.icon className={cn("h-5 w-5 shrink-0 transition-transform group-hover:scale-110", isCollapsed ? "mr-0" : "")} />
                         {!isCollapsed && (
-                            <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="truncate"
-                                title={item.label}
-                            >
+                            <span className="truncate" title={item.label}>
                                 {item.label}
-                            </motion.span>
+                            </span>
                         )}
                     </NavLink>
                 ))}
@@ -173,7 +208,7 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     className={cn(
-                        "w-full justify-start text-foreground/80 hover:text-destructive-foreground hover:bg-destructive active:bg-destructive/90 active:text-destructive-foreground h-10 transition-colors",
+                        "h-11 w-full justify-start text-foreground/80 dark:text-foreground/90 hover:bg-destructive hover:text-destructive-foreground active:bg-destructive/90 active:text-destructive-foreground transition-colors",
                         isCollapsed ? "justify-center px-0" : "px-3"
                     )}
                     onClick={logout}

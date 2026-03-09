@@ -173,6 +173,8 @@ export const RolesPage = () => {
     const [createOpen, setCreateOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
+    const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     // --- Queries ---
     const { data: roles, isLoading } = useQuery({
@@ -363,9 +365,8 @@ export const RolesPage = () => {
                                                 aria-label={`Delete role ${role.name}`}
                                                 title={`Delete role ${role.name}`}
                                                 onClick={() => {
-                                                    if (confirm("Are you sure you want to delete this role?")) {
-                                                        deleteMutation.mutate(role.id);
-                                                    }
+                                                    setRoleToDelete(role);
+                                                    setDeleteConfirmOpen(true);
                                                 }}
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -384,6 +385,46 @@ export const RolesPage = () => {
                 open={detailsOpen}
                 onOpenChange={setDetailsOpen}
             />
+            <Dialog
+                open={deleteConfirmOpen}
+                onOpenChange={(open) => {
+                    if (!open) setRoleToDelete(null);
+                    setDeleteConfirmOpen(open);
+                }}
+            >
+                <AppDialogContent
+                    title="Delete role"
+                    description={`Delete role "${roleToDelete?.name ?? ""}"? This action cannot be undone.`}
+                >
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                                setDeleteConfirmOpen(false);
+                                setRoleToDelete(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                if (!roleToDelete) return;
+                                deleteMutation.mutate(roleToDelete.id);
+                                setDeleteConfirmOpen(false);
+                                setRoleToDelete(null);
+                            }}
+                            disabled={deleteMutation.isPending || !roleToDelete}
+                            data-testid="roles-delete-confirm-button"
+                        >
+                            {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                        </Button>
+                    </div>
+                    <DialogFooter />
+                </AppDialogContent>
+            </Dialog>
         </div>
     );
 };

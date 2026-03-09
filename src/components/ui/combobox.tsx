@@ -145,7 +145,7 @@ export function Combobox({
                         className={cn("min-h-11 w-full justify-between overflow-hidden", className)}
                         title={triggerLabel}
                     >
-                        <span className="min-w-0 truncate text-left">{triggerLabel}</span>
+                        <span className="min-w-0 truncate text-left" title={triggerLabel}>{triggerLabel}</span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 )}

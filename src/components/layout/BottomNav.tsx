@@ -31,12 +31,14 @@ export function BottomNav() {
                             className={({ isActive }) =>
                                 cn(
                                     "flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
-                                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                                    isActive
+                                        ? "bg-accent text-foreground"
+                                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                                 )
                             }
                         >
                             <item.icon className="h-5 w-5" />
-                            <span className="text-[10px] font-medium">{item.label}</span>
+                            <span className="text-xs font-medium">{item.label}</span>
                         </NavLink>
                     ))}
 
@@ -46,12 +48,14 @@ export function BottomNav() {
                         data-testid="bottom-nav-search-trigger"
                         className={cn(
                             "flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
-                            isSearchOpen ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                            isSearchOpen
+                                ? "bg-accent text-foreground"
+                                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                         )}
                         onClick={() => setIsSearchOpen(true)}
                     >
                         <Search className="h-5 w-5" />
-                        <span className="text-[10px] font-medium">Search</span>
+                        <span className="text-xs font-medium">Search</span>
                     </button>
                 </div>
             </nav>

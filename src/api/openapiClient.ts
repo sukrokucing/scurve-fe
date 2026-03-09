@@ -23,6 +23,25 @@ type ProjectPlanCreateRequest = {
     planned_progress: number;
 }[];
 
+type TaskListSortDirection = "asc" | "desc";
+type TaskListQueryParams = {
+    q?: string;
+    status?: string;
+    assignee_id?: string;
+    start_from?: string;
+    start_to?: string;
+    due_from?: string;
+    due_to?: string;
+    sort_by?: string;
+    sort_dir?: TaskListSortDirection;
+    page?: number;
+    per_page?: number;
+};
+type PaginatedTasksResult = {
+    tasks: DomainTask[];
+    total: number;
+};
+
 type ApiDashboardResponse = components["schemas"]["DashboardResponse"];
 type ApiProjectPlanPoint = components["schemas"]["ProjectPlanPoint"];
 
@@ -113,6 +132,20 @@ export const openapi = {
         return data.map(mapApiTaskToDomain);
     },
 
+    async listTasksByProjectPaginated(projectId: string, params?: TaskListQueryParams): Promise<PaginatedTasksResult> {
+        const response = await api.get<ApiTask[]>(`/projects/${projectId}/tasks`, {
+            params,
+        });
+        const totalHeader = response.headers["x-total-count"] ?? response.headers["X-Total-Count"];
+        const headerValue = Array.isArray(totalHeader) ? totalHeader[0] : totalHeader;
+        const parsedTotal = Number.parseInt(String(headerValue ?? ""), 10);
+
+        return {
+            tasks: response.data.map(mapApiTaskToDomain),
+            total: Number.isFinite(parsedTotal) ? parsedTotal : response.data.length,
+        };
+    },
+
     async createTaskForProject(projectId: string, payload: Partial<TaskCreateRequest>): Promise<DomainTask> {
         const body: TaskCreateRequest = payload as TaskCreateRequest;
         const { data } = await api.post<ApiTask>(`/projects/${projectId}/tasks`, body);
@@ -126,6 +159,13 @@ export const openapi = {
 
     async deleteTask(projectId: string, id: string): Promise<void> {
         await api.delete(`/projects/${projectId}/tasks/${id}`);
+    },
+
+    async batchDeleteTasks(projectId: string, ids: string[]): Promise<{ deleted: number }> {
+        const { data } = await api.delete<{ deleted: number }>(`/projects/${projectId}/tasks/batch`, {
+            data: { ids },
+        });
+        return data;
     },
 
     async batchUpdateTasks(projectId: string, payload: TaskBatchUpdatePayload): Promise<void> {
@@ -167,4 +207,16 @@ export const openapi = {
     },
 };
 
-export type { ProjectCreateRequest, ProjectUpdateRequest, TaskCreateRequest, TaskUpdateRequest, DependencyCreateRequest, ApiTaskDependency, TaskBatchUpdatePayload, ApiDashboardResponse, ApiProjectPlanPoint };
+export type {
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+    TaskCreateRequest,
+    TaskUpdateRequest,
+    DependencyCreateRequest,
+    ApiTaskDependency,
+    TaskBatchUpdatePayload,
+    ApiDashboardResponse,
+    ApiProjectPlanPoint,
+    TaskListQueryParams,
+    PaginatedTasksResult,
+};

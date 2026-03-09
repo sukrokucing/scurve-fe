@@ -31,7 +31,7 @@ export const auditConfig = {
 };
 
 export function getViewportTargetSize(viewportName) {
-    return viewportName === "desktop"
-        ? auditConfig.thresholds.targetSize.desktop
-        : auditConfig.thresholds.targetSize.mobile;
+    return viewportName === "mobile"
+        ? auditConfig.thresholds.targetSize.mobile
+        : auditConfig.thresholds.targetSize.desktop;
 }

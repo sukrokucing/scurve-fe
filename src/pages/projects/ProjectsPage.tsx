@@ -34,11 +34,11 @@ export function ProjectsPage() {
     const queryClient = useQueryClient();
     const [editing, setEditing] = useState<Project | null>(null);
     const createForm = useForm<ProjectFormValues>({
-        defaultValues: { name: "", description: "", theme_color: "#3498db" },
+        defaultValues: { name: "", description: "" },
     });
 
     const editForm = useForm<ProjectFormValues>({
-        defaultValues: { name: "", description: "", theme_color: "#3498db" },
+        defaultValues: { name: "", description: "" },
     });
 
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -491,7 +491,7 @@ function VirtualizedProjectsTable({
                                             data-testid="projects-row-edit-button"
                                             onClick={() => {
                                                 setEditing(project);
-                                                editForm.reset({ name: project.name, description: project.description ?? "", theme_color: "#3498db" });
+                                                editForm.reset({ name: project.name, description: project.description ?? "" });
                                             }}
                                         >
                                             Edit
