@@ -56,6 +56,12 @@ VITE_ALLOWED_HOSTS=localhost,fe,127.0.0.1
 # Optional for generated Playwright scenarios
 PLAYWRIGHT_USERNAME=...
 PLAYWRIGHT_PASSWORD=...
+# Optional token-first auth for Playwright (preferred for CI stability)
+PLAYWRIGHT_AUTH_TOKEN=...
+# Optional fallback identity fields if /api/auth/me is unavailable
+PLAYWRIGHT_USER_ID=...
+PLAYWRIGHT_USER_NAME=...
+PLAYWRIGHT_USER_EMAIL=...
 # Fallback keys used by test generator/runtime
 TEST_EMAIL=...
 TEST_PASSWORD=...
@@ -65,6 +71,11 @@ VITE_TELEMETRY_ENABLED=false
 VITE_TELEMETRY_ENDPOINT=/api/telemetry/events
 VITE_TELEMETRY_SAMPLE_RATE=1
 VITE_TELEMETRY_FLUSH_MS=2000
+
+# Optional API pacing for strict backend rate limits
+# (especially useful for local Playwright runs)
+VITE_API_CONCURRENCY=2
+VITE_API_MIN_INTERVAL_MS=0
 ```
 
 3. Start dev server:
@@ -88,15 +99,20 @@ App default URL: `http://localhost:3001`
 - `npm run dev`: start local app (`3001`)
 - `npm run check`: lint + typecheck + strict perf audit
 - `npm run build`: production build
+- `npm run seed:demo-personas`: seed example personas + projects + tasks + dashboard consistency report
+- `npm run seed:dashboard-demo`: seed one fresh dashboard trial project with plan + task progress history
 - `npm run test:e2e`: run all Playwright E2E tests
+- `npm run test:e2e:persona`: run persona workflow ergonomics checks
 - `npm run test:e2e:critical`: smoke + runtime perf probes (chromium)
+- `npm run qa:be-update:20260311`: run FE QA checklist for BE contract update (March 11, 2026)
 - `npm run audit:ui && npm run audit:perf:strict`: full audit gate
 - `npm run generate:schemas && npm run generate:theme`: regenerate API+Zod schemas + theme tokens
 
 ### Specialized commands
 
 - `npm run dev`, `npm run preview`, `npm run build`, `npm run lint`, `npm run typecheck`
-- `npm run test:e2e`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
+- `npm run seed:demo-personas`, `npm run seed:dashboard-demo`
+- `npm run test:e2e`, `npm run test:e2e:persona`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
 - `npm run generate:e2e:scenario`, `npm run test:e2e:scenario`
 - `npm run sync:openapi`, `npm run generate:types`, `npm run generate:types:remote`, `npm run generate:zod`, `npm run generate:schemas`, `npm run generate:schemas:remote`
 - `npm run generate:theme`, `npm run check:theme`
@@ -105,6 +121,7 @@ App default URL: `http://localhost:3001`
 - `npm run perf:baseline`, `npm run perf:compare`
 - `npm run visual:baseline`, `npm run visual:compare`
 - `npm run upgrade:tailwind4:canary`, `npm run upgrade:gate`
+- `npm run qa:be-update:20260311`
 
 ### OpenAPI + Zod Generation Flow
 
@@ -125,6 +142,39 @@ Notes:
 - `generate:types` is now local/deterministic (`src/openapi.json`) so CI and local output stay aligned.
 - Use `generate:types:remote` only when you need direct URL-based type generation.
 - One-shot backend refresh + regen: `npm run generate:schemas:remote`.
+
+### Backend Contract Notes (March 11, 2026)
+
+- Progress endpoints reject unknown fields by contract (`serde(deny_unknown_fields)`), so legacy payload fields are expected to fail with `422 Unprocessable Entity`:
+  - `POST /projects/{project_id}/tasks/{task_id}/progress` with `actual_hours`
+  - `PUT /projects/{project_id}/tasks/{task_id}/progress/{id}` with `actual_cost`
+- FE/BE checklist runner:
+
+```bash
+npm run qa:be-update:20260311
+```
+
+- Output artifacts:
+  - `artifacts/qa/fe-qa-checklist-2026-03-11.json`
+  - `artifacts/qa/fe-qa-checklist-2026-03-11.md`
+
+## Demo Persona Workflow
+
+For an end-to-end example that matches role/persona workflows and validates low-friction task operations:
+
+1. Seed example users, roles, projects, and tasks:
+
+```bash
+npm run seed:demo-personas
+```
+
+2. Run persona quick-create + mode-switching checks:
+
+```bash
+npm run test:e2e:persona
+```
+
+See [docs/DEMO_PERSONA_WORKFLOW.md](./docs/DEMO_PERSONA_WORKFLOW.md) for details.
 
 ## Zero-Breakage Upgrade Workflow
 
@@ -167,6 +217,7 @@ Notes:
 - `/login`, `/register`
 - `/` (dashboard)
 - `/projects`, `/projects/:id/dashboard`
+- `/projects/:id/settings`
 - `/tasks`
 - `/settings/users`, `/settings/users/:userId`
 - `/settings/roles`
@@ -265,6 +316,19 @@ npm run test:e2e:scenario
 
 - Username: `PLAYWRIGHT_USERNAME` -> `TEST_EMAIL`
 - Password: `PLAYWRIGHT_PASSWORD` -> `TEST_PASSWORD`
+- Token-first mode (optional): `PLAYWRIGHT_AUTH_TOKEN`
+  - If token is set, generated specs and critical suites try `/api/auth/me` + permissions lookup first.
+  - `PLAYWRIGHT_USER_*` is only fallback metadata, no longer mandatory.
+- Browser scope for generated flow:
+  - `PLAYWRIGHT_SCENARIO_BROWSERS` (comma-separated), default: `chromium`
+  - Example: `PLAYWRIGHT_SCENARIO_BROWSERS=chromium,firefox`
+- Browser scope for auth-heavy suites (`console-smoke`, `persona-workflows`):
+  - `PLAYWRIGHT_AUTH_E2E_BROWSERS` (comma-separated), default: `chromium`
+  - Example: `PLAYWRIGHT_AUTH_E2E_BROWSERS=chromium,firefox`
+- Playwright-managed dev server applies safer defaults for strict backends:
+  - `VITE_API_CONCURRENCY=1`
+  - `VITE_API_MIN_INTERVAL_MS=250`
+  - Override either value from your shell if your backend can handle higher throughput.
 
 ### YAML Variable Syntax (Supported)
 
@@ -430,9 +494,10 @@ Notes:
 ## Troubleshooting
 
 - Login failures in generated scenarios:
-  - Verify credential env keys are set and valid.
+  - Verify `PLAYWRIGHT_AUTH_TOKEN` (preferred) or credential env keys are set and valid.
 - Intermittent backend/rate-limit issues:
   - Ensure backend is healthy and reachable at `VITE_API_URL`.
+  - Reuse token-first auth in CI to reduce repeated `/api/auth/login` pressure.
   - Retry flows if backend responds with temporary errors.
 - Playwright browser binaries missing:
 

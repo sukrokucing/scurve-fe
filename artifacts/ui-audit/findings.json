@@ -1,10 +1,11 @@
 {
-  "generatedAt": "2026-03-09T10:16:20.095Z",
-  "mode": "visual",
+  "generatedAt": "2026-03-12T01:42:00.581Z",
+  "runId": "audit-1773279583842-lyh9f8",
+  "mode": "full",
   "findings": [],
   "inputs": {
-    "static": "2026-03-09T10:14:45.639Z",
-    "runtime": "2026-03-09T10:16:18.223Z"
+    "static": "2026-03-12T01:39:46.161Z",
+    "runtime": "2026-03-12T01:41:59.045Z"
   },
   "counts": {
     "total": 0,

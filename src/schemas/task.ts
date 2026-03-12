@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const taskSchema = z.object({
     title: z.string().min(1, "Title is required"),
+    description: z.string().max(4000, "Description must be at most 4000 characters").optional(),
     // Allow realistic schedule lengths used by Gantt edits (e.g. 16+ day tasks).
     plan: z.number().min(1, "Plan must be at least 1").max(3650, "Plan must be at most 3650"),
     start_date: z.string().optional(),

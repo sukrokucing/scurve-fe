@@ -12,15 +12,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Combobox } from '@/components/ui/combobox';
+import { TableBody, TableCell, TableElement, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, Plus, X } from 'lucide-react';
 import { HEADER_HEIGHT, ROW_HEIGHT } from './constants';
-import {
-    Dialog,
-    DialogFooter,
-    DialogClose,
-} from "@/components/ui/dialog";
-import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const columnHelper = createColumnHelper<GanttTask>();
 
@@ -392,12 +397,12 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                 className="w-full h-full overflow-auto"
                 onScroll={onScroll}
             >
-                <table className="w-full text-sm text-left border-collapse">
-                    <thead className="bg-background text-muted-foreground font-medium sticky top-0 z-50 shadow-sm">
+                <TableElement className="text-left border-collapse">
+                    <TableHeader className="bg-background text-muted-foreground font-medium sticky top-0 z-50 shadow-sm">
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id}>
+                            <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
-                                    <th
+                                    <TableHead
                                         key={header.id}
                                         className="p-0 border-r last:border-r-0 border-b bg-background"
                                         style={{ width: header.getSize(), height: HEADER_HEIGHT }}
@@ -407,29 +412,29 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                                                 ? null
                                                 : flexRender(header.column.columnDef.header, header.getContext())}
                                         </div>
-                                    </th>
+                                    </TableHead>
                                 ))}
-                            </tr>
+                            </TableRow>
                         ))}
-                    </thead>
-                    <tbody>
+                    </TableHeader>
+                    <TableBody>
                         {paddingTop > 0 ? (
-                            <tr aria-hidden="true">
-                                <td colSpan={visibleColumnCount} style={{ height: `${paddingTop}px`, padding: 0, border: 0 }} />
-                            </tr>
+                            <TableRow aria-hidden="true">
+                                <TableCell colSpan={visibleColumnCount} style={{ height: `${paddingTop}px`, padding: 0, border: 0 }} />
+                            </TableRow>
                         ) : null}
 
                         {virtualRows.map((virtualRow) => {
                             const row = rows[virtualRow.index];
                             if (!row) return null;
                             return (
-                            <tr
+                            <TableRow
                                 key={row.id}
                                 className="border-b hover:bg-muted/50 transition-colors h-[50px]"
                                 style={{ height: `${virtualRow.size}px` }}
                             >
                                 {row.getVisibleCells().map((cell) => (
-                                    <td
+                                    <TableCell
                                         key={cell.id}
                                         className="px-2 py-0 h-[50px]"
                                         style={{ width: cell.column.getSize() }}
@@ -437,40 +442,49 @@ export const TaskTable = forwardRef<HTMLDivElement, TaskTableProps>(function Tas
                                         <div className="flex items-center h-full">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </div>
-                                    </td>
+                                    </TableCell>
                                 ))}
-                            </tr>
+                            </TableRow>
                             );
                         })}
 
                         {paddingBottom > 0 ? (
-                            <tr aria-hidden="true">
-                                <td colSpan={visibleColumnCount} style={{ height: `${paddingBottom}px`, padding: 0, border: 0 }} />
-                            </tr>
+                            <TableRow aria-hidden="true">
+                                <TableCell colSpan={visibleColumnCount} style={{ height: `${paddingBottom}px`, padding: 0, border: 0 }} />
+                            </TableRow>
                         ) : null}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </TableElement>
             </div>
-            <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
-                <AppDialogContent
-                    title="Delete task"
-                    description={`Are you sure you want to permanently delete "${taskToDelete?.name}"? This action cannot be undone.`}
-                >
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                        <Button type="button" variant="destructive" onClick={() => {
-                            if (taskToDelete) {
-                                onTaskDelete(taskToDelete);
-                            }
-                            setConfirmOpen(false);
-                        }}>
-                            Delete
-                        </Button>
-                    </div>
-                    <DialogFooter />
-                    <DialogClose />
-                </AppDialogContent>
-            </Dialog>
+            <AlertDialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete task</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Are you sure you want to permanently delete "${taskToDelete?.name}"? This action cannot be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button type="button" variant="ghost">Cancel</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    if (taskToDelete) {
+                                        onTaskDelete(taskToDelete);
+                                    }
+                                    setConfirmOpen(false);
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 });

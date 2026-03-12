@@ -48,6 +48,17 @@ export default defineConfig({
     expect: { timeout: 5000 },
     fullyParallel: true,
     reporter: [['list'], ['html', { open: 'never' }]],
+    webServer: {
+        command: "npm run dev",
+        url: baseURL,
+        reuseExistingServer: true,
+        timeout: 120_000,
+        env: {
+            ...process.env,
+            VITE_API_CONCURRENCY: process.env.VITE_API_CONCURRENCY ?? "1",
+            VITE_API_MIN_INTERVAL_MS: process.env.VITE_API_MIN_INTERVAL_MS ?? "250",
+        },
+    },
     use: {
         // BASE_URL overrides VITE_BASE_URL when both are present.
         baseURL,

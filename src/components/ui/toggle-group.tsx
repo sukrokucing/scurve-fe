@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 const TOGGLE_GROUP_BASE_CLASS = "inline-flex rounded-lg bg-muted p-1 text-muted-foreground"
 const TOGGLE_GROUP_VARIANT_OUTLINE_CLASS = "border border-input bg-transparent"
 const TOGGLE_GROUP_ITEM_BASE_CLASS =
-    "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+    "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
 const TOGGLE_GROUP_ITEM_VARIANT_DEFAULT_CLASS =
     "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
 const TOGGLE_GROUP_ITEM_VARIANT_OUTLINE_CLASS =

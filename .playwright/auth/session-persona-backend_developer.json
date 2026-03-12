@@ -1,0 +1,41 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2NTkxZjVkZi1jZWYyLTRmYmEtOTczMy02YmViMWZiYjA3YWMiLCJleHAiOjE3NzMyMDI0NjUsImlhdCI6MTc3MzExNjA2NX0.IQH18HtnlxCUlVQoBaOB4JFbNgtZP0q07QzqLXzLc88",
+  "user": {
+    "id": "6591f5df-cef2-4fba-9733-6beb1fbb07ac",
+    "name": "Demo Backend Developer",
+    "email": "demo.backend.developer@example.com"
+  },
+  "permissions": [
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "backend_developer"
+    },
+    {
+      "name": "task.create",
+      "source": "role",
+      "role_name": "backend_developer"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "backend_developer"
+    },
+    {
+      "name": "task.update",
+      "source": "role",
+      "role_name": "backend_developer"
+    },
+    {
+      "name": "progress.create",
+      "source": "role",
+      "role_name": "backend_developer"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "backend_developer"
+    }
+  ],
+  "createdAt": "2026-03-10T04:14:26.033Z"
+}

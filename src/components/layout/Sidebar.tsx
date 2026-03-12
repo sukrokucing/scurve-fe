@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogOut, Pin, PinOff, Search } from "lucide-react";
@@ -10,24 +10,16 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { Separator } from "@/components/ui/separator";
 import { SIDEBAR_MENU_ENTRIES } from "@/navigation/menuCatalog";
 import { openGlobalMenuSearch } from "@/navigation/menuSearchEvents";
+import { useLocalStorage } from "@/hooks/vendor/reactUse";
 
 const MAIN_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "main");
 const SETTINGS_NAV_ITEMS = SIDEBAR_MENU_ENTRIES.filter((entry) => entry.section === "settings");
 const SIDEBAR_PIN_STORAGE_KEY = "sidebar-pinned";
 
 export function Sidebar() {
-    const [isPinned, setIsPinned] = useState(() => {
-        if (typeof window === "undefined") {
-            return false;
-        }
-        return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) === "true";
-    });
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        if (typeof window === "undefined") {
-            return true;
-        }
-        return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) !== "true";
-    });
+    const [storedPinned, setStoredPinned] = useLocalStorage<boolean>(SIDEBAR_PIN_STORAGE_KEY, false);
+    const isPinned = storedPinned ?? false;
+    const [isCollapsed, setIsCollapsed] = useState(!isPinned);
     const { logout, user } = useAuth();
     const { pathname } = useLocation();
 
@@ -41,13 +33,14 @@ export function Sidebar() {
     const sidebarWidth = isCollapsed ? "w-[72px]" : "w-[260px]";
     const pinLabel = isPinned ? "Unpin sidebar" : "Pin sidebar";
 
+    useEffect(() => {
+        setIsCollapsed(!isPinned);
+    }, [isPinned]);
+
     const togglePinned = () => {
         const nextPinned = !isPinned;
-        setIsPinned(nextPinned);
+        setStoredPinned(nextPinned);
         setIsCollapsed(!nextPinned);
-        if (typeof window !== "undefined") {
-            window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, String(nextPinned));
-        }
     };
 
     return (

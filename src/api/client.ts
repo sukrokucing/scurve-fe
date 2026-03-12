@@ -43,12 +43,40 @@ class RequestQueue {
     }
 }
 
-// Strict limit: Max 2 concurrent requests to avoid 429s on strict backend
-const limiter = new RequestQueue(2);
+function toPositiveInt(value: string | undefined, fallback: number) {
+    const parsed = Number.parseInt(value ?? "", 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return parsed;
+}
+
+const MAX_CONCURRENT_REQUESTS = toPositiveInt(import.meta.env.VITE_API_CONCURRENCY, 2);
+const API_MIN_INTERVAL_MS = toPositiveInt(import.meta.env.VITE_API_MIN_INTERVAL_MS, 0);
+const limiter = new RequestQueue(MAX_CONCURRENT_REQUESTS);
+
+let requestPacingQueue = Promise.resolve();
+let lastRequestTimestamp = 0;
+
+async function enforceRequestPacing() {
+    if (API_MIN_INTERVAL_MS <= 0) return;
+
+    const run = async () => {
+        const elapsed = Date.now() - lastRequestTimestamp;
+        const waitMs = API_MIN_INTERVAL_MS - elapsed;
+        if (waitMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+        lastRequestTimestamp = Date.now();
+    };
+
+    const next = requestPacingQueue.then(run, run);
+    requestPacingQueue = next.catch(() => {});
+    await next;
+}
 
 api.interceptors.request.use(async (config) => {
     // Acquire semaphore before sending
     await limiter.acquire();
+    await enforceRequestPacing();
     // Before sending, check whether the backend is reachable. This uses a
     // caching/deduplicated probe (`checkBackendAvailable`) so repeated calls
     // are cheap. If unreachable, short-circuit and mark as offline.

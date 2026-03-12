@@ -1,38 +1,64 @@
-import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { MoreHorizontal } from "lucide-react";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { projectSchema, type ProjectFormValues } from "@/schemas/project";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useProjectsQuery } from "@/api/queries/projects";
+import {
+    useCreateProjectMutation,
+    useDeleteProjectMutation,
+    usePortfolioSCurveSummary,
+    useProjectsQuery,
+    useUpdateProjectByIdMutation,
+} from "@/api/queries/projects";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { AppDataTable } from "@/components/ui/app-data-table";
 import { Input } from "@/components/ui/input";
-import { openapi } from "@/api/openapiClient";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
 import type { Project } from "@/types/domain";
 
+const projectColumnHelper = createColumnHelper<Project>();
+
+function getMutationErrorMessage(err: unknown, action: string) {
+    if (!isAxiosError(err)) return `Failed to ${action} project`;
+
+    const status = err.response?.status;
+    const payload = err.response?.data as { message?: string; detail?: string; error?: string } | undefined;
+    const backendMessage = payload?.message ?? payload?.detail ?? payload?.error;
+
+    if (backendMessage && status) return `Failed to ${action} project (${status}): ${backendMessage}`;
+    if (backendMessage) return `Failed to ${action} project: ${backendMessage}`;
+    if (status) return `Failed to ${action} project (${status})`;
+    return `Failed to ${action} project`;
+}
+
 export function ProjectsPage() {
+    const navigate = useNavigate();
     const { data: projects, isLoading, refetch, isRefetching, error } = useProjectsQuery();
-    const queryClient = useQueryClient();
+    const { data: portfolioSummary } = usePortfolioSCurveSummary("progress");
     const [editing, setEditing] = useState<Project | null>(null);
+    const [projectQuery, setProjectQuery] = useState("");
     const createForm = useForm<ProjectFormValues>({
         defaultValues: { name: "", description: "" },
     });
@@ -48,6 +74,10 @@ export function ProjectsPage() {
     // Pagination State
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    useEffect(() => {
+        setPage(1);
+    }, [projectQuery]);
+
     const createNameRef = useRef<HTMLInputElement | null>(null);
     useEffect(() => {
         if (createDialogOpen) {
@@ -55,79 +85,80 @@ export function ProjectsPage() {
         }
     }, [createDialogOpen]);
 
-    const createMutation = useMutation({
-        mutationFn: (payload: { name: string; description?: string; theme_color?: string }) =>
-            openapi.createProject(payload),
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["projects"] });
-            toast.success(`Created project "${data.name}"`);
-            setCreateDialogOpen(false);
-        },
-        onError: (err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err);
-            let extra = "";
-            if (isAxiosError(err) && err.response) {
-                try {
-                    const status = err.response.status;
-                    const body = typeof err.response.data === "string" ? err.response.data : JSON.stringify(err.response.data);
-                    extra = ` (status: ${status}) ${body}`;
-                } catch {
-                    // ignore stringify errors
-                }
-            }
-            toast.error(`Failed to create project: ${message}${extra}`);
-        },
-    });
+    const createMutation = useCreateProjectMutation();
+    const updateMutation = useUpdateProjectByIdMutation();
+    const deleteMutation = useDeleteProjectMutation();
 
-    const updateMutation = useMutation({
-        mutationFn: (args: { id: string; payload: { name?: string; description?: string; theme_color?: string } }) =>
-            openapi.updateProject(args.id, args.payload),
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["projects"] });
-            toast.success(`Updated project "${data.name}"`);
-        },
-        onError: (err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err);
-            let extra = "";
-            if (isAxiosError(err) && err.response) {
-                try {
-                    const status = err.response.status;
-                    const body = typeof err.response.data === "string" ? err.response.data : JSON.stringify(err.response.data);
-                    extra = ` (status: ${status}) ${body}`;
-                } catch {
-                    // ignore stringify errors
-                }
-            }
-            toast.error(`Failed to update project: ${message}${extra}`);
-        },
-    });
+    const createProject = useCallback((payload: { name: string; description?: string; theme_color?: string }) => {
+        return createMutation.mutateAsync(payload, {
+            onSuccess: (data) => {
+                toast.success(`Created project "${data.name}"`);
+                setCreateDialogOpen(false);
+                createForm.reset({ name: "", description: "", theme_color: data.theme_color });
+                navigate(`/projects/${data.id}/settings?onboard=1`);
+            },
+            onError: (err: unknown) => {
+                toast.error(getMutationErrorMessage(err, "create"));
+            },
+        });
+    }, [createForm, createMutation, navigate]);
 
-    const deleteMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await openapi.deleteProject(id);
-            return id;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["projects"] });
-            toast.success(`Deleted project`);
-        },
-        onError: (err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err);
-            let extra = "";
-            if (isAxiosError(err) && err.response) {
-                try {
-                    const status = err.response.status;
-                    const body = typeof err.response.data === "string" ? err.response.data : JSON.stringify(err.response.data);
-                    extra = ` (status: ${status}) ${body}`;
-                } catch {
-                    // ignore stringify errors
-                }
-            }
-            toast.error(`Failed to delete project: ${message}${extra}`);
-        },
-    });
+    const updateProject = useCallback((args: { id: string; payload: { name?: string; description?: string; theme_color?: string } }) => {
+        return updateMutation.mutateAsync(args, {
+            onSuccess: (data) => {
+                toast.success(`Updated project "${data.name}"`);
+            },
+            onError: (err: unknown) => {
+                toast.error(getMutationErrorMessage(err, "update"));
+            },
+        });
+    }, [updateMutation]);
+
+    const deleteProject = useCallback((id: string) => {
+        return deleteMutation.mutateAsync(id, {
+            onSuccess: () => {
+                toast.success("Deleted project");
+                setConfirmOpen(false);
+                setProjectToDelete(null);
+            },
+            onError: (err: unknown) => {
+                toast.error(getMutationErrorMessage(err, "delete"));
+            },
+        });
+    }, [deleteMutation]);
+
+    const createPending = createMutation.status === "pending";
+    const updatePending = updateMutation.status === "pending";
+    const deletePending = deleteMutation.status === "pending";
 
     const rows = (projects as unknown as Project[]) ?? [];
+    const projectSummaryById = useMemo(() => {
+        const byId = new Map<string, {
+            actualPct: number | null;
+            dataStatus: string;
+            metricSupported: boolean;
+            stage: string | null;
+        }>();
+        const summaryProjects = Array.isArray(portfolioSummary?.projects) ? portfolioSummary.projects : [];
+        summaryProjects.forEach((item) => {
+            byId.set(item.project_id, {
+                actualPct: typeof item.actual_pct === "number" && Number.isFinite(item.actual_pct) ? item.actual_pct : null,
+                dataStatus: item.data_status,
+                metricSupported: item.metric_supported,
+                stage: item.stage ?? null,
+            });
+        });
+        return byId;
+    }, [portfolioSummary?.projects]);
+    const normalizedProjectQuery = projectQuery.trim().toLowerCase();
+    const filteredRows = normalizedProjectQuery.length === 0
+        ? rows
+        : rows.filter((project) => {
+            const summary = projectSummaryById.get(project.id);
+            const haystack = `${project.name} ${project.description ?? ""} ${summary?.stage ?? ""} ${summary?.dataStatus ?? ""}`.toLowerCase();
+            return haystack.includes(normalizedProjectQuery);
+        });
+    const paginatedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
 
     return (
         <div className="space-y-6">
@@ -161,7 +192,7 @@ export function ProjectsPage() {
                                             });
                                             return;
                                         }
-                                        createMutation.mutateAsync(parsed.data)
+                                        createProject(parsed.data)
                                             .then(() => {
                                                 // success behavior (closing/reset) handled in hook onSuccess
                                             })
@@ -229,10 +260,10 @@ export function ProjectsPage() {
                                     <div className="flex justify-end">
                                         <Button
                                             type="submit"
-                                            disabled={createMutation.status === "pending"}
+                                            disabled={createPending}
                                             data-testid="projects-create-submit-button"
                                         >
-                                            {createMutation.status === "pending" ? "Creating…" : "Create"}
+                                            {createPending ? "Creating…" : "Create"}
                                         </Button>
                                     </div>
                                 </form>
@@ -242,28 +273,50 @@ export function ProjectsPage() {
                     </Dialog>
 
                     {/* Confirm delete dialog */}
-                    <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setProjectToDelete(null); setConfirmOpen(open); }}>
-                        <AppDialogContent
-                            title="Delete project"
-                            description="Are you sure you want to permanently delete this project? This action cannot be undone."
-                        >
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                                <Button type="button" variant="destructive" onClick={() => {
-                                    if (!projectToDelete) return;
-                                    deleteMutation.mutate(projectToDelete.id);
-                                    setConfirmOpen(false);
-                                }} data-testid="projects-delete-confirm-button">
-                                    Delete
-                                </Button>
-                            </div>
-                            <DialogFooter />
-                            <DialogClose />
-                        </AppDialogContent>
-                    </Dialog>
+                    <AlertDialog open={confirmOpen} onOpenChange={(open) => { if (!open) setProjectToDelete(null); setConfirmOpen(open); }}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete project</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {projectToDelete
+                                        ? `Delete "${projectToDelete.name}" permanently? This action cannot be undone.`
+                                        : "Are you sure you want to permanently delete this project? This action cannot be undone."}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel asChild>
+                                    <Button type="button" variant="ghost" disabled={deletePending}>Cancel</Button>
+                                </AlertDialogCancel>
+                                <AlertDialogAction asChild>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        disabled={!projectToDelete || deletePending}
+                                        onClick={() => {
+                                            if (!projectToDelete) return;
+                                            void deleteProject(projectToDelete.id);
+                                        }}
+                                        data-testid="projects-delete-confirm-button"
+                                    >
+                                        {deletePending
+                                            ? "Deleting…"
+                                            : projectToDelete
+                                                ? `Delete "${projectToDelete.name}"`
+                                                : "Delete"}
+                                    </Button>
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
 
                     {/* Edit dialog (controlled) */}
-                    <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+                    <Dialog
+                        open={Boolean(editing)}
+                        onOpenChange={(open) => {
+                            if (!open && updatePending) return;
+                            if (!open) setEditing(null);
+                        }}
+                    >
                         <AppDialogContent
                             title="Edit project"
                             description="Update project details and save your changes."
@@ -281,7 +334,7 @@ export function ProjectsPage() {
                                             });
                                             return;
                                         }
-                                        updateMutation.mutateAsync({ id: editing.id, payload: parsed.data })
+                                        updateProject({ id: editing.id, payload: parsed.data })
                                             .then(() => {
                                                 // success handled by hook toasts/cache; UI closes in hook or we can close here
                                                 setEditing(null);
@@ -340,13 +393,22 @@ export function ProjectsPage() {
                                             </FormItem>
                                         )}
                                     />
-                                    <div className="flex justify-end">
+                                    <div className="flex justify-end gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            disabled={updatePending}
+                                            data-testid="projects-edit-cancel-button"
+                                            onClick={() => setEditing(null)}
+                                        >
+                                            Cancel
+                                        </Button>
                                         <Button
                                             type="submit"
-                                            disabled={updateMutation.status === "pending"}
+                                            disabled={updatePending}
                                             data-testid="projects-edit-save-button"
                                         >
-                                            {updateMutation.status === "pending" ? "Saving…" : "Save"}
+                                            {updatePending ? "Saving…" : "Save"}
                                         </Button>
                                     </div>
                                 </form>
@@ -362,6 +424,25 @@ export function ProjectsPage() {
                     <CardDescription>Fetched from the S-Curve backend in real-time.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <Input
+                            value={projectQuery}
+                            onChange={(event) => setProjectQuery(event.target.value)}
+                            placeholder="Search projects by name, description, stage, or data status…"
+                            className="sm:max-w-md"
+                            data-testid="projects-search-input"
+                            aria-label="Search projects"
+                        />
+                        {projectQuery.length > 0 ? (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setProjectQuery("")}
+                            >
+                                Clear
+                            </Button>
+                        ) : null}
+                    </div>
                     {error ? (
                         <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                             <div className="flex items-start justify-between gap-3">
@@ -379,10 +460,11 @@ export function ProjectsPage() {
                             <Skeleton className="h-5 w-5/6" />
                             <Skeleton className="h-5 w-4/6" />
                         </div>
-                    ) : rows.length > 0 ? (
+                    ) : filteredRows.length > 0 ? (
                         <>
                             <VirtualizedProjectsTable
-                                projects={rows.slice((page - 1) * pageSize, page * pageSize)}
+                                projects={paginatedRows}
+                                projectSummaryById={projectSummaryById}
                                 setEditing={setEditing}
                                 editForm={editForm}
                                 setProjectToDelete={setProjectToDelete}
@@ -390,15 +472,19 @@ export function ProjectsPage() {
                             />
                             <DataTablePagination
                                 currentPage={page}
-                                totalPages={Math.ceil(rows.length / pageSize)}
+                                totalPages={Math.ceil(filteredRows.length / pageSize)}
                                 pageSize={pageSize}
                                 setPage={setPage}
                                 setPageSize={setPageSize}
-                                totalItems={rows.length}
+                                totalItems={filteredRows.length}
                             />
                         </>
                     ) : (
-                        <p className="text-sm text-muted-foreground">No projects found. Use the backend API to seed data.</p>
+                        <p className="text-sm text-muted-foreground">
+                            {projectQuery.length > 0
+                                ? "No projects match your search."
+                                : "No projects found. Use the backend API to seed data."}
+                        </p>
                     )}
                 </CardContent>
             </Card>
@@ -408,118 +494,191 @@ export function ProjectsPage() {
 
 function VirtualizedProjectsTable({
     projects,
+    projectSummaryById,
     setEditing,
     editForm,
     setProjectToDelete,
     setConfirmOpen
 }: {
     projects: Project[];
+    projectSummaryById: Map<string, {
+        actualPct: number | null;
+        dataStatus: string;
+        metricSupported: boolean;
+        stage: string | null;
+    }>;
     setEditing: (p: Project) => void;
     editForm: UseFormReturn<ProjectFormValues>;
     setProjectToDelete: (p: Project) => void;
     setConfirmOpen: (o: boolean) => void;
 }) {
-    const parentRef = useRef<HTMLDivElement>(null);
+    const formatActualProgress = useCallback((projectId: string) => {
+        const summary = projectSummaryById.get(projectId);
+        if (!summary) return "N/A";
+        if (!summary.metricSupported || summary.dataStatus === "unsupported_metric") return "Unsupported";
+        if (summary.dataStatus === "insufficient_data") return "Insufficient data";
+        if (typeof summary.actualPct === "number") return `${summary.actualPct.toFixed(1)}%`;
+        return "N/A";
+    }, [projectSummaryById]);
 
-    const rowVirtualizer = useVirtualizer({
-        count: projects.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 65, // Approximate height of a project row
-        overscan: 5,
-    });
+    const formatStage = useCallback((projectId: string) => {
+        const stage = projectSummaryById.get(projectId)?.stage;
+        if (!stage) return "N/A";
+        if (stage === "lag") return "Lag";
+        if (stage === "log") return "Log";
+        if (stage === "maturity") return "Maturity";
+        if (stage === "decline") return "Decline";
+        return stage;
+    }, [projectSummaryById]);
+    const columns = useMemo<ColumnDef<Project, unknown>[]>(() => ([
+        projectColumnHelper.accessor("name", {
+            header: "Name",
+            cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+        }),
+        projectColumnHelper.accessor("description", {
+            header: "Description",
+            cell: (info) => info.getValue() || "—",
+        }),
+        projectColumnHelper.display({
+            id: "stage",
+            header: "S-Curve Stage",
+            cell: (info) => formatStage(info.row.original.id),
+        }),
+        projectColumnHelper.display({
+            id: "actualProgress",
+            header: () => <div className="text-right">Actual Progress</div>,
+            cell: (info) => {
+                const project = info.row.original;
+                return (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="mr-4">{formatActualProgress(project.id)}</span>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            asChild
+                        >
+                            <Link
+                                to={`/projects/${project.id}/settings`}
+                                data-testid="projects-row-settings-link"
+                            >
+                                Settings
+                            </Link>
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            asChild
+                        >
+                            <Link
+                                to={`/projects/${project.id}/dashboard`}
+                                data-testid="projects-row-dashboard-link"
+                            >
+                                Dashboard
+                            </Link>
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="hidden xl:inline-flex"
+                            data-testid="projects-row-edit-button"
+                            onClick={() => {
+                                setEditing(project);
+                                editForm.reset({ name: project.name, description: project.description ?? "" });
+                            }}
+                        >
+                            Edit
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive-outline"
+                            className="hidden xl:inline-flex"
+                            data-testid="projects-row-delete-button"
+                            onClick={() => {
+                                setProjectToDelete(project);
+                                setConfirmOpen(true);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                        <div className="xl:hidden">
+                            <ProjectRowCompactActions
+                                project={project}
+                                setEditing={setEditing}
+                                editForm={editForm}
+                                setProjectToDelete={setProjectToDelete}
+                                setConfirmOpen={setConfirmOpen}
+                            />
+                        </div>
+                    </div>
+                );
+            },
+        }),
+    ]), [editForm, formatActualProgress, formatStage, setConfirmOpen, setEditing, setProjectToDelete]);
 
     return (
         <div
-            ref={parentRef}
-            style={{
-                height: `calc(100vh - 300px)`,
-                overflow: 'auto',
-            }}
+            className="overflow-x-auto"
         >
-            <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Timeline</TableHead>
-                        <TableHead className="text-right">Progress</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rowVirtualizer.getVirtualItems().length > 0 && (
-                        <TableRow key={`spacer-start-${rowVirtualizer.getVirtualItems()[0].index}`} style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }}>
-                            <TableCell colSpan={4} style={{ padding: 0 }} />
-                        </TableRow>
-                    )}
-
-                    {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                        const project = projects[virtualItem.index];
-                        return (
-                            <TableRow
-                                key={project.id}
-                                data-index={virtualItem.index}
-                                ref={rowVirtualizer.measureElement}
-                                className="hover:bg-surface-hover transition-colors"
-                            >
-                                <TableCell className="font-medium">{project.name}</TableCell>
-                                <TableCell className="capitalize">{project.status}</TableCell>
-                                <TableCell>
-                                    {project.startDate && project.endDate
-                                        ? `${project.startDate} → ${project.endDate}`
-                                        : "—"}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <span className="mr-4">{typeof project.progress === "number" ? `${project.progress}%` : "—"}</span>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            asChild
-                                            data-testid="projects-row-dashboard-link"
-                                        >
-                                            <Link
-                                                to={`/projects/${project.id}/dashboard`}
-                                                data-testid="projects-row-dashboard-link"
-                                            >
-                                                Dashboard
-                                            </Link>
-                                        </Button>
-                                        <Button
-
-                                            size="sm"
-                                            variant="ghost"
-                                            data-testid="projects-row-edit-button"
-                                            onClick={() => {
-                                                setEditing(project);
-                                                editForm.reset({ name: project.name, description: project.description ?? "" });
-                                            }}
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="destructive-outline"
-                                            data-testid="projects-row-delete-button"
-                                            onClick={() => {
-                                                setProjectToDelete(project);
-                                                setConfirmOpen(true);
-                                            }}
-                                        >
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
-
-                    {rowVirtualizer.getVirtualItems().length > 0 && (
-                        <TableRow key={`spacer-end-${rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].index}`} style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }}>
-                            <TableCell colSpan={4} style={{ padding: 0 }} />
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+            <AppDataTable
+                data={projects}
+                columns={columns}
+                getRowId={(row) => row.id}
+                headerClassName="sticky top-0 bg-background z-10"
+                rowClassName="hover:bg-surface-hover transition-colors"
+            />
         </div>
     );
 }
+
+function ProjectRowCompactActions({
+    project,
+    setEditing,
+    editForm,
+    setProjectToDelete,
+    setConfirmOpen,
+}: {
+    project: Project;
+    setEditing: (p: Project) => void;
+    editForm: UseFormReturn<ProjectFormValues>;
+    setProjectToDelete: (p: Project) => void;
+    setConfirmOpen: (o: boolean) => void;
+}) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={`More actions for ${project.name}`}
+                    data-testid="projects-row-actions-toggle"
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 p-1">
+                <DropdownMenuItem
+                    data-testid="projects-row-compact-edit-button"
+                    onClick={() => {
+                        setEditing(project);
+                        editForm.reset({ name: project.name, description: project.description ?? "" });
+                    }}
+                >
+                    Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    className="focus:bg-destructive/15 focus:text-destructive text-destructive"
+                    data-testid="projects-row-compact-delete-button"
+                    onClick={() => {
+                        setProjectToDelete(project);
+                        setConfirmOpen(true);
+                    }}
+                >
+                    Delete
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
+

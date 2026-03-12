@@ -9,6 +9,7 @@ const projectRoot = path.resolve(__dirname, "..", "..");
 const srcRoot = path.join(projectRoot, "src");
 const artifactsDir = path.join(projectRoot, "artifacts", "ui-audit");
 const outputPath = path.join(artifactsDir, "findings.static.json");
+const auditRunId = process.env.UI_AUDIT_RUN_ID ?? `static-${Date.now()}`;
 
 const SMALL_SIZE_PATTERN = /\b(?:h|w)-(?:5|6|7|8)\b/g;
 const DIRECT_COLOR_PATTERN = /\b(?:bg|text|border)-(?:teal|red|green|blue|yellow|purple|pink|orange|indigo)-\d{2,3}\b/g;
@@ -252,6 +253,7 @@ async function collect() {
 
     const payload = {
         generatedAt: new Date().toISOString(),
+        runId: auditRunId,
         source: "static",
         thresholds: auditConfig.thresholds,
         scannedFiles: tsxFiles.length,

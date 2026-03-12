@@ -50,7 +50,7 @@ function runNodeScript(scriptPath, extraEnv = {}) {
     }
 }
 
-function runPlaywrightAudit(mode) {
+function runPlaywrightAudit(mode, runId) {
     const playwrightCli = path.join(projectRoot, "node_modules", "playwright", "cli.js");
     const result = spawnSync(
         process.execPath,
@@ -67,6 +67,7 @@ function runPlaywrightAudit(mode) {
             env: {
                 ...process.env,
                 UI_AUDIT_MODE: mode,
+                UI_AUDIT_RUN_ID: runId,
                 BASE_URL: process.env.BASE_URL ?? "http://localhost:3001",
             },
         },
@@ -74,6 +75,12 @@ function runPlaywrightAudit(mode) {
     if (result.status !== 0) {
         process.exit(result.status ?? 1);
     }
+}
+
+async function resetArtifacts() {
+    await fs.mkdir(artifactsDir, { recursive: true });
+    const stalePaths = [staticFindingsPath, runtimeFindingsPath, mergedFindingsPath, scorecardPath];
+    await Promise.all(stalePaths.map((filePath) => fs.rm(filePath, { force: true })));
 }
 
 async function readJson(filePath) {
@@ -116,10 +123,14 @@ async function main() {
     const mode = args.get("mode") ?? "full";
     const gateEnabled = args.get("gate") === "true";
     const manageDevServer = process.env.UI_AUDIT_MANAGED_SERVER !== "0";
+    const runId = `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     let devServer = null;
 
     try {
         await fs.mkdir(artifactsDir, { recursive: true });
+        if (mode !== "report") {
+            await resetArtifacts();
+        }
 
         if (mode !== "report" && manageDevServer) {
             const requestedBaseUrl = process.env.BASE_URL ?? process.env.VITE_BASE_URL ?? "http://127.0.0.1:3001";
@@ -134,15 +145,29 @@ async function main() {
         }
 
         if (mode !== "report") {
-            runNodeScript(path.join(projectRoot, "scripts", "ui-audit", "collect-static-metrics.mjs"));
+            runNodeScript(
+                path.join(projectRoot, "scripts", "ui-audit", "collect-static-metrics.mjs"),
+                { UI_AUDIT_RUN_ID: runId },
+            );
 
             if (mode === "full" || mode === "visual" || mode === "a11y") {
-                runPlaywrightAudit(mode);
+                runPlaywrightAudit(mode, runId);
             }
         }
 
         const staticPayload = await readJson(staticFindingsPath);
         const runtimePayload = await readJson(runtimeFindingsPath);
+
+        if (mode !== "report") {
+            if (!staticPayload || staticPayload.runId !== runId) {
+                throw new Error("Static audit artifact missing or stale for current run.");
+            }
+            if ((mode === "full" || mode === "visual" || mode === "a11y")) {
+                if (!runtimePayload || runtimePayload.runId !== runId) {
+                    throw new Error("Runtime audit artifact missing or stale for current run.");
+                }
+            }
+        }
 
         const mergedFindings = [
             ...(staticPayload?.findings ?? []),
@@ -152,6 +177,7 @@ async function main() {
         const scorecard = computeScorecard(mergedFindings);
         const mergedPayload = {
             generatedAt: new Date().toISOString(),
+            runId,
             mode,
             findings: mergedFindings,
             inputs: {
@@ -164,6 +190,7 @@ async function main() {
         await fs.writeFile(mergedFindingsPath, JSON.stringify(mergedPayload, null, 2));
         await fs.writeFile(scorecardPath, JSON.stringify({
             generatedAt: new Date().toISOString(),
+            runId,
             mode,
             ...scorecard,
         }, null, 2));

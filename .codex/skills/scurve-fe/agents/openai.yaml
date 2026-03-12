@@ -1,0 +1,4 @@
+interface:
+  display_name: "S-Curve Frontend"
+  short_description: "Frontend architecture and UX quality workflow"
+  default_prompt: "Use $scurve-fe to implement a frontend UI change with mandatory UX core checks and project conventions."

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Loader2, User, History } from "lucide-react";
 
@@ -9,33 +9,26 @@ import {
 } from "@/components/ui/dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import {
-    Table,
-    TableBody,
     TableCell,
-    TableHead,
-    TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { AppDataTable } from "@/components/ui/app-data-table";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuditLogsQuery } from "@/api/queries/rbac";
 import { rbacApi } from "@/api/rbac";
+
+type AuditLogRow = Awaited<ReturnType<typeof rbacApi.listAuditLogs>>["items"][number];
+const auditLogColumnHelper = createColumnHelper<AuditLogRow>();
 
 export function AuditLogDialog() {
     const [open, setOpen] = useState(false);
     const [page, setPage] = useState(1);
     const [actionFilter, setActionFilter] = useState<string>("all");
 
-    const { data, isLoading } = useQuery({
-        queryKey: ["audit-logs", page, actionFilter],
-        queryFn: () => rbacApi.listAuditLogs({
-            page,
-            per_page: 20,
-            action: actionFilter === "all" ? undefined : actionFilter,
-        }),
-        enabled: open,
-    });
+    const { data, isLoading } = useAuditLogsQuery({ page, actionFilter }, { enabled: open });
 
     const logs = data?.items || [];
     const totalPages = data ? Math.ceil(data.total / data.per_page) : 1;
@@ -48,6 +41,48 @@ export function AuditLogDialog() {
         "permission.grant": "secondary",
         "permission.revoke": "destructive",
     };
+    const columns = useState<ColumnDef<AuditLogRow, unknown>[]>(() => ([
+        auditLogColumnHelper.accessor("created_at", {
+            header: () => <div className="w-[180px]">Timestamp</div>,
+            cell: (info) => (
+                <span className="text-xs font-mono text-muted-foreground">
+                    {format(new Date(info.getValue()), "MMM d, HH:mm:ss")}
+                </span>
+            ),
+        }),
+        auditLogColumnHelper.accessor("actor_name", {
+            header: () => <div className="w-[150px]">Actor</div>,
+            cell: (info) => (
+                <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm font-medium">{info.getValue()}</span>
+                </div>
+            ),
+        }),
+        auditLogColumnHelper.accessor("action", {
+            header: () => <div className="w-[150px]">Action</div>,
+            cell: (info) => (
+                <Badge variant={actionColors[info.getValue()] || "outline"}>
+                    {info.getValue()}
+                </Badge>
+            ),
+        }),
+        auditLogColumnHelper.accessor("target_user_name", {
+            header: "Target",
+            cell: (info) => <span className="text-sm">{info.getValue() || "-"}</span>,
+        }),
+        auditLogColumnHelper.accessor("details", {
+            header: "Details",
+            cell: (info) => {
+                const details = JSON.stringify(info.getValue());
+                return (
+                    <span className="text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={JSON.stringify(info.getValue(), null, 2)}>
+                        {details}
+                    </span>
+                );
+            },
+        }),
+    ]))[0];
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -84,57 +119,26 @@ export function AuditLogDialog() {
                 </div>
 
                 <ScrollArea className="flex-1 rounded-md border">
-                    <Table>
-                        <TableHeader>
+                    <AppDataTable
+                        data={logs}
+                        columns={columns}
+                        getRowId={(row) => row.id}
+                        isLoading={isLoading}
+                        loadingRow={(
                             <TableRow>
-                                <TableHead className="w-[180px]">Timestamp</TableHead>
-                                <TableHead className="w-[150px]">Actor</TableHead>
-                                <TableHead className="w-[150px]">Action</TableHead>
-                                <TableHead>Target</TableHead>
-                                <TableHead>Details</TableHead>
+                                <TableCell colSpan={5} className="h-24 text-center">
+                                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
-                                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : logs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                        No audit logs found.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                logs.map((log) => (
-                                    <TableRow key={log.id}>
-                                        <TableCell className="text-xs font-mono text-muted-foreground">
-                                            {format(new Date(log.created_at), "MMM d, HH:mm:ss")}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <User className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-sm font-medium">{log.actor_name}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={actionColors[log.action] || "outline"}>
-                                                {log.action}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm">{log.target_user_name || "-"}</span>
-                                        </TableCell>
-                                        <TableCell className="text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={JSON.stringify(log.details, null, 2)}>
-                                            {JSON.stringify(log.details)}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                        )}
+                        emptyRow={(
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    No audit logs found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    />
                 </ScrollArea>
 
                 <div className="flex items-center justify-between pt-4 border-t">

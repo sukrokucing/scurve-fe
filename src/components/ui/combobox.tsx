@@ -27,6 +27,7 @@ interface ComboboxProps {
     options: Option[]
     value?: string
     onChange: (value: string) => void
+    disabled?: boolean
     allowClear?: boolean
     onSearchChange?: (query: string) => void
     searchDebounceMs?: number
@@ -51,6 +52,7 @@ export function Combobox({
     options = [],
     value,
     onChange,
+    disabled = false,
     allowClear = false,
     onSearchChange,
     searchDebounceMs = 250,
@@ -80,6 +82,12 @@ export function Combobox({
             setSearch("")
         }
     }, [open])
+
+    React.useEffect(() => {
+        if (disabled) {
+            setOpen(false)
+        }
+    }, [disabled])
 
     React.useEffect(() => {
         if (!open || !onSearchChange) {
@@ -133,15 +141,20 @@ export function Combobox({
         : placeholder
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={(nextOpen) => {
+            if (disabled) return
+            setOpen(nextOpen)
+        }}>
             <PopoverTrigger asChild>
                 {children ? children : (
                     <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={open}
+                        aria-disabled={disabled}
                         aria-label={triggerAriaLabel}
                         data-testid={triggerTestId}
+                        disabled={disabled}
                         className={cn("min-h-11 w-full justify-between overflow-hidden", className)}
                         title={triggerLabel}
                     >
@@ -160,6 +173,8 @@ export function Combobox({
             >
                 <Command shouldFilter={false}>
                     <CommandInput
+                        wrapperClassName="border-0"
+                        className="focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0"
                         placeholder={searchPlaceholder}
                         value={search}
                         onValueChange={setSearch}

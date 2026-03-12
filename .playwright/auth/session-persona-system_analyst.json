@@ -1,0 +1,51 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3MzA3MWFjMy1hYmVkLTQ3MmYtODRjZC00YTY3ODNiOTRlNzYiLCJleHAiOjE3NzMyMDI0NjUsImlhdCI6MTc3MzExNjA2NX0._R5isCDq2BoZAYmLI3c7a1-x7hkZqZEu_XOpZJMUN3M",
+  "user": {
+    "id": "73071ac3-abed-472f-84cd-4a6783b94e76",
+    "name": "Demo System Analyst",
+    "email": "demo.system.analyst@example.com"
+  },
+  "permissions": [
+    {
+      "name": "project.create",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "project.update",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "task.create",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "task.update",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "progress.create",
+      "source": "role",
+      "role_name": "system_analyst"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "system_analyst"
+    }
+  ],
+  "createdAt": "2026-03-10T04:14:25.783Z"
+}

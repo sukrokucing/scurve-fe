@@ -103,7 +103,7 @@ async function installGanttApiMocks(page: Page) {
     await page.route("**/*", async (route) => {
         const request = route.request();
         const url = new URL(request.url());
-        const { pathname, searchParams } = url;
+        const { pathname } = url;
         const method = request.method();
 
         if (!pathname.startsWith("/api/")) {
@@ -134,21 +134,42 @@ async function installGanttApiMocks(page: Page) {
             return json([project]);
         }
 
+        if (pathname === "/api/users" && method === "GET") {
+            return json([
+                {
+                    id: "user-1",
+                    name: "Mock User",
+                    email: "mock-user@example.com",
+                },
+            ], 200);
+        }
+
         if (pathname === `/api/projects/${project.id}/critical-path` && method === "GET") {
             return json({ task_ids: [] });
         }
 
+        if (pathname === `/api/projects/${project.id}/assignees` && method === "GET") {
+            return json([
+                {
+                    id: "user-1",
+                    name: "Mock User",
+                    email: "mock-user@example.com",
+                },
+            ]);
+        }
+
         if (pathname === `/api/projects/${project.id}/tasks` && method === "GET") {
-            if (searchParams.get("progress") === "true") {
-                return json(
-                    tasks.map((task) => ({
-                        id: `progress-${task.id}`,
-                        task_id: task.id,
-                        progress: task.progress,
-                    })),
-                );
-            }
             return json(tasks);
+        }
+
+        if (pathname === `/api/projects/${project.id}/progress` && method === "GET") {
+            return json(
+                tasks.map((task) => ({
+                    id: `progress-${task.id}`,
+                    task_id: task.id,
+                    progress: task.progress,
+                })),
+            );
         }
 
         if (pathname === `/api/projects/${project.id}/tasks/batch` && method === "PUT") {
@@ -239,6 +260,13 @@ async function installGanttApiMocks(page: Page) {
 
         return json({});
     });
+}
+
+async function openTasksAdvancedFilters(page: Page) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    if (await panel.isVisible().catch(() => false)) return;
+    await page.getByTestId("tasks-advanced-filters-toggle").click();
+    await expect(panel).toBeVisible();
 }
 
 async function selectGanttViewMode(page: Page, mode: "Day" | "Week" | "Month" | "Quarter" | "Year") {
@@ -411,8 +439,9 @@ test("gantt modernization behaviors work end-to-end", async ({ page }) => {
 
     await page.goto("/tasks", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Gantt" }).click();
-    await expect(page.getByRole("heading", { name: "Gantt View" })).toBeVisible();
+    await openTasksAdvancedFilters(page);
+    await page.getByTestId("tasks-view-gantt-button").click();
+    await expect(page.getByTestId("gantt-view-mode-combobox")).toBeVisible();
 
     await selectGanttViewMode(page, "Quarter");
     const hasQuarterLabels = await page.evaluate(() => {

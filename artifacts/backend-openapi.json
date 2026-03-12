@@ -143,6 +143,22 @@
         ],
         "type": "object"
       },
+      "DashboardMetricPoint": {
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "value": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "type": "object"
+      },
       "DashboardResponse": {
         "properties": {
           "actual": {
@@ -151,20 +167,62 @@
             },
             "type": "array"
           },
+          "actual_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/SCurveDataStatus"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/SCurveMetric"
+          },
+          "metric_actual": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardMetricPoint"
+            },
+            "type": "array"
+          },
+          "metric_plan": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardMetricPoint"
+            },
+            "type": "array"
+          },
+          "metric_supported": {
+            "type": "boolean"
+          },
           "plan": {
             "items": {
               "$ref": "#/components/schemas/ProjectPlanPoint"
             },
             "type": "array"
           },
+          "planned_source": {
+            "nullable": true,
+            "type": "string"
+          },
           "project": {
             "$ref": "#/components/schemas/Project"
+          },
+          "unit": {
+            "nullable": true,
+            "type": "string"
           }
         },
         "required": [
           "project",
           "plan",
-          "actual"
+          "actual",
+          "metric",
+          "metric_supported",
+          "data_status",
+          "metric_plan",
+          "metric_actual"
         ],
         "type": "object"
       },
@@ -325,6 +383,45 @@
         ],
         "type": "object"
       },
+      "MyProjectScopeSummary": {
+        "properties": {
+          "access_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "access_role_name": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "resource_roles": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceRoleRef"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "project_name",
+          "access_role_id",
+          "access_role_name",
+          "resource_roles",
+          "permissions"
+        ],
+        "type": "object"
+      },
       "PaginatedAuditLogs": {
         "description": "Paginated response for audit logs",
         "properties": {
@@ -402,6 +499,169 @@
         ],
         "type": "object"
       },
+      "PortfolioSCurveProjectSummary": {
+        "properties": {
+          "actual_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "actual_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/SCurveDataStatus"
+          },
+          "elapsed_time_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "last_updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "metric_supported": {
+            "type": "boolean"
+          },
+          "planned_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "planned_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "rule_50_70_pass": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "rule_50_70_status": {
+            "$ref": "#/components/schemas/Rule5070Status"
+          },
+          "stage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SCurveStage"
+              }
+            ],
+            "nullable": true
+          },
+          "unit": {
+            "nullable": true,
+            "type": "string"
+          },
+          "variance_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "project_id",
+          "project_name",
+          "metric_supported",
+          "data_status",
+          "rule_50_70_status",
+          "last_updated_at"
+        ],
+        "type": "object"
+      },
+      "PortfolioSCurveSummaryResponse": {
+        "properties": {
+          "actual_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "avg_actual_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "avg_planned_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "avg_variance_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/SCurveDataStatus"
+          },
+          "decline_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "lag_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "log_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "maturity_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/SCurveMetric"
+          },
+          "metric_supported": {
+            "type": "boolean"
+          },
+          "planned_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "project_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioSCurveProjectSummary"
+            },
+            "type": "array"
+          },
+          "unit": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "metric_supported",
+          "data_status",
+          "project_count",
+          "lag_count",
+          "log_count",
+          "maturity_count",
+          "decline_count",
+          "projects"
+        ],
+        "type": "object"
+      },
       "Progress": {
         "properties": {
           "created_at": {
@@ -449,6 +709,7 @@
         "type": "object"
       },
       "ProgressCreateRequest": {
+        "additionalProperties": false,
         "properties": {
           "note": {
             "example": "Halfway done - waiting on review",
@@ -467,6 +728,7 @@
         "type": "object"
       },
       "ProgressUpdateRequest": {
+        "additionalProperties": false,
         "properties": {
           "note": {
             "nullable": true,
@@ -546,12 +808,100 @@
         ],
         "type": "object"
       },
+      "ProjectMember": {
+        "properties": {
+          "access_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "access_role_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resource_roles": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceRoleRef"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "user_name",
+          "user_email",
+          "access_role_id",
+          "access_role_name",
+          "resource_roles",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ProjectMemberCreateRequest": {
+        "properties": {
+          "access_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "resource_role_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "access_role_id",
+          "resource_role_ids"
+        ],
+        "type": "object"
+      },
       "ProjectPlanCreateRequest": {
         "properties": {
+          "currency": {
+            "example": "USD",
+            "nullable": true,
+            "type": "string"
+          },
           "date": {
             "example": "2025-12-01T00:00:00Z",
             "format": "date-time",
             "type": "string"
+          },
+          "planned_cost": {
+            "example": 15200,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "planned_hours": {
+            "example": 120.5,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
           },
           "planned_progress": {
             "example": 10,
@@ -571,6 +921,10 @@
             "format": "date-time",
             "type": "string"
           },
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
           "date": {
             "format": "date-time",
             "type": "string"
@@ -578,6 +932,16 @@
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "planned_cost": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "planned_hours": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
           },
           "planned_progress": {
             "format": "int32",
@@ -599,6 +963,51 @@
           "planned_progress",
           "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "ProjectResourceRoleRate": {
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "hourly_rate": {
+            "format": "double",
+            "type": "number"
+          },
+          "is_override": {
+            "type": "boolean"
+          },
+          "resource_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "resource_role_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_role_id",
+          "resource_role_name",
+          "hourly_rate",
+          "currency",
+          "is_override"
+        ],
+        "type": "object"
+      },
+      "ProjectResourceRoleRateUpsertRequest": {
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "hourly_rate": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "hourly_rate",
+          "currency"
         ],
         "type": "object"
       },
@@ -659,6 +1068,107 @@
           "token",
           "new_password"
         ],
+        "type": "object"
+      },
+      "ResourceRole": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "default_hourly_rate": {
+            "format": "double",
+            "type": "number"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "default_hourly_rate",
+          "currency",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ResourceRoleCreateRequest": {
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "default_hourly_rate": {
+            "format": "double",
+            "type": "number"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "default_hourly_rate",
+          "currency"
+        ],
+        "type": "object"
+      },
+      "ResourceRoleRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "ResourceRoleUpdateRequest": {
+        "properties": {
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
+          "default_hourly_rate": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Role": {
@@ -730,6 +1240,121 @@
         ],
         "type": "object"
       },
+      "Rule5070Status": {
+        "enum": [
+          "unsupported_metric",
+          "insufficient_elapsed_time_data",
+          "insufficient_progress_data",
+          "insufficient_metric_data",
+          "pre_window",
+          "pass",
+          "fail",
+          "post_window_pass",
+          "post_window_fail"
+        ],
+        "type": "string"
+      },
+      "SCurveDataStatus": {
+        "enum": [
+          "ok",
+          "insufficient_data",
+          "unsupported_metric"
+        ],
+        "type": "string"
+      },
+      "SCurveHealthResponse": {
+        "properties": {
+          "actual_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "actual_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "currency": {
+            "nullable": true,
+            "type": "string"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/SCurveDataStatus"
+          },
+          "elapsed_time_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "last_updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/SCurveMetric"
+          },
+          "metric_supported": {
+            "type": "boolean"
+          },
+          "planned_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "planned_source": {
+            "nullable": true,
+            "type": "string"
+          },
+          "rule_50_70_pass": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "rule_50_70_status": {
+            "$ref": "#/components/schemas/Rule5070Status"
+          },
+          "stage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SCurveStage"
+              }
+            ],
+            "nullable": true
+          },
+          "unit": {
+            "nullable": true,
+            "type": "string"
+          },
+          "variance_pct": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "metric",
+          "metric_supported",
+          "data_status",
+          "rule_50_70_status",
+          "last_updated_at"
+        ],
+        "type": "object"
+      },
+      "SCurveMetric": {
+        "enum": [
+          "progress",
+          "hours",
+          "cost"
+        ],
+        "type": "string"
+      },
+      "SCurveStage": {
+        "enum": [
+          "lag",
+          "log",
+          "maturity",
+          "decline"
+        ],
+        "type": "string"
+      },
       "Task": {
         "properties": {
           "assignee": {
@@ -744,6 +1369,10 @@
           "deleted_at": {
             "format": "date-time",
             "nullable": true,
+            "type": "string"
+          },
+          "description": {
+            "example": "[Quick Add] Define launch checklist",
             "type": "string"
           },
           "due_date": {
@@ -800,6 +1429,7 @@
           "id",
           "project_id",
           "title",
+          "description",
           "status",
           "progress",
           "created_at",
@@ -957,6 +1587,11 @@
             "nullable": true,
             "type": "string"
           },
+          "description": {
+            "example": "[Quick Add] Define launch checklist",
+            "nullable": true,
+            "type": "string"
+          },
           "due_date": {
             "example": "2025-10-10T10:00:00Z",
             "format": "date-time",
@@ -1055,6 +1690,10 @@
         "properties": {
           "assignee": {
             "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "description": {
             "nullable": true,
             "type": "string"
           },
@@ -1336,6 +1975,158 @@
           "role_id",
           "created_at"
         ],
+        "type": "object"
+      },
+      "WorkLog": {
+        "properties": {
+          "cost_amount": {
+            "format": "double",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency_snapshot": {
+            "type": "string"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "hourly_rate_snapshot": {
+            "format": "double",
+            "type": "number"
+          },
+          "hours": {
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "resource_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "resource_role_name": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/WorkLogSource"
+          },
+          "task_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "user_name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "work_date": {
+            "example": "2026-03-10",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "task_id",
+          "resource_role_id",
+          "resource_role_name",
+          "hours",
+          "hourly_rate_snapshot",
+          "currency_snapshot",
+          "cost_amount",
+          "work_date",
+          "source",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "WorkLogCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "hours": {
+            "example": 2.5,
+            "format": "double",
+            "type": "number"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "resource_role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "work_date": {
+            "example": "2026-03-10",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_role_id",
+          "hours"
+        ],
+        "type": "object"
+      },
+      "WorkLogSource": {
+        "enum": [
+          "manual",
+          "migrated_task_progress"
+        ],
+        "type": "string"
+      },
+      "WorkLogUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "hours": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "resource_role_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "work_date": {
+            "example": "2026-03-10",
+            "nullable": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       }
     },
@@ -1630,6 +2421,49 @@
         ]
       }
     },
+    "/portfolio/s-curve/summary": {
+      "get": {
+        "description": "Get Portfolio S Curve Summary Handles `GET` requests for `/portfolio/s-curve/summary`. Requires bearer authentication.",
+        "operationId": "get_portfolio_s_curve_summary",
+        "parameters": [
+          {
+            "description": "Metric type. Defaults to progress.",
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SCurveMetric"
+                }
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSCurveSummaryResponse"
+                }
+              }
+            },
+            "description": "Portfolio S-curve summary"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get Portfolio S Curve Summary",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
     "/projects": {
       "get": {
         "description": "List Projects Handles `GET` requests for `/projects`. Requires bearer authentication.",
@@ -1918,6 +2752,20 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "Metric type. Defaults to progress.",
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SCurveMetric"
+                }
+              ],
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -2022,7 +2870,10 @@
             "application/json": {
               "example": [
                 {
+                  "currency": "USD",
                   "date": "2025-12-01T00:00:00Z",
+                  "planned_cost": 15200,
+                  "planned_hours": 120.5,
                   "planned_progress": 10
                 }
               ],
@@ -2067,6 +2918,60 @@
           }
         ],
         "summary": "Update Project Plan",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{id}/s-curve/health": {
+      "get": {
+        "description": "Get Project S Curve Health Handles `GET` requests for `/projects/{id}/s-curve/health`. Requires bearer authentication.",
+        "operationId": "get_project_s_curve_health",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Metric type. Defaults to progress.",
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SCurveMetric"
+                }
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SCurveHealthResponse"
+                }
+              }
+            },
+            "description": "Project S-curve health"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get Project S Curve Health",
         "tags": [
           "Projects"
         ]
@@ -2278,6 +3183,189 @@
         ]
       }
     },
+    "/projects/{project_id}/members": {
+      "get": {
+        "description": "List Project Members Handles `GET` requests for `/projects/{project_id}/members`. Requires bearer authentication.",
+        "operationId": "list_project_members",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "access_role_id": "55555555-5555-4555-8555-555555555555",
+                    "access_role_name": "project_owner",
+                    "created_at": "2026-03-10T00:00:00Z",
+                    "resource_roles": [
+                      {
+                        "id": "40000000-0000-0000-0000-000000000003",
+                        "name": "backend_engineer"
+                      },
+                      {
+                        "id": "40000000-0000-0000-0000-000000000006",
+                        "name": "project_manager"
+                      }
+                    ],
+                    "updated_at": "2026-03-10T00:00:00Z",
+                    "user_email": "ada@example.com",
+                    "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "user_name": "Ada Lovelace"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectMember"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List active project members"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List Project Members",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "post": {
+        "description": "Create Project Member Handles `POST` requests for `/projects/{project_id}/members`. Requires bearer authentication.",
+        "operationId": "create_project_member",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "access_role_id": "55555555-5555-4555-8555-555555555555",
+                "resource_role_ids": [
+                  "40000000-0000-0000-0000-000000000003",
+                  "40000000-0000-0000-0000-000000000006"
+                ],
+                "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMemberCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "access_role_id": "55555555-5555-4555-8555-555555555555",
+                  "access_role_name": "project_owner",
+                  "created_at": "2026-03-10T00:00:00Z",
+                  "resource_roles": [
+                    {
+                      "id": "40000000-0000-0000-0000-000000000003",
+                      "name": "backend_engineer"
+                    },
+                    {
+                      "id": "40000000-0000-0000-0000-000000000006",
+                      "name": "project_manager"
+                    }
+                  ],
+                  "updated_at": "2026-03-10T00:00:00Z",
+                  "user_email": "ada@example.com",
+                  "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "user_name": "Ada Lovelace"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMember"
+                }
+              }
+            },
+            "description": "Project member added or updated"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create Project Member",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{project_id}/members/{user_id}": {
+      "delete": {
+        "description": "Delete Project Member Handles `DELETE` requests for `/projects/{project_id}/members/{user_id}`. Requires bearer authentication.",
+        "operationId": "delete_project_member",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "User id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Project member soft deleted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete Project Member",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
     "/projects/{project_id}/progress": {
       "get": {
         "description": "List Project Progress Handles `GET` requests for `/projects/{project_id}/progress`. Requires bearer authentication.",
@@ -2344,6 +3432,172 @@
         ]
       }
     },
+    "/projects/{project_id}/resource-roles": {
+      "get": {
+        "description": "List Project Resource Roles Handles `GET` requests for `/projects/{project_id}/resource-roles`. Requires bearer authentication.",
+        "operationId": "list_project_resource_roles",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "currency": "USD",
+                    "hourly_rate": 88,
+                    "is_override": true,
+                    "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                    "resource_role_name": "backend_engineer"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectResourceRoleRate"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List project effective resource role rates"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List Project Resource Roles",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/projects/{project_id}/resource-roles/{resource_role_id}/rate": {
+      "delete": {
+        "description": "Delete Project Resource Role Rate Handles `DELETE` requests for `/projects/{project_id}/resource-roles/{resource_role_id}/rate`. Requires bearer authentication.",
+        "operationId": "delete_project_resource_role_rate",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Resource role id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "resource_role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Project resource role rate deleted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete Project Resource Role Rate",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "put": {
+        "description": "Upsert Project Resource Role Rate Handles `PUT` requests for `/projects/{project_id}/resource-roles/{resource_role_id}/rate`. Requires bearer authentication.",
+        "operationId": "upsert_project_resource_role_rate",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Resource role id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "resource_role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "currency": "USD",
+                "hourly_rate": 88
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ProjectResourceRoleRateUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "currency": "USD",
+                  "hourly_rate": 88,
+                  "is_override": true,
+                  "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                  "resource_role_name": "backend_engineer"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResourceRoleRate"
+                }
+              }
+            },
+            "description": "Project resource role rate upserted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Upsert Project Resource Role Rate",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
     "/projects/{project_id}/tasks": {
       "get": {
         "description": "List Tasks Handles `GET` requests for `/projects/{project_id}/tasks`. Requires bearer authentication.",
@@ -2383,7 +3637,7 @@
             }
           },
           {
-            "description": "Title search keyword.",
+            "description": "Title search keyword. Trimmed; max 128 characters. '%' and '_' are treated as literal characters.",
             "in": "query",
             "name": "q",
             "required": false,
@@ -2483,7 +3737,7 @@
             }
           },
           {
-            "description": "Page number (1-based, default 1).",
+            "description": "Page number (1-based, default 1). Values below 1 are treated as 1.",
             "in": "query",
             "name": "page",
             "required": false,
@@ -2495,7 +3749,7 @@
             }
           },
           {
-            "description": "Items per page (default 50, max 100).",
+            "description": "Items per page (default 50). Clamped to 1..100.",
             "in": "query",
             "name": "per_page",
             "required": false,
@@ -3335,6 +4589,313 @@
         ]
       }
     },
+    "/projects/{project_id}/tasks/{task_id}/work-logs": {
+      "get": {
+        "description": "List Work Logs Handles `GET` requests for `/projects/{project_id}/tasks/{task_id}/work-logs`. Requires bearer authentication.",
+        "operationId": "list_work_logs",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "cost_amount": 352,
+                    "created_at": "2026-03-10T07:00:00Z",
+                    "currency_snapshot": "USD",
+                    "deleted_at": null,
+                    "hourly_rate_snapshot": 88,
+                    "hours": 4,
+                    "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                    "note": "Implemented server-side pagination",
+                    "project_id": "44444444-4444-4444-8444-444444444444",
+                    "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                    "resource_role_name": "backend_engineer",
+                    "source": "manual",
+                    "task_id": "33333333-3333-4333-8333-333333333333",
+                    "updated_at": "2026-03-10T07:00:00Z",
+                    "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "user_name": "Ada Lovelace",
+                    "work_date": "2026-03-10"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkLog"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List work logs"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List Work Logs",
+        "tags": [
+          "Progress"
+        ]
+      },
+      "post": {
+        "description": "Create Work Log Handles `POST` requests for `/projects/{project_id}/tasks/{task_id}/work-logs`. Requires bearer authentication.",
+        "operationId": "create_work_log",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "hours": 3.5,
+                "note": "Implemented pagination filters",
+                "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                "work_date": "2026-03-10"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/WorkLogCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "cost_amount": 352,
+                  "created_at": "2026-03-10T07:00:00Z",
+                  "currency_snapshot": "USD",
+                  "deleted_at": null,
+                  "hourly_rate_snapshot": 88,
+                  "hours": 4,
+                  "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                  "note": "Implemented server-side pagination",
+                  "project_id": "44444444-4444-4444-8444-444444444444",
+                  "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                  "resource_role_name": "backend_engineer",
+                  "source": "manual",
+                  "task_id": "33333333-3333-4333-8333-333333333333",
+                  "updated_at": "2026-03-10T07:00:00Z",
+                  "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "user_name": "Ada Lovelace",
+                  "work_date": "2026-03-10"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WorkLog"
+                }
+              }
+            },
+            "description": "Work log created"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create Work Log",
+        "tags": [
+          "Progress"
+        ]
+      }
+    },
+    "/projects/{project_id}/tasks/{task_id}/work-logs/{id}": {
+      "delete": {
+        "description": "Delete Work Log Handles `DELETE` requests for `/projects/{project_id}/tasks/{task_id}/work-logs/{id}`. Requires bearer authentication.",
+        "operationId": "delete_work_log",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Work log id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Work log deleted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete Work Log",
+        "tags": [
+          "Progress"
+        ]
+      },
+      "put": {
+        "description": "Update Work Log Handles `PUT` requests for `/projects/{project_id}/tasks/{task_id}/work-logs/{id}`. Requires bearer authentication.",
+        "operationId": "update_work_log",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Work log id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "hours": 4,
+                "note": "Expanded to include sorting support"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/WorkLogUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "cost_amount": 352,
+                  "created_at": "2026-03-10T07:00:00Z",
+                  "currency_snapshot": "USD",
+                  "deleted_at": null,
+                  "hourly_rate_snapshot": 88,
+                  "hours": 4,
+                  "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                  "note": "Implemented server-side pagination",
+                  "project_id": "44444444-4444-4444-8444-444444444444",
+                  "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                  "resource_role_name": "backend_engineer",
+                  "source": "manual",
+                  "task_id": "33333333-3333-4333-8333-333333333333",
+                  "updated_at": "2026-03-10T07:00:00Z",
+                  "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                  "user_name": "Ada Lovelace",
+                  "work_date": "2026-03-10"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WorkLog"
+                }
+              }
+            },
+            "description": "Work log updated"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update Work Log",
+        "tags": [
+          "Progress"
+        ]
+      }
+    },
     "/rbac/audit-logs": {
       "get": {
         "description": "List Audit Logs Handles `GET` requests for `/rbac/audit-logs`. Requires bearer authentication.",
@@ -4166,6 +5727,191 @@
         ]
       }
     },
+    "/resource-roles": {
+      "get": {
+        "description": "List Resource Roles Handles `GET` requests for `/resource-roles`. Requires bearer authentication.",
+        "operationId": "list_resource_roles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "created_at": "2026-03-10T00:00:00Z",
+                    "currency": "USD",
+                    "default_hourly_rate": 70,
+                    "description": "Backend engineering project contribution role",
+                    "id": "40000000-0000-0000-0000-000000000003",
+                    "name": "backend_engineer",
+                    "updated_at": "2026-03-10T00:00:00Z"
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceRole"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List global resource roles"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List Resource Roles",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "post": {
+        "description": "Create Resource Role Handles `POST` requests for `/resource-roles`. Requires bearer authentication.",
+        "operationId": "create_resource_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "currency": "USD",
+                "default_hourly_rate": 72.5,
+                "description": "Builds and maintains project data pipelines",
+                "name": "data_engineer"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ResourceRoleCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-03-10T00:00:00Z",
+                  "currency": "USD",
+                  "default_hourly_rate": 70,
+                  "description": "Backend engineering project contribution role",
+                  "id": "40000000-0000-0000-0000-000000000003",
+                  "name": "backend_engineer",
+                  "updated_at": "2026-03-10T00:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceRole"
+                }
+              }
+            },
+            "description": "Resource role created"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create Resource Role",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/resource-roles/{id}": {
+      "delete": {
+        "description": "Delete Resource Role Handles `DELETE` requests for `/resource-roles/{id}`. Requires bearer authentication.",
+        "operationId": "delete_resource_role",
+        "parameters": [
+          {
+            "description": "Resource role id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Resource role soft deleted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete Resource Role",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "put": {
+        "description": "Update Resource Role Handles `PUT` requests for `/resource-roles/{id}`. Requires bearer authentication.",
+        "operationId": "update_resource_role",
+        "parameters": [
+          {
+            "description": "Resource role id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "default_hourly_rate": 78,
+                "description": "Updated description"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ResourceRoleUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-03-10T00:00:00Z",
+                  "currency": "USD",
+                  "default_hourly_rate": 70,
+                  "description": "Backend engineering project contribution role",
+                  "id": "40000000-0000-0000-0000-000000000003",
+                  "name": "backend_engineer",
+                  "updated_at": "2026-03-10T00:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceRole"
+                }
+              }
+            },
+            "description": "Resource role updated"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update Resource Role",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
     "/tasks/{task_id}/progress": {
       "get": {
         "description": "List Progress By Task Handles `GET` requests for `/tasks/{task_id}/progress`. Requires bearer authentication.",
@@ -4273,7 +6019,7 @@
         "operationId": "list_users",
         "parameters": [
           {
-            "description": "Optional search query (name or email)",
+            "description": "Optional search query (name or email). Trimmed; max 128 characters. '%' and '_' are treated as literal characters.",
             "in": "query",
             "name": "q",
             "required": false,
@@ -4283,7 +6029,7 @@
             }
           },
           {
-            "description": "Page number (1-based, default 1)",
+            "description": "Page number (1-based, default 1). Values below 1 are treated as 1.",
             "in": "query",
             "name": "page",
             "required": false,
@@ -4295,7 +6041,7 @@
             }
           },
           {
-            "description": "Items per page (default 25, max 100)",
+            "description": "Items per page (default 25). Clamped to 1..100.",
             "in": "query",
             "name": "per_page",
             "required": false,
@@ -4400,6 +6146,57 @@
         "summary": "Create a new user (admin)",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/users/me/projects": {
+      "get": {
+        "description": "List My Project Scopes Handles `GET` requests for `/users/me/projects`. Requires bearer authentication.",
+        "operationId": "list_my_project_scopes",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "access_role_id": "55555555-5555-4555-8555-555555555555",
+                    "access_role_name": "project_owner",
+                    "permissions": [
+                      "project.view",
+                      "task.create",
+                      "task.view",
+                      "progress.create",
+                      "progress.view"
+                    ],
+                    "project_id": "44444444-4444-4444-8444-444444444444",
+                    "project_name": "Launch Planning",
+                    "resource_roles": [
+                      {
+                        "id": "40000000-0000-0000-0000-000000000003",
+                        "name": "backend_engineer"
+                      }
+                    ]
+                  }
+                ],
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyProjectScopeSummary"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Accessible projects with effective scoped permissions"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List My Project Scopes",
+        "tags": [
+          "Projects"
         ]
       }
     },

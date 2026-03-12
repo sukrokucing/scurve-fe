@@ -1,10 +1,14 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 
+import { api } from "@/api/client";
+import { rbacApi } from "@/api/rbac";
 import { queryClient } from "@/lib/queryClient";
 import { useAuthStore } from "@/store/authStore";
 import { usePermissionStore } from "@/store/permissionStore";
+import type { User } from "@/types/domain";
 
 import App from "./App.tsx";
 import "./index.css";
@@ -50,36 +54,22 @@ async function bootstrap() {
                 }
 
                 useAuthStore.getState().setToken(token);
-                // Build the auth URL. In dev we proxy API requests under /api.
-                const apiBase = import.meta.env.DEV ? "/api" : (import.meta.env.VITE_API_URL ?? "");
                 try {
-                    const res = await fetch(`${apiBase.replace(/\/$/, "")}/auth/me`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        useAuthStore.getState().setUser(data);
+                    const { data } = await api.get<User>("/auth/me");
+                    useAuthStore.getState().setUser(data);
 
-                        // Fetch permissions
-                        try {
-                            const permRes = await fetch(`${apiBase.replace(/\/$/, "")}/rbac/users/${data.id}/effective-permissions`, {
-                                headers: { Authorization: `Bearer ${token}` },
-                            });
-                            if (permRes.ok) {
-                                const permData = await permRes.json();
-                                // API returns: { user_id, roles, permissions: [...] }
-                                if (permData.permissions) {
-                                    usePermissionStore.getState().setPermissions(permData.permissions);
-                                }
-                            }
-                        } catch {
-                            console.warn("Failed to fetch permissions");
+                    try {
+                        const permissionsPayload = await rbacApi.getUserEffectivePermissions(data.id);
+                        if (Array.isArray(permissionsPayload.permissions)) {
+                            usePermissionStore.getState().setPermissions(permissionsPayload.permissions);
                         }
-                    } else if (res.status === 401) {
-                        // token invalid/expired
+                    } catch {
+                        console.warn("Failed to fetch permissions");
+                    }
+                } catch (error) {
+                    if (isAxiosError(error) && error.response?.status === 401) {
                         useAuthStore.getState().reset();
                     }
-                } catch {
                     // network error; leave auth as-is and let UI show offline state
                     // console.debug('bootstrap fetchMe error', e);
                 }

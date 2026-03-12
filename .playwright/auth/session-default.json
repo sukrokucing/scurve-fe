@@ -1,0 +1,96 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjQ4ZDk2YS03NjVlLTRmYWUtOTk3Ny05NjkxMTBjZmZiODYiLCJleHAiOjE3NzMzNjU5NDcsImlhdCI6MTc3MzI3OTU0N30.KpAZVmBdbZc4_qNGdMYbnGnem7s4BAjRQqa4ydQ-FLg",
+  "user": {
+    "id": "a248d96a-765e-4fae-9977-969110cffb86",
+    "name": "Jimmy",
+    "email": "jimmy@dwp.co.id"
+  },
+  "permissions": [
+    {
+      "name": "project.create",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "project.update",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "project.delete",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "task.create",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "task.update",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "task.delete",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "progress.create",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "user.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "user.manage",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "role.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "role.manage",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "permission.view",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "permission.manage",
+      "source": "role",
+      "role_name": "super_admin"
+    },
+    {
+      "name": "telemetry.ingest",
+      "source": "role",
+      "role_name": "super_admin"
+    }
+  ],
+  "createdAt": "2026-03-12T01:39:07.795Z"
+}

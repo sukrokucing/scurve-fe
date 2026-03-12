@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-03-11T02:15:24.591Z",
+  "base_url": "https://localhost:8800",
+  "app_url": "http://localhost:3001",
+  "seeded_project": {
+    "id": "d9929886-404b-4616-885d-f0b67a61f4cf",
+    "name": "Dashboard Demo 20260311021523"
+  },
+  "created_counts": {
+    "tasks": 6,
+    "progress_entries": 15,
+    "plan_points": 8
+  },
+  "verification": {
+    "dashboard": {
+      "plan_points": 8,
+      "actual_points": 1
+    },
+    "s_curve_health_progress": {
+      "rule_50_70_status": "pre_window",
+      "rule_50_70_pass": null,
+      "stage": "log",
+      "actual_pct": 41.67,
+      "planned_pct": 45,
+      "variance_pct": -3.33
+    },
+    "s_curve_health_hours": {
+      "rule_50_70_status": "insufficient_metric_data",
+      "actual_pct": null,
+      "planned_pct": null
+    },
+    "s_curve_health_cost": {
+      "rule_50_70_status": "insufficient_metric_data",
+      "actual_pct": null,
+      "planned_pct": null
+    },
+    "portfolio": {
+      "metric": "progress",
+      "project_count": 10
+    }
+  },
+  "quick_open_routes": [
+    "http://localhost:3001/",
+    "http://localhost:3001/projects/d9929886-404b-4616-885d-f0b67a61f4cf/dashboard",
+    "http://localhost:3001/tasks"
+  ]
+}

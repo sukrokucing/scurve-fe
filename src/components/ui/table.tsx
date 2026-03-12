@@ -14,14 +14,26 @@ const TABLE_HEAD_CLASS =
 const TABLE_CELL_CLASS = "p-4 align-middle [&:has([role=checkbox])]:pr-0"
 const TABLE_CAPTION_CLASS = "mt-4 text-sm text-muted-foreground"
 
+const TableElement = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => (
+  <table
+    ref={ref}
+    className={cn(TABLE_CLASS, className)}
+    {...props}
+  />
+))
+TableElement.displayName = "TableElement"
+
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
   <div className={TABLE_CONTAINER_CLASS} tabIndex={0}>
-    <table
+    <TableElement
       ref={ref}
-      className={cn(TABLE_CLASS, className)}
+      className={className}
       {...props}
     />
   </div>
@@ -110,6 +122,7 @@ TableCaption.displayName = "TableCaption"
 
 export {
   Table,
+  TableElement,
   TableHeader,
   TableBody,
   TableFooter,

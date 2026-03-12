@@ -146,20 +146,26 @@ test("rbac granular controls govern matrix interactions", async ({ page }) => {
     const revokeToggle = page.getByTestId("rbac-revoke-toggle");
 
     await expect(editToggle).toBeVisible();
-    await expect(grantToggle).toBeVisible();
-    await expect(revokeToggle).toBeVisible();
+    await expect(grantToggle).toHaveCount(0);
+    await expect(revokeToggle).toHaveCount(0);
 
     const viewerDeleteCell = page.getByTestId("rbac-permission-cell-viewer-perm-task-delete");
     await expect(viewerDeleteCell).toBeVisible();
 
     await editToggle.click();
-    await expect(grantToggle).toBeDisabled();
-    await expect(revokeToggle).toBeDisabled();
+    await expect(grantToggle).toBeVisible();
+    await expect(revokeToggle).toBeVisible();
+    await expect(grantToggle).toBeEnabled();
+    await expect(revokeToggle).toBeEnabled();
+
+    await editToggle.click();
+    await expect(grantToggle).toHaveCount(0);
+    await expect(revokeToggle).toHaveCount(0);
     await expect(viewerDeleteCell).toBeDisabled();
 
     await editToggle.click();
-    await expect(grantToggle).toBeEnabled();
-    await expect(revokeToggle).toBeEnabled();
+    await expect(grantToggle).toBeVisible();
+    await expect(revokeToggle).toBeVisible();
 
     await page.getByTestId("rbac-role-filter-combobox").click();
     await page.getByPlaceholder("Search roles...").fill("viewer");

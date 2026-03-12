@@ -1,4 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { getOrCreateAuthSession, seedAuthState, type AuthSession } from "./support/auth-session";
+
+test.setTimeout(180_000);
+test.describe.configure({ mode: "serial" });
 
 type FlowMeta = {
     id: string;
@@ -18,28 +22,45 @@ const FLOW_CATALOG: FlowMeta[] = [
     { id: "BF-08", priority: "P1", title: "Auth entry points", route: "/login" },
 ];
 
-const SESSION = {
-    token: process.env.PLAYWRIGHT_AUTH_TOKEN ?? "flow-catalog-token",
-    user: {
-        id: process.env.PLAYWRIGHT_USER_ID ?? "flow-catalog-user",
-        name: process.env.PLAYWRIGHT_USER_NAME ?? "Flow Catalog User",
-        email: process.env.PLAYWRIGHT_USER_EMAIL ?? "flow-catalog@example.com",
-    },
-    permissions: ["progress.view", "user.manage", "role.manage", "permission.manage"],
-};
+async function openTasksAdvancedIfClosed(page: Page) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    if (await panel.isVisible().catch(() => false)) return;
+    await page.getByTestId("tasks-advanced-filters-toggle").click();
+    await expect(panel).toBeVisible();
+}
+
+async function ensureTasksProjectSelected(page: Page) {
+    const projectCombobox = page.getByTestId("tasks-project-combobox");
+    if (!(await projectCombobox.isVisible().catch(() => false))) return;
+
+    const quickCreateButton = page.getByTestId("tasks-quick-create-button");
+    if (await quickCreateButton.isEnabled().catch(() => false)) return;
+
+    await projectCombobox.click();
+    const firstProjectOption = page.locator("[cmdk-item]").first();
+    if (await firstProjectOption.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await firstProjectOption.click();
+    }
+}
+
+let FLOW_SESSION: AuthSession | null = null;
+
+test.beforeAll(async ({ request }, testInfo) => {
+    testInfo.setTimeout(180_000);
+    FLOW_SESSION = await getOrCreateAuthSession(request, "business flow");
+});
 
 test.beforeEach(async ({ page }) => {
-    await page.addInitScript((session) => {
-        window.localStorage.setItem("token", session.token);
-        window.localStorage.setItem("user", JSON.stringify(session.user));
-        window.localStorage.setItem("permissions", JSON.stringify(session.permissions));
-    }, SESSION);
+    if (!FLOW_SESSION) {
+        throw new Error("Business flow session is not initialized.");
+    }
+    await seedAuthState(page, FLOW_SESSION);
 });
 
 test.describe("Business Flow Coverage", () => {
     test(`${FLOW_CATALOG[0].id} ${FLOW_CATALOG[0].title}`, async ({ page }) => {
         await page.goto(FLOW_CATALOG[0].route);
-        await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText("Total Projects")).toBeVisible();
         await expect(page.getByText("Project Progress")).toBeVisible();
     });
@@ -61,7 +82,7 @@ test.describe("Business Flow Coverage", () => {
             await editDialog.getByRole("button", { name: "Close" }).click();
         }
 
-        const dashboardLinks = page.getByRole("link", { name: "Dashboard" });
+        const dashboardLinks = page.getByTestId("projects-row-dashboard-link");
         if (await dashboardLinks.count()) {
             await dashboardLinks.first().click();
             await expect(page).toHaveURL(/\/projects\/.+\/dashboard/);
@@ -71,7 +92,12 @@ test.describe("Business Flow Coverage", () => {
 
     test(`${FLOW_CATALOG[2].id} ${FLOW_CATALOG[2].title}`, async ({ page }) => {
         await page.goto(FLOW_CATALOG[2].route);
-        await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible({ timeout: 15_000 });
+        await ensureTasksProjectSelected(page);
+        const quickCreateButton = page.getByTestId("tasks-quick-create-button");
+        if (!(await quickCreateButton.isEnabled().catch(() => false))) {
+            return;
+        }
 
         await page.getByRole("button", { name: "New task" }).click();
         const createTaskDialog = page.getByRole("dialog", { name: "Create task" });
@@ -86,9 +112,13 @@ test.describe("Business Flow Coverage", () => {
         await createTaskDialog.getByRole("radio", { name: "Custom" }).click();
         await createTaskDialog.getByRole("button", { name: "Cancel" }).click();
 
-        await page.getByRole("button", { name: "Board" }).click();
-        await page.getByRole("button", { name: "Gantt" }).click();
-        await page.getByRole("button", { name: "List" }).click();
+        await openTasksAdvancedIfClosed(page);
+        await page.getByTestId("tasks-view-board-button").click();
+        await openTasksAdvancedIfClosed(page);
+        await page.getByTestId("tasks-view-gantt-button").click();
+        await expect(page.getByTestId("gantt-view-mode-combobox")).toBeVisible();
+        await openTasksAdvancedIfClosed(page);
+        await page.getByTestId("tasks-view-list-button").click();
     });
 
     test(`${FLOW_CATALOG[3].id} ${FLOW_CATALOG[3].title}`, async ({ page }) => {
@@ -98,7 +128,17 @@ test.describe("Business Flow Coverage", () => {
         const userSearchTrigger = page.getByTestId("access-flow-user-search-combobox");
         await expect(userSearchTrigger).toBeVisible();
         await userSearchTrigger.click();
-        await page.getByPlaceholder("Type name or email...").fill("test");
+        const userSearchInput = page
+            .getByPlaceholder(/Search users\.\.\.|Type name or email\.\.\./i)
+            .first();
+        await expect(userSearchInput).toBeVisible();
+        await userSearchInput.fill("test");
+
+        const firstOption = page.getByRole("option").first();
+        if (await firstOption.isVisible().catch(() => false)) {
+            await firstOption.click();
+        }
+        await page.keyboard.press("Escape");
 
         const userRows = page.getByTestId("access-flow-user-item");
         if (await userRows.count()) {

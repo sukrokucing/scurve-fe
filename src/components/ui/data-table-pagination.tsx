@@ -4,48 +4,78 @@ import {
     ChevronsLeft,
     ChevronsRight,
 } from "lucide-react";
+import type { Table as TanStackTable } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 
-interface DataTablePaginationProps {
+type DataTablePaginationBaseProps = {
+    totalItems: number;
+    pageSizeOptions?: number[];
+};
+
+type DataTablePaginationStateProps = DataTablePaginationBaseProps & {
     currentPage: number;
     totalPages: number;
     pageSize: number;
     setPage: (page: number) => void;
     setPageSize: (pageSize: number) => void;
-    totalItems: number;
-    pageSizeOptions?: number[];
-}
+    table?: never;
+};
 
-export function DataTablePagination({
-    currentPage,
-    totalPages,
-    pageSize,
-    setPage,
-    setPageSize,
-    totalItems,
-    pageSizeOptions = [10, 20, 30, 40, 50],
-}: DataTablePaginationProps) {
+type DataTablePaginationTableProps<TData> = DataTablePaginationBaseProps & {
+    table: TanStackTable<TData>;
+    currentPage?: never;
+    totalPages?: never;
+    pageSize?: never;
+    setPage?: never;
+    setPageSize?: never;
+};
+
+type DataTablePaginationProps<TData = unknown> =
+    | DataTablePaginationStateProps
+    | DataTablePaginationTableProps<TData>;
+
+export function DataTablePagination<TData>(props: DataTablePaginationProps<TData>) {
+    const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
+    const currentPage = props.table ? props.table.getState().pagination.pageIndex + 1 : props.currentPage;
+    const pageSize = props.table ? props.table.getState().pagination.pageSize : props.pageSize;
+    const totalPages = props.table ? props.table.getPageCount() : props.totalPages;
+
+    const setPage = (page: number) => {
+        if (props.table) {
+            props.table.setPageIndex(Math.max(0, page - 1));
+            return;
+        }
+        props.setPage(page);
+    };
+
+    const setPageSize = (nextPageSize: number) => {
+        if (props.table) {
+            props.table.setPageSize(nextPageSize);
+            props.table.setPageIndex(0);
+            return;
+        }
+        props.setPageSize(nextPageSize);
+        props.setPage(1);
+    };
+
     return (
         <div className="flex items-center justify-between px-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-                {totalItems} total items
+                {props.totalItems} total items
             </div>
             <div className="flex items-center space-x-6 lg:space-x-8">
                 <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium">Rows per page</p>
                     <Combobox
                         value={`${pageSize}`}
-                        onChange={(value) => {
-                            setPageSize(Number(value));
-                            setPage(1); // Reset to first page on size change
-                        }}
+                        onChange={(value) => setPageSize(Number(value))}
                         className="h-11 min-h-11 w-[112px]"
                         placeholder={`${pageSize}`}
                         options={[
                             ...pageSizeOptions.map((size) => ({ value: `${size}`, label: `${size}` })),
-                            { value: `${totalItems}`, label: "All" }
+                            { value: `${props.totalItems}`, label: "All" }
                         ]}
                     />
                 </div>

@@ -1,35 +1,68 @@
-import { useProjectsQuery } from "@/api/queries/projects";
-import { useAllTasks } from "@/api/queries/tasks";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { CheckCircle2, Clock, FolderKanban, ArrowUpRight } from "lucide-react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { Activity, CheckCircle2, Clock, FolderKanban, ShieldCheck } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+
+import { useAllTasks } from "@/api/queries/tasks";
+import {
+    useMyProjectScopesQuery,
+    usePortfolioSCurveSummary,
+    useProjectsQuery,
+} from "@/api/queries/projects";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function truncateLabel(value: string, maxLength = 16) {
+    if (value.length <= maxLength) return value;
+    return `${value.slice(0, Math.max(1, maxLength - 1))}…`;
+}
 
 export function DashboardPage() {
     const { data: projects, isLoading: isLoadingProjects } = useProjectsQuery();
     const { tasks, isLoading: isLoadingTasks } = useAllTasks();
+    const { data: portfolioSummary, isLoading: isLoadingPortfolio } = usePortfolioSCurveSummary("progress");
+    const { data: myScopes, isLoading: isLoadingScopes } = useMyProjectScopesQuery();
 
-    const isLoading = isLoadingProjects || isLoadingTasks;
-
-    // Calculate high-level metrics
-    // Calculate high-level metrics
-    const totalProjects = projects?.length ?? 0;
-
-    // Safeguard: Ensure tasks are only counted if we have projects
-    // This prevents edge cases where tasks might be stale or mismatched
+    const isLoading = isLoadingProjects || isLoadingTasks || isLoadingPortfolio || isLoadingScopes;
+    const safeProjects = useMemo(
+        () => (Array.isArray(projects) ? projects : []),
+        [projects],
+    );
+    const totalProjects = safeProjects.length;
     const safeTasks = totalProjects > 0 ? tasks : [];
+    const completedTasks = safeTasks.filter((task) => task.status === "done").length;
+    const pendingTasks = safeTasks.filter((task) => task.status !== "done").length;
+    const projectsWithHealth = useMemo(
+        () => (Array.isArray(portfolioSummary?.projects) ? portfolioSummary.projects : []),
+        [portfolioSummary?.projects],
+    );
+    const projectThemeById = useMemo(
+        () => new Map(safeProjects.map((project) => [project.id, project.theme_color])),
+        [safeProjects],
+    );
 
-    const completedTasks = safeTasks.filter(t => t.status === 'done').length;
-    const pendingTasks = safeTasks.filter(t => t.status !== 'done').length;
-
-    const chartData = projects?.map(p => ({
-        name: p.name,
-        progress: typeof p.progress === 'number' ? p.progress : 0,
-        fill: p.theme_color ?? "hsl(var(--chart-1))"
-    })) ?? [];
+    const chartData = useMemo(
+        () => projectsWithHealth
+            .filter(
+                (project) =>
+                    typeof project.actual_pct === "number"
+                    && Number.isFinite(project.actual_pct),
+            )
+            .map((project) => ({
+                shortName: truncateLabel(project.project_name),
+                name: project.project_name,
+                progress: Math.max(0, Math.min(100, project.actual_pct as number)),
+                fill: projectThemeById.get(project.project_id) ?? "hsl(var(--chart-1))",
+            })),
+        [projectThemeById, projectsWithHealth],
+    );
+    const fullNameByShortName = useMemo(
+        () => new Map(chartData.map((item) => [item.shortName, item.name])),
+        [chartData],
+    );
+    const shouldCompactXAxis = chartData.length >= 6;
 
     const chartConfig = {
         progress: {
@@ -38,11 +71,38 @@ export function DashboardPage() {
         },
     } satisfies ChartConfig;
 
+    const governanceSummary = useMemo(() => {
+        const ruleEvaluatedProjects = projectsWithHealth.filter(
+            (project) => typeof project.rule_50_70_pass === "boolean",
+        );
+        const passCount = ruleEvaluatedProjects.filter((project) => project.rule_50_70_pass === true).length;
+        const passRate = ruleEvaluatedProjects.length > 0
+            ? Math.round((passCount / ruleEvaluatedProjects.length) * 100)
+            : null;
+        const attentionCount = projectsWithHealth.filter((project) => {
+            if (project.stage === "lag" || project.stage === "decline") return true;
+            return typeof project.variance_pct === "number" && project.variance_pct < 0;
+        }).length;
+        const scopeList = Array.isArray(myScopes) ? myScopes : [];
+        const uniquePermissionCount = new Set(
+            scopeList.flatMap((scope) => scope.permissions ?? []),
+        ).size;
+
+        return {
+            passCount,
+            passRate,
+            supportedRuleCount: ruleEvaluatedProjects.length,
+            attentionCount,
+            scopedProjectCount: scopeList.length,
+            uniquePermissionCount,
+        };
+    }, [myScopes, projectsWithHealth]);
+
     if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {["kpi-total", "kpi-active", "kpi-complete", "kpi-efficiency"].map((skeletonKey) => (
+                    {["kpi-total", "kpi-active", "kpi-complete", "kpi-governance"].map((skeletonKey) => (
                         <Skeleton key={skeletonKey} className="h-32 rounded-xl" />
                     ))}
                 </div>
@@ -53,129 +113,145 @@ export function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            {/* Header Section */}
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                    <p className="text-muted-foreground">Overview of your workspace activity.</p>
+                    <p className="text-muted-foreground">Overview of delivery performance and S-curve governance.</p>
                 </div>
                 <Button asChild>
                     <Link to="/projects">View All Projects</Link>
                 </Button>
             </div>
 
-            {/* Metrics Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
+                <Card className="glass shadow-sm transition-shadow hover:shadow-md" data-testid="dashboard-kpi-total-projects">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
                         <FolderKanban className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalProjects}</div>
-                        <p className="text-xs text-muted-foreground">+2 from last month</p>
+                        <div className="text-2xl font-bold" data-testid="dashboard-kpi-total-projects-value">{totalProjects}</div>
+                        <p className="text-xs text-muted-foreground">Projects you can access</p>
                     </CardContent>
                 </Card>
-                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
+                <Card className="glass shadow-sm transition-shadow hover:shadow-md" data-testid="dashboard-kpi-active-tasks">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Tasks</CardTitle>
                         <Clock className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{pendingTasks}</div>
-                        <p className="text-xs text-muted-foreground">Across all projects</p>
+                        <div className="text-2xl font-bold" data-testid="dashboard-kpi-active-tasks-value">{pendingTasks}</div>
+                        <p className="text-xs text-muted-foreground">Across accessible projects</p>
                     </CardContent>
                 </Card>
-                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
+                <Card className="glass shadow-sm transition-shadow hover:shadow-md" data-testid="dashboard-kpi-completed-tasks">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                        <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
                         <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{completedTasks}</div>
-                        <p className="text-xs text-muted-foreground">+12% completion rate</p>
+                        <div className="text-2xl font-bold" data-testid="dashboard-kpi-completed-tasks-value">{completedTasks}</div>
+                        <p className="text-xs text-muted-foreground">Done items in current scope</p>
                     </CardContent>
                 </Card>
-                <Card className="glass shadow-sm hover:shadow-md transition-shadow">
+                <Card className="glass shadow-sm transition-shadow hover:shadow-md" data-testid="dashboard-kpi-scurve-pass-rate">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Efficiency</CardTitle>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">S-Curve 50/70</CardTitle>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">94%</div>
-                        <p className="text-xs text-muted-foreground">+2.5% from last week</p>
+                        <div className="text-2xl font-bold" data-testid="dashboard-kpi-scurve-pass-rate-value">
+                            {governanceSummary.passRate !== null
+                                ? `${governanceSummary.passRate}%`
+                                : "N/A"}
+                        </div>
+                        <p className="text-xs text-muted-foreground" data-testid="dashboard-kpi-scurve-pass-rate-note">
+                            {governanceSummary.supportedRuleCount > 0
+                                ? `${governanceSummary.passCount}/${governanceSummary.supportedRuleCount} projects passed`
+                                : "No supported rule checks yet"}
+                        </p>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Main Content Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-
-                {/* Chart Section */}
-                <Card className="col-span-4 glass">
+                <Card className="col-span-4 min-w-0 glass">
                     <CardHeader>
                         <CardTitle>Project Progress</CardTitle>
-                        <CardDescription>Real-time progress tracking across active projects.</CardDescription>
+                        <CardDescription>Actual progress from portfolio S-curve summary (`actual_pct`).</CardDescription>
                     </CardHeader>
-                    <CardContent className="pl-2">
+                    <CardContent className="overflow-hidden pl-2">
                         {chartData.length > 0 ? (
-                            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                                <BarChart data={chartData}>
+                            <ChartContainer config={chartConfig} className="h-[320px] w-full overflow-hidden" data-testid="dashboard-project-progress-chart">
+                                <BarChart
+                                    data={chartData}
+                                    margin={{
+                                        top: 8,
+                                        right: 12,
+                                        left: 0,
+                                        bottom: shouldCompactXAxis ? 56 : 18,
+                                    }}
+                                >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis
-                                        dataKey="name"
+                                        dataKey="shortName"
                                         tickLine={false}
-                                        tickMargin={10}
+                                        tickMargin={8}
                                         axisLine={false}
+                                        minTickGap={20}
+                                        interval={0}
+                                        angle={shouldCompactXAxis ? -24 : 0}
+                                        textAnchor={shouldCompactXAxis ? "end" : "middle"}
+                                        height={shouldCompactXAxis ? 64 : 32}
                                     />
                                     <YAxis
                                         tickLine={false}
                                         axisLine={false}
                                         tickFormatter={(value) => `${value}%`}
                                     />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <ChartTooltip
+                                        content={(
+                                            <ChartTooltipContent
+                                                labelFormatter={(label) =>
+                                                    fullNameByShortName.get(String(label)) ?? String(label)
+                                                }
+                                            />
+                                        )}
+                                    />
                                     <Bar dataKey="progress" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ChartContainer>
                         ) : (
                             <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                                No project data available
+                                No project progress data available yet
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
-                {/* Recent Activity / Projects List */}
-                <Card className="col-span-3 glass shadow-sm hover:shadow-md transition-shadow">
+                <Card className="col-span-3 glass shadow-sm transition-shadow hover:shadow-md">
                     <CardHeader>
-                        <CardTitle>Recent Projects</CardTitle>
-                        <CardDescription>Quick access to your latest work.</CardDescription>
+                        <CardTitle>Governance Snapshot</CardTitle>
+                        <CardDescription>S-curve risk plus project-scope access coverage.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-8">
-                            {projects?.slice(0, 5).map((project) => (
-                                <div
-                                    key={project.id}
-                                    className="flex items-center p-3 rounded-lg border-l-4 hover:bg-surface-hover transition-colors"
-                                    style={{ borderLeftColor: project.theme_color ?? "hsl(var(--primary))" }}
-                                >
-                                    <div className="h-9 w-9 rounded-full border flex items-center justify-center bg-background">
-                                        <div className="h-4 w-4 rounded-full" style={{ backgroundColor: project.theme_color ?? "hsl(var(--primary))" }} />
-                                    </div>
-                                    <div className="ml-4 space-y-1">
-                                        <p className="text-sm font-medium leading-none">{project.name}</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[200px]" title={project.description || "No description"}>
-                                            {project.description || "No description"}
-                                        </p>
-                                    </div>
-                                    <div className="ml-auto font-medium text-sm">
-                                        {typeof project.progress === 'number' ? `${project.progress}%` : "0%"}
-                                    </div>
-                                </div>
-                            ))}
-                            {(!projects || projects.length === 0) && (
-                                <p className="py-4 text-sm text-muted-foreground">No projects found.</p>
-                            )}
+                    <CardContent className="space-y-5">
+                        <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">Projects needing attention</p>
+                            <p className="text-xl font-semibold">{governanceSummary.attentionCount}</p>
+                            <p className="text-xs text-muted-foreground">
+                                Lag/decline stage or negative variance against plan
+                            </p>
+                        </div>
+                        <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">Accessible project scopes</p>
+                            <p className="text-xl font-semibold">{governanceSummary.scopedProjectCount}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {governanceSummary.uniquePermissionCount} unique scoped permissions
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <ShieldCheck className="h-4 w-4" />
+                            Backend remains permission-authoritative; UI uses this as guidance.
                         </div>
                     </CardContent>
                 </Card>

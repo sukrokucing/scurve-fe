@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
@@ -8,8 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 
-import { usersApi, type User } from "@/api/users";
-import { rbacApi, type Role } from "@/api/rbac";
+import { useRolePermissionsQuery, useUserRolesQuery } from "@/api/queries/rbac";
+import { useUsersListQuery } from "@/api/queries/users";
+import type { User } from "@/api/users";
+import type { Role } from "@/api/rbac";
 
 const EMPTY_USERS: User[] = [];
 
@@ -20,10 +21,7 @@ export const HierarchyExplorer = () => {
     const navigate = useNavigate();
 
     // --- Column 1: Users (from real backend) ---
-    const { data: usersData, isLoading: loadingUsers } = useQuery({
-        queryKey: ["users", searchQuery],
-        queryFn: () => usersApi.listUsers({ q: searchQuery || undefined }),
-    });
+    const { data: usersData, isLoading: loadingUsers } = useUsersListQuery({ q: searchQuery || undefined });
 
     const users = usersData?.users ?? EMPTY_USERS;
     const userOptions = useMemo(() => {
@@ -43,18 +41,10 @@ export const HierarchyExplorer = () => {
     }, [users, selectedUser]);
 
     // --- Column 2: User Roles (from real RBAC API) ---
-    const { data: userRoles, isLoading: loadingUserRoles } = useQuery({
-        queryKey: ["user-roles", selectedUser?.id],
-        queryFn: () => selectedUser ? rbacApi.getUserRoles(selectedUser.id) : Promise.resolve([]),
-        enabled: !!selectedUser,
-    });
+    const { data: userRoles, isLoading: loadingUserRoles } = useUserRolesQuery(selectedUser?.id);
 
     // --- Column 3: Role Permissions (from real RBAC API) ---
-    const { data: rolePermissions, isLoading: loadingRolePerms } = useQuery({
-        queryKey: ["role-permissions", selectedRole?.id],
-        queryFn: () => selectedRole ? rbacApi.getRolePermissions(selectedRole.id) : Promise.resolve([]),
-        enabled: !!selectedRole,
-    });
+    const { data: rolePermissions, isLoading: loadingRolePerms } = useRolePermissionsQuery(selectedRole?.id);
 
     // Helper for Column Loading State
     const ColumnLoading = () => (

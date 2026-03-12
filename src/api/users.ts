@@ -22,10 +22,12 @@ export const usersApi = {
      */
     async listUsers(params?: ListUsersParams): Promise<ListUsersResponse> {
         const response = await api.get<User[]>("/users", { params });
-        const total = parseInt(response.headers["x-total-count"] || "0", 10);
+        const users = Array.isArray(response.data) ? response.data : [];
+        const headerValue = response.headers["x-total-count"] || response.headers["X-Total-Count"];
+        const parsedTotal = Number.parseInt(String(headerValue ?? ""), 10);
         return {
-            users: response.data,
-            total
+            users,
+            total: Number.isFinite(parsedTotal) ? parsedTotal : users.length,
         };
     },
 

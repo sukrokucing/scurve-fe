@@ -42,10 +42,24 @@ export const CriticalPathResponseSchema = z.object({
     task_ids: z.array(z.string()),
   });
 
+export const DashboardMetricPointSchema = z.object({
+    date: z.string(),
+    value: z.number(),
+  });
+
 export const DashboardResponseSchema = z.object({
     actual: z.array(z.lazy(() => ActualPointSchema)),
+    actual_source: z.string().nullable().optional(),
+    currency: z.string().nullable().optional(),
+    data_status: z.lazy(() => SCurveDataStatusSchema),
+    metric: z.lazy(() => SCurveMetricSchema),
+    metric_actual: z.array(z.lazy(() => DashboardMetricPointSchema)),
+    metric_plan: z.array(z.lazy(() => DashboardMetricPointSchema)),
+    metric_supported: z.boolean(),
     plan: z.array(z.lazy(() => ProjectPlanPointSchema)),
+    planned_source: z.string().nullable().optional(),
     project: z.lazy(() => ProjectSchema),
+    unit: z.string().nullable().optional(),
   });
 
 export const DeletedResponseSchema = z.object({
@@ -99,6 +113,15 @@ export const MessageResponseSchema = z.object({
     message: z.string(),
   });
 
+export const MyProjectScopeSummarySchema = z.object({
+    access_role_id: z.string(),
+    access_role_name: z.string(),
+    permissions: z.array(z.string()),
+    project_id: z.string(),
+    project_name: z.string(),
+    resource_roles: z.array(z.lazy(() => ResourceRoleRefSchema)),
+  });
+
 export const PaginatedAuditLogsSchema = z.object({
     items: z.array(z.lazy(() => AuditLogEntrySchema)),
     page: z.number(),
@@ -117,6 +140,44 @@ export const PermissionSchema = z.object({
 export const PermissionCreateRequestSchema = z.object({
     description: z.string().nullable().optional(), // example: "Archive completed projects"
     name: z.string(), // example: "project.archive"
+  });
+
+export const PortfolioSCurveProjectSummarySchema = z.object({
+    actual_pct: z.number().optional(),
+    actual_source: z.string().nullable().optional(),
+    currency: z.string().nullable().optional(),
+    data_status: z.lazy(() => SCurveDataStatusSchema),
+    elapsed_time_pct: z.number().optional(),
+    last_updated_at: z.string().datetime(),
+    metric_supported: z.boolean(),
+    planned_pct: z.number().optional(),
+    planned_source: z.string().nullable().optional(),
+    project_id: z.string(),
+    project_name: z.string(),
+    rule_50_70_pass: z.boolean().optional(),
+    rule_50_70_status: z.lazy(() => Rule5070StatusSchema),
+    stage: z.any().optional(),
+    unit: z.string().nullable().optional(),
+    variance_pct: z.number().optional(),
+  });
+
+export const PortfolioSCurveSummaryResponseSchema = z.object({
+    actual_source: z.string().nullable().optional(),
+    avg_actual_pct: z.number().optional(),
+    avg_planned_pct: z.number().optional(),
+    avg_variance_pct: z.number().optional(),
+    currency: z.string().nullable().optional(),
+    data_status: z.lazy(() => SCurveDataStatusSchema),
+    decline_count: z.number(),
+    lag_count: z.number(),
+    log_count: z.number(),
+    maturity_count: z.number(),
+    metric: z.lazy(() => SCurveMetricSchema),
+    metric_supported: z.boolean(),
+    planned_source: z.string().nullable().optional(),
+    project_count: z.number(),
+    projects: z.array(z.lazy(() => PortfolioSCurveProjectSummarySchema)),
+    unit: z.string().nullable().optional(),
   });
 
 export const ProgressSchema = z.object({
@@ -157,18 +218,54 @@ export const ProjectCreateRequestSchema = z.object({
     theme_color: z.string().nullable().optional(), // example: "#3498db"
   });
 
+export const ProjectMemberSchema = z.object({
+    access_role_id: z.string(),
+    access_role_name: z.string(),
+    created_at: z.string().datetime(),
+    resource_roles: z.array(z.lazy(() => ResourceRoleRefSchema)),
+    updated_at: z.string().datetime(),
+    user_email: z.string(),
+    user_id: z.string(),
+    user_name: z.string(),
+  });
+
+export const ProjectMemberCreateRequestSchema = z.object({
+    access_role_id: z.string(),
+    resource_role_ids: z.array(z.string()),
+    user_id: z.string(),
+  });
+
 export const ProjectPlanCreateRequestSchema = z.object({
+    currency: z.string().nullable().optional(), // example: "USD"
     date: z.string().datetime(), // example: "2025-12-01T00:00:00Z"
+    planned_cost: z.number().optional(), // example: 15200
+    planned_hours: z.number().optional(), // example: 120.5
     planned_progress: z.number(), // example: 10
   });
 
 export const ProjectPlanPointSchema = z.object({
     created_at: z.string().datetime(),
+    currency: z.string().nullable().optional(),
     date: z.string().datetime(),
     id: z.string(),
+    planned_cost: z.number().optional(),
+    planned_hours: z.number().optional(),
     planned_progress: z.number(),
     project_id: z.string(),
     updated_at: z.string().datetime(),
+  });
+
+export const ProjectResourceRoleRateSchema = z.object({
+    currency: z.string(),
+    hourly_rate: z.number(),
+    is_override: z.boolean(),
+    resource_role_id: z.string(),
+    resource_role_name: z.string(),
+  });
+
+export const ProjectResourceRoleRateUpsertRequestSchema = z.object({
+    currency: z.string(),
+    hourly_rate: z.number(),
   });
 
 export const ProjectUpdateRequestSchema = z.object({
@@ -186,6 +283,35 @@ export const RegisterRequestSchema = z.object({
 export const ResetPasswordRequestSchema = z.object({
     new_password: z.string(), // example: "NewSecureP@ss456"
     token: z.string(), // example: "abc123token"
+  });
+
+export const ResourceRoleSchema = z.object({
+    created_at: z.string().datetime(),
+    currency: z.string(),
+    default_hourly_rate: z.number(),
+    description: z.string().nullable().optional(),
+    id: z.string(),
+    name: z.string(),
+    updated_at: z.string().datetime(),
+  });
+
+export const ResourceRoleCreateRequestSchema = z.object({
+    currency: z.string(),
+    default_hourly_rate: z.number(),
+    description: z.string().nullable().optional(),
+    name: z.string(),
+  });
+
+export const ResourceRoleRefSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+  });
+
+export const ResourceRoleUpdateRequestSchema = z.object({
+    currency: z.string().nullable().optional(),
+    default_hourly_rate: z.number().optional(),
+    description: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
   });
 
 export const RoleSchema = z.object({
@@ -207,10 +333,37 @@ export const RolePermissionSchema = z.object({
     role_id: z.string(),
   });
 
+export const Rule5070StatusSchema = z.string();
+
+export const SCurveDataStatusSchema = z.string();
+
+export const SCurveHealthResponseSchema = z.object({
+    actual_pct: z.number().optional(),
+    actual_source: z.string().nullable().optional(),
+    currency: z.string().nullable().optional(),
+    data_status: z.lazy(() => SCurveDataStatusSchema),
+    elapsed_time_pct: z.number().optional(),
+    last_updated_at: z.string().datetime(),
+    metric: z.lazy(() => SCurveMetricSchema),
+    metric_supported: z.boolean(),
+    planned_pct: z.number().optional(),
+    planned_source: z.string().nullable().optional(),
+    rule_50_70_pass: z.boolean().optional(),
+    rule_50_70_status: z.lazy(() => Rule5070StatusSchema),
+    stage: z.any().optional(),
+    unit: z.string().nullable().optional(),
+    variance_pct: z.number().optional(),
+  });
+
+export const SCurveMetricSchema = z.string();
+
+export const SCurveStageSchema = z.string();
+
 export const TaskSchema = z.object({
     assignee: z.string().nullable().optional(),
     created_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable().optional(),
+    description: z.string(), // example: "[Quick Add] Define launch checklist"
     due_date: z.string().datetime().nullable().optional(),
     duration_days: z.number().optional(),
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
@@ -266,6 +419,7 @@ export const TaskBatchUpdateRequestSchema = z.object({
 
 export const TaskCreateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
+    description: z.string().nullable().optional(), // example: "[Quick Add] Define launch checklist"
     due_date: z.string().datetime().nullable().optional(), // example: "2025-10-10T10:00:00Z"
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
     parent_id: z.string().nullable().optional(),
@@ -289,6 +443,7 @@ export const TaskSortDirSchema = z.string();
 
 export const TaskUpdateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
     due_date: z.string().datetime().nullable().optional(), // example: "2025-11-01T10:00:00Z"
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
     parent_id: z.string().nullable().optional(),
@@ -363,6 +518,43 @@ export const UserRoleSchema = z.object({
     user_id: z.string(),
   });
 
+export const WorkLogSchema = z.object({
+    cost_amount: z.number(),
+    created_at: z.string().datetime(),
+    currency_snapshot: z.string(),
+    deleted_at: z.string().datetime().nullable().optional(),
+    hourly_rate_snapshot: z.number(),
+    hours: z.number(),
+    id: z.string(),
+    note: z.string().nullable().optional(),
+    project_id: z.string(),
+    resource_role_id: z.string(),
+    resource_role_name: z.string(),
+    source: z.lazy(() => WorkLogSourceSchema),
+    task_id: z.string(),
+    updated_at: z.string().datetime(),
+    user_id: z.string().nullable().optional(),
+    user_name: z.string().nullable().optional(),
+    work_date: z.string(), // example: "2026-03-10"
+  });
+
+export const WorkLogCreateRequestSchema = z.object({
+    hours: z.number(), // example: 2.5
+    note: z.string().nullable().optional(),
+    resource_role_id: z.string(),
+    user_id: z.string().nullable().optional(),
+    work_date: z.string().nullable().optional(), // example: "2026-03-10"
+  });
+
+export const WorkLogSourceSchema = z.string();
+
+export const WorkLogUpdateRequestSchema = z.object({
+    hours: z.number().optional(),
+    note: z.string().nullable().optional(),
+    resource_role_id: z.string().nullable().optional(),
+    work_date: z.string().nullable().optional(), // example: "2026-03-10"
+  });
+
 export const components = { schemas: {
   ActualPoint: ActualPointSchema,
   AssignPermissionToRoleRequest: AssignPermissionToRoleRequestSchema,
@@ -371,6 +563,7 @@ export const components = { schemas: {
   AuthResponse: AuthResponseSchema,
   CreateUserRequest: CreateUserRequestSchema,
   CriticalPathResponse: CriticalPathResponseSchema,
+  DashboardMetricPoint: DashboardMetricPointSchema,
   DashboardResponse: DashboardResponseSchema,
   DeletedResponse: DeletedResponseSchema,
   DependencyCreateRequest: DependencyCreateRequestSchema,
@@ -381,22 +574,38 @@ export const components = { schemas: {
   HealthResponse: HealthResponseSchema,
   LoginRequest: LoginRequestSchema,
   MessageResponse: MessageResponseSchema,
+  MyProjectScopeSummary: MyProjectScopeSummarySchema,
   PaginatedAuditLogs: PaginatedAuditLogsSchema,
   Permission: PermissionSchema,
   PermissionCreateRequest: PermissionCreateRequestSchema,
+  PortfolioSCurveProjectSummary: PortfolioSCurveProjectSummarySchema,
+  PortfolioSCurveSummaryResponse: PortfolioSCurveSummaryResponseSchema,
   Progress: ProgressSchema,
   ProgressCreateRequest: ProgressCreateRequestSchema,
   ProgressUpdateRequest: ProgressUpdateRequestSchema,
   Project: ProjectSchema,
   ProjectCreateRequest: ProjectCreateRequestSchema,
+  ProjectMember: ProjectMemberSchema,
+  ProjectMemberCreateRequest: ProjectMemberCreateRequestSchema,
   ProjectPlanCreateRequest: ProjectPlanCreateRequestSchema,
   ProjectPlanPoint: ProjectPlanPointSchema,
+  ProjectResourceRoleRate: ProjectResourceRoleRateSchema,
+  ProjectResourceRoleRateUpsertRequest: ProjectResourceRoleRateUpsertRequestSchema,
   ProjectUpdateRequest: ProjectUpdateRequestSchema,
   RegisterRequest: RegisterRequestSchema,
   ResetPasswordRequest: ResetPasswordRequestSchema,
+  ResourceRole: ResourceRoleSchema,
+  ResourceRoleCreateRequest: ResourceRoleCreateRequestSchema,
+  ResourceRoleRef: ResourceRoleRefSchema,
+  ResourceRoleUpdateRequest: ResourceRoleUpdateRequestSchema,
   Role: RoleSchema,
   RoleCreateRequest: RoleCreateRequestSchema,
   RolePermission: RolePermissionSchema,
+  Rule5070Status: Rule5070StatusSchema,
+  SCurveDataStatus: SCurveDataStatusSchema,
+  SCurveHealthResponse: SCurveHealthResponseSchema,
+  SCurveMetric: SCurveMetricSchema,
+  SCurveStage: SCurveStageSchema,
   Task: TaskSchema,
   TaskActivityEntry: TaskActivityEntrySchema,
   TaskAssignee: TaskAssigneeSchema,
@@ -418,4 +627,8 @@ export const components = { schemas: {
   User: UserSchema,
   UserPermission: UserPermissionSchema,
   UserRole: UserRoleSchema,
+  WorkLog: WorkLogSchema,
+  WorkLogCreateRequest: WorkLogCreateRequestSchema,
+  WorkLogSource: WorkLogSourceSchema,
+  WorkLogUpdateRequest: WorkLogUpdateRequestSchema,
 } } as const;

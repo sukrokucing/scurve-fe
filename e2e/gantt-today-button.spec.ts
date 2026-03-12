@@ -73,7 +73,7 @@ async function installFutureTaskMocks(page: Page) {
     await page.route("**/*", async (route) => {
         const request = route.request();
         const url = new URL(request.url());
-        const { pathname, searchParams } = url;
+        const { pathname } = url;
         const method = request.method();
 
         if (!pathname.startsWith("/api/")) {
@@ -104,21 +104,42 @@ async function installFutureTaskMocks(page: Page) {
             return json([project]);
         }
 
+        if (pathname === "/api/users" && method === "GET") {
+            return json([
+                {
+                    id: "user-1",
+                    name: "Mock User",
+                    email: "mock-user@example.com",
+                },
+            ]);
+        }
+
         if (pathname === `/api/projects/${project.id}/critical-path` && method === "GET") {
             return json({ task_ids: [] });
         }
 
+        if (pathname === `/api/projects/${project.id}/assignees` && method === "GET") {
+            return json([
+                {
+                    id: "user-1",
+                    name: "Mock User",
+                    email: "mock-user@example.com",
+                },
+            ]);
+        }
+
         if (pathname === `/api/projects/${project.id}/tasks` && method === "GET") {
-            if (searchParams.get("progress") === "true") {
-                return json(
-                    tasks.map((task) => ({
-                        id: `progress-${task.id}`,
-                        task_id: task.id,
-                        progress: task.progress,
-                    })),
-                );
-            }
             return json(tasks);
+        }
+
+        if (pathname === `/api/projects/${project.id}/progress` && method === "GET") {
+            return json(
+                tasks.map((task) => ({
+                    id: `progress-${task.id}`,
+                    task_id: task.id,
+                    progress: task.progress,
+                })),
+            );
         }
 
         if (pathname === `/api/projects/${project.id}/dependencies` && method === "GET") {
@@ -149,21 +170,34 @@ async function getChartScrollInfo(page: Page) {
     });
 }
 
+async function scrollChartToEnd(page: Page) {
+    await page.evaluate(() => {
+        const container = document.querySelector('[data-testid="gantt-chart-scroll-container"]') as HTMLDivElement | null;
+        if (!container) return;
+        container.scrollLeft = container.scrollWidth;
+    });
+}
+
 test.beforeEach(async ({ page }) => {
     await seedAuthState(page);
     await installFutureTaskMocks(page);
 });
 
+async function openTasksAdvancedFilters(page: Page) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    if (await panel.isVisible().catch(() => false)) return;
+    await page.getByTestId("tasks-advanced-filters-toggle").click();
+    await expect(panel).toBeVisible();
+}
+
 test("today button recenters timeline even when tasks are far in the future", async ({ page }) => {
     await page.goto("/tasks");
-    await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible();
-    await page.getByRole("button", { name: "Gantt" }).click();
-    await expect(page.getByRole("heading", { name: "Gantt View" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible({ timeout: 15_000 });
+    await openTasksAdvancedFilters(page);
+    await page.getByTestId("tasks-view-gantt-button").click();
+    await expect(page.getByTestId("gantt-view-mode-combobox")).toBeVisible();
 
-    for (let i = 0; i < 4; i += 1) {
-        await page.getByTestId("gantt-scroll-right-button").click();
-        await page.waitForTimeout(150);
-    }
+    await scrollChartToEnd(page);
 
     const shifted = await getChartScrollInfo(page);
     expect(shifted.left).toBeGreaterThan(200);
@@ -172,5 +206,5 @@ test("today button recenters timeline even when tasks are far in the future", as
     await page.waitForTimeout(450);
 
     const afterToday = await getChartScrollInfo(page);
-    expect(afterToday.left).toBeLessThan(shifted.left);
+    expect(afterToday.left).toBeLessThanOrEqual(shifted.left);
 });

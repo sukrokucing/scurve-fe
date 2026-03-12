@@ -1,0 +1,46 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmZGE2NzQ5OS1kYTNhLTRiNDUtODFiMC0zMGU5YTJkMDZhYzQiLCJleHAiOjE3NzMyMDI0NjYsImlhdCI6MTc3MzExNjA2Nn0.o45GX-xrqbrG7fvv--JGC-OELdFZP0BXGnINStOeE2g",
+  "user": {
+    "id": "fda67499-da3a-4b45-81b0-30e9a2d06ac4",
+    "name": "Demo Fullstack Developer",
+    "email": "demo.fullstack.developer@example.com"
+  },
+  "permissions": [
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "project.update",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "task.create",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "task.update",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "progress.create",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "fullstack_developer"
+    }
+  ],
+  "createdAt": "2026-03-10T04:14:26.807Z"
+}

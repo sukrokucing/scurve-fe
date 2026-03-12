@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,19 +8,22 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import {
     Dialog,
     DialogFooter,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import {
     Form,
@@ -34,9 +37,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AppDataTable } from "@/components/ui/app-data-table";
 
+import {
+    useAssignPermissionToRoleMutation,
+    useCreateRoleMutation,
+    useDeleteRoleMutation,
+    usePermissionsQuery,
+    useRolePermissionsQuery,
+    useRolesQuery,
+} from "@/api/queries/rbac";
 
-import { rbacApi, type Role } from "@/api/rbac";
+import type { Role } from "@/api/rbac";
+
+const roleColumnHelper = createColumnHelper<Role>();
 
 // --- Schemas ---
 const roleSchema = z.object({
@@ -55,35 +69,13 @@ type AssignPermValues = z.infer<typeof assignPermSchema>;
 // --- Components ---
 
 const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; open: boolean; onOpenChange: (open: boolean) => void }) => {
-    const queryClient = useQueryClient();
-
     // Fetch role permissions
-    const { data: rolePerms, isLoading: loadingPerms } = useQuery({
-        queryKey: ["role-permissions", role?.id],
-        queryFn: () => role ? rbacApi.getRolePermissions(role.id) : Promise.resolve([]),
-        enabled: !!role && open,
-    });
+    const { data: rolePerms, isLoading: loadingPerms } = useRolePermissionsQuery(role?.id, { enabled: open });
 
     // Fetch all permissions for selection
-    const { data: allPerms } = useQuery({
-        queryKey: ["permissions"],
-        queryFn: rbacApi.listPermissions,
-        enabled: open,
-    });
+    const { data: allPerms } = usePermissionsQuery({ enabled: open });
 
-    const assignMutation = useMutation({
-        mutationFn: (values: AssignPermValues) =>
-            role ? rbacApi.assignPermissionToRole(role.id, { permission_id: values.permissionId }) : Promise.resolve(),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["role-permissions", role?.id] });
-            toast.success("Permission assigned");
-            form.reset();
-        },
-        onError: (err) => {
-            toast.error("Failed to assign permission");
-            console.error(err);
-        }
-    });
+    const assignMutation = useAssignPermissionToRoleMutation(role?.id);
 
     const form = useForm<AssignPermValues>({
         resolver: zodResolver(assignPermSchema),
@@ -112,7 +104,21 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                     {/* Assign Form */}
                     <div className="flex items-end gap-2 p-4 bg-muted/50 rounded-lg">
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit((v) => assignMutation.mutate(v))} className="flex-1 flex gap-2">
+                            <form
+                                onSubmit={form.handleSubmit((values) => {
+                                    assignMutation.mutate(values.permissionId, {
+                                        onSuccess: () => {
+                                            toast.success("Permission assigned");
+                                            form.reset();
+                                        },
+                                        onError: (err) => {
+                                            toast.error("Failed to assign permission");
+                                            console.error(err);
+                                        },
+                                    });
+                                })}
+                                className="flex-1 flex gap-2"
+                            >
                                 <FormField
                                     control={form.control}
                                     name="permissionId"
@@ -169,7 +175,6 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
 };
 
 export const RolesPage = () => {
-    const queryClient = useQueryClient();
     const [createOpen, setCreateOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
@@ -177,37 +182,11 @@ export const RolesPage = () => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     // --- Queries ---
-    const { data: roles, isLoading } = useQuery({
-        queryKey: ["roles"],
-        queryFn: rbacApi.listRoles,
-    });
+    const { data: roles, isLoading } = useRolesQuery();
 
     // --- Mutations ---
-    const createMutation = useMutation({
-        mutationFn: rbacApi.createRole,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["roles"] });
-            setCreateOpen(false);
-            toast.success("Role created successfully");
-            form.reset();
-        },
-        onError: (err) => {
-            toast.error("Failed to create role");
-            console.error(err);
-        },
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: rbacApi.deleteRole,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["roles"] });
-            toast.success("Role deleted");
-        },
-        onError: (err) => {
-            toast.error("Failed to delete role");
-            console.error(err);
-        },
-    });
+    const createMutation = useCreateRoleMutation();
+    const deleteMutation = useDeleteRoleMutation();
 
     // --- Form ---
     const form = useForm<RoleFormValues>({
@@ -219,8 +198,88 @@ export const RolesPage = () => {
     });
 
     const onSubmit = (values: RoleFormValues) => {
-        createMutation.mutate(values);
+        createMutation.mutate(values, {
+            onSuccess: () => {
+                setCreateOpen(false);
+                toast.success("Role created successfully");
+                form.reset();
+            },
+            onError: (err) => {
+                toast.error("Failed to create role");
+                console.error(err);
+            },
+        });
     };
+
+    const columns = useState<ColumnDef<Role, unknown>[]>(() => ([
+        roleColumnHelper.accessor("name", {
+            header: "Name",
+            cell: (info) => (
+                <Button
+                    variant="link"
+                    className="p-0 h-auto font-semibold"
+                    data-testid="roles-row-name-button"
+                    onClick={() => {
+                        setSelectedRole(info.row.original);
+                        setDetailsOpen(true);
+                    }}
+                >
+                    {info.getValue()}
+                </Button>
+            ),
+        }),
+        roleColumnHelper.accessor("description", {
+            header: "Description",
+            cell: (info) => <span className="text-muted-foreground">{info.getValue() || "—"}</span>,
+        }),
+        roleColumnHelper.accessor("created_at", {
+            header: "Created",
+            cell: (info) => (
+                <span className="text-sm text-muted-foreground">
+                    {format(new Date(info.getValue()), "MMM d, yyyy")}
+                </span>
+            ),
+        }),
+        roleColumnHelper.display({
+            id: "actions",
+            header: () => <div className="w-[100px]" />,
+            cell: (info) => {
+                const role = info.row.original;
+                return (
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground"
+                            data-testid="roles-row-settings-button"
+                            aria-label={`Open settings for role ${role.name}`}
+                            title={`Open settings for role ${role.name}`}
+                            onClick={() => {
+                                setSelectedRole(role);
+                                setDetailsOpen(true);
+                            }}
+                        >
+                            <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            data-testid="roles-row-delete-button"
+                            aria-label={`Delete role ${role.name}`}
+                            title={`Delete role ${role.name}`}
+                            onClick={() => {
+                                setRoleToDelete(role);
+                                setDeleteConfirmOpen(true);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                );
+            },
+        }),
+    ]))[0];
 
     if (isLoading) {
         return <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -305,79 +364,18 @@ export const RolesPage = () => {
             </div>
 
             <div className="rounded-md border bg-card">
-                <Table>
-                    <TableHeader>
+                <AppDataTable
+                    data={roles ?? []}
+                    columns={columns}
+                    getRowId={(row) => row.id}
+                    emptyRow={(
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead className="w-[100px]"></TableHead>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                No roles found. Create one to get started.
+                            </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {!roles || roles.length === 0 ? (
-                            <TableRow key="no-roles">
-                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                    No roles found. Create one to get started.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            roles.map((role: Role) => (
-                                <TableRow key={role.id}>
-                                    <TableCell className="font-medium">
-                                        <Button
-                                            variant="link"
-                                            className="p-0 h-auto font-semibold"
-                                            data-testid="roles-row-name-button"
-                                            onClick={() => {
-                                                setSelectedRole(role);
-                                                setDetailsOpen(true);
-                                            }}
-                                        >
-                                            {role.name}
-                                        </Button>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">{role.description || "—"}</TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                        {format(new Date(role.created_at), "MMM d, yyyy")}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-muted-foreground"
-                                                data-testid="roles-row-settings-button"
-                                                aria-label={`Open settings for role ${role.name}`}
-                                                title={`Open settings for role ${role.name}`}
-                                                onClick={() => {
-                                                    setSelectedRole(role);
-                                                    setDetailsOpen(true);
-                                                }}
-                                            >
-                                                <Settings className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-muted-foreground hover:text-destructive"
-                                                data-testid="roles-row-delete-button"
-                                                aria-label={`Delete role ${role.name}`}
-                                                title={`Delete role ${role.name}`}
-                                                onClick={() => {
-                                                    setRoleToDelete(role);
-                                                    setDeleteConfirmOpen(true);
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                    )}
+                />
             </div>
 
             <RoleDetailsDialog
@@ -385,46 +383,60 @@ export const RolesPage = () => {
                 open={detailsOpen}
                 onOpenChange={setDetailsOpen}
             />
-            <Dialog
+            <AlertDialog
                 open={deleteConfirmOpen}
                 onOpenChange={(open) => {
                     if (!open) setRoleToDelete(null);
                     setDeleteConfirmOpen(open);
                 }}
             >
-                <AppDialogContent
-                    title="Delete role"
-                    description={`Delete role "${roleToDelete?.name ?? ""}"? This action cannot be undone.`}
-                >
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                                setDeleteConfirmOpen(false);
-                                setRoleToDelete(null);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={() => {
-                                if (!roleToDelete) return;
-                                deleteMutation.mutate(roleToDelete.id);
-                                setDeleteConfirmOpen(false);
-                                setRoleToDelete(null);
-                            }}
-                            disabled={deleteMutation.isPending || !roleToDelete}
-                            data-testid="roles-delete-confirm-button"
-                        >
-                            {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                        </Button>
-                    </div>
-                    <DialogFooter />
-                </AppDialogContent>
-            </Dialog>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete role</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Delete role "${roleToDelete?.name ?? ""}"? This action cannot be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => {
+                                    setDeleteConfirmOpen(false);
+                                    setRoleToDelete(null);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    if (!roleToDelete) return;
+                                    deleteMutation.mutate(roleToDelete.id, {
+                                        onSuccess: () => {
+                                            toast.success("Role deleted");
+                                        },
+                                        onError: (err) => {
+                                            toast.error("Failed to delete role");
+                                            console.error(err);
+                                        },
+                                    });
+                                    setDeleteConfirmOpen(false);
+                                    setRoleToDelete(null);
+                                }}
+                                disabled={deleteMutation.isPending || !roleToDelete}
+                                data-testid="roles-delete-confirm-button"
+                            >
+                                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

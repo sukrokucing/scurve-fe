@@ -41,21 +41,16 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
     setIsLoading: (isLoading) => set({ isLoading }),
     hasPermission: (name, scope) => {
         const { permissions } = get();
-        // 1. Find permission by name
-        const permission = permissions.find((p) => p.name === name);
-        if (!permission) return false;
+        const namedPermissions = permissions.filter((permission) => permission.name === name);
+        if (namedPermissions.length === 0) return false;
+        if (!scope) return true;
 
-        // 2. If scope is provided, verify it matches
-        if (scope && permission.scope) {
-            const scopeKeys = Object.keys(scope);
-            for (const key of scopeKeys) {
-                if (permission.scope[key] !== scope[key]) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        const scopeEntries = Object.entries(scope);
+        return namedPermissions.some((permission) => {
+            // Global permission without scope matches any scoped check.
+            if (!permission.scope) return true;
+            return scopeEntries.every(([key, value]) => permission.scope?.[key] === value);
+        });
     },
     reset: () => {
         if (typeof window !== "undefined") {

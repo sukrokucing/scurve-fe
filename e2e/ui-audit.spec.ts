@@ -41,7 +41,7 @@ type RuntimeObservation = {
         unlabeledButtonCount: number;
         overflowingTableCount: number;
         truncationRiskCount: number;
-        focusedElementHasVisibleRing: boolean;
+        focusedElementHasVisibleRing: boolean | null;
         searchSurfaceOpened?: boolean;
         searchSurfaceSmallTargetCount?: number;
         searchSurfaceUnlabeledButtonCount?: number;
@@ -70,6 +70,8 @@ const artifactsDir = path.resolve(process.cwd(), "artifacts", "ui-audit");
 const screenshotsDir = path.join(artifactsDir, "screenshots");
 const outputFile = path.join(artifactsDir, "findings.runtime.json");
 const runtimeMode = process.env.UI_AUDIT_MODE ?? "full";
+const auditRunId = process.env.UI_AUDIT_RUN_ID ?? `runtime-${Date.now()}`;
+const strictApiMocking = process.env.UI_AUDIT_STRICT_API_MOCK !== "0";
 
 const SESSION = {
     token: process.env.PLAYWRIGHT_AUTH_TOKEN ?? "ui-audit-token",
@@ -80,6 +82,193 @@ const SESSION = {
     },
     permissions: ["progress.view", "user.manage", "role.manage", "permission.manage"],
 };
+
+const AUDIT_PROJECTS = [
+    {
+        id: "project-alpha",
+        name: "Audit Project Alpha",
+        description: "Audit baseline project for dashboard route validation.",
+        theme_color: "#0ea5a4",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        user_id: SESSION.user.id,
+    },
+    {
+        id: "project-beta",
+        name: "Audit Project Beta",
+        description: "Secondary project for chart scaling checks.",
+        theme_color: "#0284c7",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        user_id: SESSION.user.id,
+    },
+];
+
+const AUDIT_TASKS_BY_PROJECT: Record<string, Array<Record<string, unknown>>> = {
+    "project-alpha": [
+        {
+            id: "task-alpha-1",
+            project_id: "project-alpha",
+            title: "Define requirements",
+            description: "Define scope and acceptance criteria.",
+            status: "in_progress",
+            progress: 58,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            due_date: "2026-03-20T00:00:00Z",
+        },
+    ],
+    "project-beta": [
+        {
+            id: "task-beta-1",
+            project_id: "project-beta",
+            title: "Implement feature",
+            description: "Implement baseline UI integration.",
+            status: "pending",
+            progress: 20,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            due_date: "2026-03-28T00:00:00Z",
+        },
+    ],
+};
+
+const AUDIT_SCOPES = [
+    {
+        permissions: ["task.create", "task.update", "project.read"],
+        project_id: "project-alpha",
+        project_name: "Audit Project Alpha",
+        access_role_id: "role-system-analyst",
+        access_role_name: "System Analyst",
+        resource_roles: [{ id: "resource-system-analyst", name: "system_analyst" }],
+    },
+    {
+        permissions: ["task.create", "project.read"],
+        project_id: "project-beta",
+        project_name: "Audit Project Beta",
+        access_role_id: "role-team-member",
+        access_role_name: "Team Member",
+        resource_roles: [{ id: "resource-backend-engineer", name: "backend_engineer" }],
+    },
+];
+
+const AUDIT_PORTFOLIO_SUMMARY = {
+    data_status: "ok" as const,
+    metric_supported: true,
+    avg_actual_pct: 51,
+    avg_planned_pct: 49,
+    avg_variance_pct: 2,
+    decline_count: 0,
+    lag_count: 0,
+    log_count: 2,
+    maturity_count: 0,
+    metric: "progress" as const,
+    project_count: AUDIT_PROJECTS.length,
+    projects: [
+        {
+            actual_pct: 58,
+            elapsed_time_pct: 54,
+            last_updated_at: "2026-03-10T00:00:00Z",
+            planned_pct: 52,
+            project_id: "project-alpha",
+            project_name: "Audit Project Alpha",
+            rule_50_70_pass: true,
+            rule_50_70_status: "pass",
+            stage: "log",
+            variance_pct: 6,
+        },
+        {
+            actual_pct: 44,
+            elapsed_time_pct: 49,
+            last_updated_at: "2026-03-10T00:00:00Z",
+            planned_pct: 46,
+            project_id: "project-beta",
+            project_name: "Audit Project Beta",
+            rule_50_70_pass: false,
+            rule_50_70_status: "warning",
+            stage: "log",
+            variance_pct: -2,
+        },
+    ],
+};
+
+function makeProjectDashboard(projectId: string, metric: "progress" | "hours" | "cost") {
+    const project = AUDIT_PROJECTS.find((item) => item.id === projectId) ?? AUDIT_PROJECTS[0];
+    const metricSupported = metric === "progress";
+    return {
+        metric,
+        metric_supported: metricSupported,
+        data_status: metricSupported ? "ok" : "unsupported_metric",
+        unit: metric === "hours" ? "hours" : "%",
+        currency: metric === "cost" ? "USD" : null,
+        project,
+        plan: [
+            {
+                id: `${project.id}-plan-1`,
+                project_id: project.id,
+                planned_progress: 25,
+                date: "2026-02-01T00:00:00Z",
+                created_at: "2026-02-01T00:00:00Z",
+                updated_at: "2026-02-01T00:00:00Z",
+            },
+            {
+                id: `${project.id}-plan-2`,
+                project_id: project.id,
+                planned_progress: 52,
+                date: "2026-03-01T00:00:00Z",
+                created_at: "2026-03-01T00:00:00Z",
+                updated_at: "2026-03-01T00:00:00Z",
+            },
+        ],
+        actual: [
+            { date: "2026-02-01", actual: 22 },
+            { date: "2026-03-01", actual: project.id === "project-alpha" ? 58 : 44 },
+        ],
+        metric_plan: metricSupported
+            ? [
+                { date: "2026-02-01", value: 25 },
+                { date: "2026-03-01", value: 52 },
+            ]
+            : [],
+        metric_actual: metricSupported
+            ? [
+                { date: "2026-02-01", value: 22 },
+                { date: "2026-03-01", value: project.id === "project-alpha" ? 58 : 44 },
+            ]
+            : [],
+    };
+}
+
+function makeProjectHealth(metric: "progress" | "hours" | "cost") {
+    if (metric === "hours" || metric === "cost") {
+        return {
+            data_status: "unsupported_metric",
+            actual_pct: null,
+            elapsed_time_pct: null,
+            last_updated_at: "2026-03-10T00:00:00Z",
+            metric,
+            metric_supported: false,
+            planned_pct: null,
+            rule_50_70_pass: null,
+            rule_50_70_status: "unsupported_metric",
+            stage: null,
+            variance_pct: null,
+        };
+    }
+    return {
+        data_status: "ok",
+        actual_pct: 58,
+        elapsed_time_pct: 54,
+        last_updated_at: "2026-03-10T00:00:00Z",
+        metric,
+        metric_supported: true,
+        planned_pct: 52,
+        rule_50_70_pass: true,
+        rule_50_70_status: "pass",
+        stage: "log",
+        variance_pct: 6,
+    };
+}
 
 const findings: RuntimeFinding[] = [];
 const observations: RuntimeObservation[] = [];
@@ -145,11 +334,12 @@ async function installAuditApiMocks(page: Page) {
         }
 
         if (pathname === "/api/projects" && method === "GET") {
-            return json([]);
+            return json(AUDIT_PROJECTS);
         }
 
         if (/^\/api\/projects\/[^/]+\/tasks$/.test(pathname) && method === "GET") {
-            return json([]);
+            const projectId = pathname.split("/")[3] ?? "";
+            return json(AUDIT_TASKS_BY_PROJECT[projectId] ?? []);
         }
 
         if (/^\/api\/projects\/[^/]+\/dependencies$/.test(pathname) && method === "GET") {
@@ -160,8 +350,36 @@ async function installAuditApiMocks(page: Page) {
             return json({ task_ids: [] });
         }
 
+        if (/^\/api\/projects\/[^/]+\/dashboard$/.test(pathname) && method === "GET") {
+            const projectId = pathname.split("/")[3] ?? "";
+            const metricParam = url.searchParams.get("metric");
+            const metric = metricParam === "hours" || metricParam === "cost" ? metricParam : "progress";
+            return json(makeProjectDashboard(projectId, metric));
+        }
+
+        if (/^\/api\/projects\/[^/]+\/s-curve\/health$/.test(pathname) && method === "GET") {
+            const metricParam = url.searchParams.get("metric");
+            const metric = metricParam === "hours" || metricParam === "cost" ? metricParam : "progress";
+            return json(makeProjectHealth(metric));
+        }
+
         if (pathname === "/api/users" && method === "GET") {
             return json([], 200, { "x-total-count": "0" });
+        }
+
+        if (pathname === "/api/users/me/projects" && method === "GET") {
+            return json(AUDIT_SCOPES);
+        }
+
+        if (pathname === "/api/portfolio/s-curve/summary" && method === "GET") {
+            const metricParam = url.searchParams.get("metric");
+            const metric = metricParam === "hours" || metricParam === "cost" ? metricParam : "progress";
+            return json({
+                ...AUDIT_PORTFOLIO_SUMMARY,
+                metric,
+                metric_supported: metric === "progress",
+                data_status: metric === "progress" ? "ok" : "unsupported_metric",
+            });
         }
 
         if (pathname === "/api/rbac/roles" && method === "GET") {
@@ -182,6 +400,18 @@ async function installAuditApiMocks(page: Page) {
 
         if (pathname === "/api/rbac/audit-logs" && method === "GET") {
             return json({ items: [], total: 0, page: 1, per_page: 10 });
+        }
+
+        if (strictApiMocking) {
+            return route.fulfill({
+                status: 501,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    error: "ui-audit-unmocked-endpoint",
+                    method,
+                    pathname,
+                }),
+            });
         }
 
         return json({});
@@ -216,26 +446,41 @@ async function screenshotPathFor(routeLabel: string, theme: UiAuditTheme, viewpo
 }
 
 async function captureFocusState(page: Page) {
-    await page.keyboard.press("Tab");
-    return await page.evaluate(() => {
-        const active = document.activeElement as HTMLElement | null;
-        if (!active || active === document.body || active === document.documentElement) {
+    for (let attempt = 1; attempt <= 8; attempt += 1) {
+        await page.keyboard.press("Tab");
+        const focusState = await page.evaluate(() => {
+            const active = document.activeElement as HTMLElement | null;
+            if (!active || active === document.body || active === document.documentElement) {
+                return {
+                    hasVisibleRing: null,
+                    tagName: active?.tagName ?? null,
+                    className: active?.className ?? "",
+                    reason: "root-focus",
+                };
+            }
+            const style = window.getComputedStyle(active);
+            const outlineVisible = style.outlineStyle !== "none" && style.outlineWidth !== "0px";
+            const ringVisible = style.boxShadow !== "none";
+            const borderVisible = Number.parseFloat(style.borderWidth || "0") > 1 && style.borderStyle !== "none";
             return {
-                hasVisibleRing: false,
-                tagName: active?.tagName ?? null,
-                className: active?.className ?? "",
+                hasVisibleRing: outlineVisible || ringVisible || borderVisible,
+                tagName: active.tagName,
+                className: active.className,
+                reason: "focusable",
             };
+        });
+
+        if (focusState.reason === "focusable") {
+            return focusState;
         }
-        const style = window.getComputedStyle(active);
-        const outlineVisible = style.outlineStyle !== "none" && style.outlineWidth !== "0px";
-        const ringVisible = style.boxShadow !== "none";
-        const borderVisible = Number.parseFloat(style.borderWidth || "0") > 1 && style.borderStyle !== "none";
-        return {
-            hasVisibleRing: outlineVisible || ringVisible || borderVisible,
-            tagName: active.tagName,
-            className: active.className,
-        };
-    });
+    }
+
+    return {
+        hasVisibleRing: null,
+        tagName: null,
+        className: "",
+        reason: "no-focusable",
+    };
 }
 
 async function collectRuntimeMetrics(page: Page, minTargetSize: number) {
@@ -335,7 +580,13 @@ async function collectRuntimeMetrics(page: Page, minTargetSize: number) {
         const text = (document.body.innerText || "").toLowerCase();
         const loadingVisible = /(loading|please wait|fetching)/.test(text);
         const emptyVisible = /(no .*found|no data|empty)/.test(text);
-        const errorVisible = /(error|failed|unable to)/.test(text);
+        const routeErrorPattern = /(failed to load|something went wrong|unable to .*?(?:load|reach)|network error|try again later)/i;
+        const alertTexts = Array.from(document.querySelectorAll<HTMLElement>("[role='alert'], [data-testid*='error']"))
+            .filter(isVisible)
+            .map((element) => (element.innerText || "").toLowerCase())
+            .join(" ");
+        const errorVisible = routeErrorPattern.test(alertTexts)
+            || (routeErrorPattern.test(text) && /(retry|failed to load|something went wrong)/.test(text));
 
         return {
             hasHorizontalOverflow,
@@ -744,7 +995,7 @@ async function auditRoute(page: Page, route: UiAuditRoute, theme: UiAuditTheme, 
         });
     }
 
-    if (!focusState.hasVisibleRing) {
+    if (focusState.hasVisibleRing === false) {
         findings.push({
             id: nextFindingId(),
             source: "runtime",
@@ -1002,6 +1253,27 @@ async function auditRoute(page: Page, route: UiAuditRoute, theme: UiAuditTheme, 
         });
 }
 
+async function gotoWithRetry(page: Page, routePath: string, attempts = 4) {
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+            await page.goto(routePath, { waitUntil: "domcontentloaded" });
+            return;
+        } catch (error) {
+            lastError = error;
+            const message = error instanceof Error ? error.message : String(error);
+            if (!/connection[_ ]refused|ERR_CONNECTION_REFUSED|NS_ERROR_CONNECTION_REFUSED/i.test(message)) {
+                throw error;
+            }
+            if (attempt === attempts) {
+                throw error;
+            }
+            await page.waitForTimeout(1000 * attempt);
+        }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 test.describe.configure({ mode: "serial" });
 
 test("UI audit matrix (authenticated routes)", async ({ page }) => {
@@ -1013,7 +1285,7 @@ test("UI audit matrix (authenticated routes)", async ({ page }) => {
     for (const [viewportName, viewportSize] of Object.entries(UI_AUDIT_CONFIG.viewports) as Array<[UiAuditViewport, { width: number; height: number }]>) {
         await page.setViewportSize(viewportSize);
         for (const route of routes) {
-            await page.goto(route.path, { waitUntil: "domcontentloaded" });
+            await gotoWithRetry(page, route.path);
             await page.waitForLoadState("networkidle").catch(() => undefined);
 
             for (const theme of UI_AUDIT_CONFIG.themes) {
@@ -1029,7 +1301,7 @@ test("UI audit matrix (public auth routes)", async ({ page }) => {
     for (const [viewportName, viewportSize] of Object.entries(UI_AUDIT_CONFIG.viewports) as Array<[UiAuditViewport, { width: number; height: number }]>) {
         await page.setViewportSize(viewportSize);
         for (const route of routes) {
-            await page.goto(route.path, { waitUntil: "domcontentloaded" });
+            await gotoWithRetry(page, route.path);
             await page.waitForLoadState("networkidle").catch(() => undefined);
 
             for (const theme of UI_AUDIT_CONFIG.themes) {
@@ -1048,7 +1320,7 @@ test("UI audit menu-search surfaces (targeted regression)", async ({ page }) => 
 
     for (const [viewportName, viewportSize] of Object.entries(UI_AUDIT_CONFIG.viewports) as Array<[UiAuditViewport, { width: number; height: number }]>) {
         await page.setViewportSize(viewportSize);
-        await page.goto(route.path, { waitUntil: "domcontentloaded" });
+        await gotoWithRetry(page, route.path);
         await page.waitForLoadState("networkidle").catch(() => undefined);
 
         for (const theme of UI_AUDIT_CONFIG.themes) {
@@ -1076,6 +1348,7 @@ test.afterAll(async () => {
     await ensureDir(artifactsDir);
     const payload = {
         generatedAt: new Date().toISOString(),
+        runId: auditRunId,
         source: "runtime",
         mode: runtimeMode,
         screenshotCount: screenshotCounter,

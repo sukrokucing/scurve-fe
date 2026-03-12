@@ -35,6 +35,7 @@ export function MenuSearchPanel({
     showHint = true,
 }: MenuSearchPanelProps) {
     const [queryInput, setQueryInput] = useState("");
+    const commandRootRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -60,6 +61,10 @@ export function MenuSearchPanel({
         const settings = results.filter((entry) => entry.section === "settings");
         return { main, settings };
     }, [results]);
+    const resultById = useMemo(
+        () => new Map(results.map((entry) => [entry.id, entry])),
+        [results],
+    );
 
     const navigateToEntry = useCallback((entry: MenuEntry) => {
         navigate(entry.to);
@@ -73,12 +78,37 @@ export function MenuSearchPanel({
         navigateToEntry(firstResult);
     }, [navigateToEntry, queryInput]);
 
+    const navigateToHighlightedResult = useCallback(() => {
+        const root = commandRootRef.current;
+        if (!root) return false;
+
+        const selectedItem = root.querySelector<HTMLElement>(
+            "[cmdk-item][data-selected='true'], [cmdk-item][aria-selected='true']",
+        );
+        const selectedId = selectedItem?.dataset.menuEntryId;
+        if (!selectedId) return false;
+
+        const entry = resultById.get(selectedId);
+        if (!entry) return false;
+        const immediateResults = filterAndRankMenu(queryInput, SEARCH_MENU_ENTRIES);
+        const isSelectionStillRelevant = immediateResults.some((result) => result.id === selectedId);
+        if (!isSelectionStillRelevant) return false;
+        navigateToEntry(entry);
+        return true;
+    }, [navigateToEntry, queryInput, resultById]);
+
     return (
         <div className={cn("space-y-2", className)}>
-            <Command shouldFilter={false} className="rounded-md border bg-background">
+            <Command
+                ref={commandRootRef}
+                shouldFilter={false}
+                className="rounded-lg bg-background shadow-sm [&_[cmdk-input-wrapper]]:border-b-0"
+            >
                 <CommandInput
                     ref={inputRef}
                     aria-label="Search menu"
+                    wrapperClassName="border-0"
+                    className="focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0"
                     value={queryInput}
                     onValueChange={setQueryInput}
                     placeholder="Search menu..."
@@ -87,11 +117,13 @@ export function MenuSearchPanel({
                         if (event.nativeEvent.isComposing) return;
                         if (event.key !== "Enter") return;
                         event.preventDefault();
-                        navigateToFirstResult();
+                        if (!navigateToHighlightedResult()) {
+                            navigateToFirstResult();
+                        }
                     }}
                 />
 
-                <CommandList className="max-h-[min(58vh,420px)] md:max-h-[280px]">
+                <CommandList className="max-h-[min(58vh,420px)] pr-1 [scrollbar-gutter:stable] md:max-h-[280px]">
                     {results.length === 0 ? (
                         <CommandEmpty data-testid={buildTestId("menu-search-empty", testIdPrefix)}>
                             No menu found
@@ -106,6 +138,7 @@ export function MenuSearchPanel({
                                     value={entry.label}
                                     onSelect={() => navigateToEntry(entry)}
                                     data-testid={buildTestId("menu-search-result-item", testIdPrefix)}
+                                    data-menu-entry-id={entry.id}
                                 >
                                     <entry.icon className="h-4 w-4 text-muted-foreground" />
                                     <span className="flex-1">{entry.label}</span>
@@ -123,6 +156,7 @@ export function MenuSearchPanel({
                                     value={entry.label}
                                     onSelect={() => navigateToEntry(entry)}
                                     data-testid={buildTestId("menu-search-result-item", testIdPrefix)}
+                                    data-menu-entry-id={entry.id}
                                 >
                                     <entry.icon className="h-4 w-4 text-muted-foreground" />
                                     <span className="flex-1">{entry.label}</span>

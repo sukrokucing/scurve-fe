@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils"
 
 const COMMAND_ROOT_CLASS =
     "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground"
-const COMMAND_INPUT_WRAPPER_CLASS = "flex items-center border-b px-3"
+const COMMAND_INPUT_WRAPPER_CLASS = "flex items-center border-b border-border/70 px-3"
 const COMMAND_INPUT_CLASS =
-    "flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+    "flex h-12 w-full border-0 bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
 const COMMAND_LIST_CLASS = "max-h-[300px] overflow-y-auto overflow-x-hidden"
 const COMMAND_GROUP_CLASS =
     "overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
 const COMMAND_ITEM_CLASS =
-    "relative flex min-h-12 cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+    "relative flex min-h-12 cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2 data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
 
 const Command = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive>,
@@ -27,11 +27,15 @@ const Command = React.forwardRef<
 ))
 Command.displayName = CommandPrimitive.displayName
 
+type CommandInputProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & {
+    wrapperClassName?: string
+}
+
 const CommandInput = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Input>,
-    React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-    <div className={COMMAND_INPUT_WRAPPER_CLASS} cmdk-input-wrapper="">
+    CommandInputProps
+>(({ className, wrapperClassName, ...props }, ref) => (
+    <div className={cn(COMMAND_INPUT_WRAPPER_CLASS, wrapperClassName)} cmdk-input-wrapper="">
         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
         <CommandPrimitive.Input
             ref={ref}

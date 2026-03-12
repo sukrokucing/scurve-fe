@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
-import { useProjectsQuery } from "./projects";
+import { projectsKeys, useProjectsQuery } from "./projects";
 
 import { openapi } from "@/api/openapiClient";
 import type { Task } from "@/types/domain";
@@ -10,6 +10,9 @@ import type {
     DependencyCreateRequest,
     TaskListQueryParams,
     PaginatedTasksResult,
+    ApiWorkLog,
+    ApiWorkLogCreateRequest,
+    ApiWorkLogUpdateRequest,
 } from "@/api/openapiClient";
 
 type Progress = components["schemas"]["Progress"];
@@ -20,9 +23,13 @@ const TASKS_QUERY_KEY = ["tasks"] as const;
 
 export const tasksKeys = {
     all: TASKS_QUERY_KEY,
-    byProject: (projectId: string, progress?: boolean) => [...TASKS_QUERY_KEY, "project", projectId, progress ? "progress" : "tasks"] as const,
+    projectScope: (projectId: string) => [...TASKS_QUERY_KEY, "project", projectId] as const,
+    byProject: (projectId: string, progress?: boolean) =>
+        [...tasksKeys.projectScope(projectId), progress ? "progress" : "tasks"] as const,
     byProjectList: (projectId: string, params: TaskListQueryParams) =>
         [...tasksKeys.byProject(projectId), "list", params] as const,
+    dependencies: (projectId: string) => [...tasksKeys.projectScope(projectId), "dependencies"] as const,
+    workLogs: (projectId: string, taskId: string) => [...TASKS_QUERY_KEY, "project", projectId, "task", taskId, "work-logs"] as const,
 };
 
 export function useTasksByProject(projectId: string, progress?: boolean, options?: { enabled?: boolean }) {
@@ -103,6 +110,12 @@ export function useTaskMutation(projectId?: string) {
                 ...(payload.progress !== undefined ? { progress: payload.progress } : {}),
                 status: mapStatusToApi(payload.status),
             };
+            if (Object.prototype.hasOwnProperty.call(payload, "description")) {
+                const normalizedDescription = payload.description?.trim();
+                if (normalizedDescription) {
+                    body.description = normalizedDescription;
+                }
+            }
 
             const created = await openapi.createTaskForProject(projectId, body);
             return created;
@@ -161,6 +174,12 @@ export function useUpdateTask() {
 
             const body: Partial<TaskUpdateRequest> = {};
             if (args.payload.name !== undefined) body.title = args.payload.name;
+            if (Object.prototype.hasOwnProperty.call(args.payload, "description")) {
+                const normalizedDescription = args.payload.description?.trim();
+                if (normalizedDescription) {
+                    body.description = normalizedDescription;
+                }
+            }
             // If dueDate is explicitly provided as empty string, treat as null (clear); if it's undefined, omit the field
             if (Object.prototype.hasOwnProperty.call(args.payload, "dueDate")) {
                 if (args.payload.dueDate === "") body.due_date = null;
@@ -176,9 +195,6 @@ export function useUpdateTask() {
             }
             if (args.payload.progress !== undefined) {
                 body.progress = args.payload.progress;
-            }
-            if (args.payload.dueDate !== undefined) {
-                body.due_date = args.payload.dueDate as string | null | undefined;
             }
             if (Object.prototype.hasOwnProperty.call(args.payload, "assigneeId")) {
                 body.assignee = args.payload.assigneeId === ""
@@ -273,7 +289,7 @@ export function useDeleteTask(projectId?: string) {
 
 export function useDependencies(projectId: string) {
     return useQuery({
-        queryKey: [...tasksKeys.byProject(projectId), "dependencies"],
+        queryKey: tasksKeys.dependencies(projectId),
         queryFn: async () => {
             if (!projectId) return [];
             return openapi.getDependencies(projectId);
@@ -291,7 +307,7 @@ export function useDependencyMutation(projectId?: string) {
         },
         onSuccess: () => {
             if (projectId) {
-                queryClient.invalidateQueries({ queryKey: [...tasksKeys.byProject(projectId), "dependencies"] });
+                queryClient.invalidateQueries({ queryKey: tasksKeys.dependencies(projectId) });
             }
             toast.success("Created dependency");
         },
@@ -311,7 +327,7 @@ export function useDeleteDependency(projectId?: string) {
         },
         onSuccess: () => {
             if (projectId) {
-                queryClient.invalidateQueries({ queryKey: [...tasksKeys.byProject(projectId), "dependencies"] });
+                queryClient.invalidateQueries({ queryKey: tasksKeys.dependencies(projectId) });
             }
             toast.success("Deleted dependency");
         },
@@ -322,8 +338,13 @@ export function useDeleteDependency(projectId?: string) {
     });
 }
 
-export function useBatchUpdateTasks(projectId?: string) {
+export function useBatchUpdateTasks(
+    projectId?: string,
+    options?: { notify?: boolean; optimistic?: boolean },
+) {
     const queryClient = useQueryClient();
+    const notify = options?.notify ?? true;
+    const optimistic = options?.optimistic ?? true;
     type BatchUpdateContext = {
         previousTasks?: Task[];
     };
@@ -334,7 +355,7 @@ export function useBatchUpdateTasks(projectId?: string) {
             return openapi.batchUpdateTasks(projectId, payload);
         },
         onMutate: async (payload): Promise<BatchUpdateContext> => {
-            if (!projectId) return {};
+            if (!projectId || !optimistic) return {};
 
             await queryClient.cancelQueries({ queryKey: tasksKeys.byProject(projectId) });
             const previousTasks = queryClient.getQueryData<Task[]>(tasksKeys.byProject(projectId));
@@ -368,7 +389,9 @@ export function useBatchUpdateTasks(projectId?: string) {
             if (projectId) {
                 queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId) });
             }
-            toast.success("Updated tasks");
+            if (notify) {
+                toast.success("Updated tasks");
+            }
         },
         onError: (err: unknown, _payload, context) => {
             if (projectId && context?.previousTasks) {
@@ -376,7 +399,111 @@ export function useBatchUpdateTasks(projectId?: string) {
             }
 
             const message = err instanceof Error ? err.message : String(err);
-            toast.error(`Failed to batch update tasks: ${message}`);
+            if (notify) {
+                toast.error(`Failed to batch update tasks: ${message}`);
+            }
+        },
+    });
+}
+
+export function useBatchDeleteTasks(projectId?: string, options?: { notify?: boolean }) {
+    const queryClient = useQueryClient();
+    const notify = options?.notify ?? true;
+
+    return useMutation({
+        mutationFn: async (taskIds: string[]) => {
+            if (!projectId) throw new Error("projectId is required for batch delete");
+            return openapi.batchDeleteTasks(projectId, taskIds);
+        },
+        onSuccess: () => {
+            if (projectId) {
+                queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId), exact: false });
+            }
+            if (notify) {
+                toast.success("Deleted selected tasks");
+            }
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            if (notify) {
+                toast.error(`Failed to delete selected tasks: ${message}`);
+            }
+        },
+    });
+}
+
+export function useTaskWorkLogs(projectId?: string, taskId?: string, options?: { enabled?: boolean }) {
+    return useQuery<ApiWorkLog[]>({
+        queryKey: tasksKeys.workLogs(projectId ?? "", taskId ?? ""),
+        queryFn: async () => {
+            if (!projectId || !taskId) return [];
+            return openapi.listTaskWorkLogs(projectId, taskId);
+        },
+        enabled: Boolean(projectId && taskId) && (options?.enabled ?? true),
+    });
+}
+
+function invalidateTaskWorkLogRelatedQueries(queryClient: ReturnType<typeof useQueryClient>, projectId?: string, taskId?: string) {
+    if (!projectId) return;
+    if (taskId) {
+        queryClient.invalidateQueries({ queryKey: tasksKeys.workLogs(projectId, taskId) });
+    }
+    queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId), exact: false });
+    // Dashboard and S-curve metrics can depend on work logs for hours/cost.
+    queryClient.invalidateQueries({ queryKey: projectsKeys.detail(projectId), exact: false });
+    queryClient.invalidateQueries({ queryKey: projectsKeys.all, exact: false });
+}
+
+export function useCreateTaskWorkLog(projectId?: string, taskId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (payload: ApiWorkLogCreateRequest) => {
+            if (!projectId || !taskId) throw new Error("projectId and taskId are required to create a work log");
+            return openapi.createTaskWorkLog(projectId, taskId, payload);
+        },
+        onSuccess: () => {
+            invalidateTaskWorkLogRelatedQueries(queryClient, projectId, taskId);
+            toast.success("Work log added");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to add work log: ${message}`);
+        },
+    });
+}
+
+export function useUpdateTaskWorkLog(projectId?: string, taskId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (args: { id: string; payload: ApiWorkLogUpdateRequest }) => {
+            if (!projectId || !taskId) throw new Error("projectId and taskId are required to update a work log");
+            return openapi.updateTaskWorkLog(projectId, taskId, args.id, args.payload);
+        },
+        onSuccess: () => {
+            invalidateTaskWorkLogRelatedQueries(queryClient, projectId, taskId);
+            toast.success("Work log updated");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update work log: ${message}`);
+        },
+    });
+}
+
+export function useDeleteTaskWorkLog(projectId?: string, taskId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            if (!projectId || !taskId) throw new Error("projectId and taskId are required to delete a work log");
+            await openapi.deleteTaskWorkLog(projectId, taskId, id);
+        },
+        onSuccess: () => {
+            invalidateTaskWorkLogRelatedQueries(queryClient, projectId, taskId);
+            toast.success("Work log deleted");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to delete work log: ${message}`);
         },
     });
 }

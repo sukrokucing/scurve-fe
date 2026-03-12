@@ -21,6 +21,8 @@ variables:
   PROJECT_NAME: "Flow Project CRUD ${RUN_SUFFIX}"
   PROJECT_DESCRIPTION_CREATE: "Created by capability-based business_flow.yaml (${RUN_SUFFIX})"
   PROJECT_DESCRIPTION_UPDATE: "Updated by capability-based business_flow.yaml (${RUN_SUFFIX})"
+  PROJECT_RATE_OVERRIDE: "123.45"
+  PROJECT_RATE_CURRENCY: "IDR"
   TASK_TITLE: "Flow Task CRUD ${RUN_SUFFIX}"
   TASK_TITLE_UPDATED: "Flow Task CRUD Updated ${RUN_SUFFIX}"
   ROLE_NAME: "flow_role_crud_${RUN_SUFFIX}"
@@ -64,6 +66,7 @@ action_library:
       by: role
       role: heading
       name: Dashboard
+    timeout_ms: 15000
     description: Dashboard heading is visible
 
   # -------- Dashboard --------
@@ -111,6 +114,14 @@ action_library:
       role: dialog
       name: Create project
     description: Create project dialog is visible
+  expect_project_create_dialog_closed:
+    kind: expect_hidden
+    locator:
+      by: role
+      role: dialog
+      name: Create project
+    timeout_ms: 20000
+    description: Create project dialog is closed after successful submit
   fill_project_name:
     kind: fill
     locator:
@@ -125,6 +136,13 @@ action_library:
       testid: projects-create-description-input
     value_template: "${PROJECT_DESCRIPTION_CREATE}"
     description: Fill project description
+  filter_projects_by_created_name:
+    kind: fill
+    locator:
+      by: testid
+      testid: projects-search-input
+    value_template: "${PROJECT_NAME}"
+    description: Filter projects by created project name
   submit_project_create:
     kind: click
     locator:
@@ -144,6 +162,98 @@ action_library:
       by: css
       selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-dashboard-link"]'
     description: Open first project dashboard
+  open_first_project_settings:
+    kind: click
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-settings-link"]'
+    description: Open first project settings
+  expect_project_settings_page:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: project-settings-page
+    description: Project settings page is visible
+  expect_project_settings_members_section:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: project-settings-members-section
+    description: Project settings members section is visible
+  open_project_settings_resource_rates_tab:
+    kind: click
+    locator:
+      by: testid
+      testid: project-settings-tab-resource-rates
+    description: Open resource rates tab
+  expect_project_settings_resource_rates_section:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: project-settings-resource-rates-section
+    description: Project settings resource rates section is visible
+  fill_project_settings_rate_hourly:
+    kind: fill
+    locator:
+      by: testid
+      testid: project-settings-rate-hourly-input
+    value_template: "${PROJECT_RATE_OVERRIDE}"
+    description: Fill project resource rate override hourly value
+  open_project_settings_rate_currency_combobox:
+    kind: click
+    locator:
+      by: testid
+      testid: project-settings-rate-currency-combobox
+    description: Open project settings rate currency combobox
+  select_project_settings_rate_currency:
+    kind: click_if_visible
+    locator:
+      by: css
+      selector: '[cmdk-item]:has-text("${PROJECT_RATE_CURRENCY}")'
+      first: true
+    timeout_ms: 1200
+    description: Select configured project rate currency when available
+  select_first_visible_combobox_option:
+    kind: click_if_visible
+    locator:
+      by: css
+      selector: "[cmdk-item]:visible"
+      first: true
+    timeout_ms: 1200
+    description: Select first visible combobox option as fallback
+  submit_project_settings_rate_save:
+    kind: click
+    locator:
+      by: testid
+      testid: project-settings-rate-save-button
+    description: Save project resource rate override
+  expect_project_settings_rate_override_row:
+    kind: expect_visible
+    locator:
+      by: css
+      selector: '[data-testid="project-settings-rate-row"]:has-text("Override")'
+      first: true
+    timeout_ms: 15000
+    description: Project resource rate override row is visible
+  reset_project_settings_rate_override:
+    kind: click
+    locator:
+      by: css
+      selector: '[data-testid="project-settings-rate-row"]:has-text("Override") [data-testid="project-settings-rate-reset-button"]'
+      first: true
+    description: Reset first project resource rate override
+  open_project_settings_general_tab:
+    kind: click
+    locator:
+      by: testid
+      testid: project-settings-tab-general
+    description: Open general tab
+  expect_project_settings_general_section:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: project-settings-general-section
+    description: Project settings general section is visible
   expect_project_dashboard_curve:
     kind: expect_visible
     locator:
@@ -155,11 +265,26 @@ action_library:
     url: /projects
     description: Return to projects page before update
   click_first_project_edit:
-    kind: click
+    kind: click_if_visible
     locator:
       by: css
       selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-edit-button"]'
+    timeout_ms: 1200
     description: Open first project edit dialog
+  open_first_project_actions_menu:
+    kind: click_if_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-actions-toggle"]'
+    timeout_ms: 1200
+    description: Open compact row actions menu when visible (mobile/tablet)
+  click_first_project_edit_compact:
+    kind: click_if_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-compact-edit-button"]'
+    timeout_ms: 1200
+    description: Open first project edit dialog via compact actions menu
   expect_project_edit_dialog:
     kind: expect_visible
     locator:
@@ -181,11 +306,19 @@ action_library:
       testid: projects-edit-save-button
     description: Save project update
   click_first_project_delete:
-    kind: click
+    kind: click_if_visible
     locator:
       by: css
       selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-delete-button"]'
+    timeout_ms: 1200
     description: Open first project delete confirmation
+  click_first_project_delete_compact:
+    kind: click_if_visible
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}") [data-testid="projects-row-compact-delete-button"]'
+    timeout_ms: 1200
+    description: Open first project delete confirmation via compact actions menu
   expect_project_delete_dialog:
     kind: expect_visible
     locator:
@@ -253,6 +386,10 @@ action_library:
       testid: tasks-search-input
     value_template: "${TASK_TITLE_UPDATED}"
     description: Filter tasks list by updated task title
+  wait_for_tasks_filter_settle:
+    kind: wait
+    ms: 700
+    description: Wait for tasks list filtering and virtualization to settle
   expect_created_task_row:
     kind: expect_visible
     locator:
@@ -265,6 +402,15 @@ action_library:
       by: testid
       testid: tasks-view-board-button
     description: Switch to board view
+  open_tasks_advanced_filters:
+    kind: ensure_visible
+    locator:
+      by: testid
+      testid: tasks-advanced-filters-panel
+    open_locator:
+      by: testid
+      testid: tasks-advanced-filters-toggle
+    description: Open tasks advanced controls panel
   switch_task_gantt_view:
     kind: click
     locator:
@@ -283,6 +429,15 @@ action_library:
       by: testid
       testid: gantt-today-button
     description: Gantt today button is visible
+  open_gantt_advanced_panel:
+    kind: ensure_visible
+    locator:
+      by: testid
+      testid: gantt-advanced-panel
+    open_locator:
+      by: testid
+      testid: gantt-advanced-toggle
+    description: Open gantt advanced panel
   click_gantt_scroll_left:
     kind: click
     locator:
@@ -336,10 +491,11 @@ action_library:
     value_template: "${TASK_TITLE_UPDATED}"
     description: Update task title
   submit_task_save:
-    kind: click
+    kind: press
     locator:
       by: testid
-      testid: tasks-edit-save-button
+      testid: tasks-edit-title-input
+    key: Enter
     description: Save task update
   click_first_task_delete:
     kind: click
@@ -348,6 +504,14 @@ action_library:
       testid: tasks-row-delete-button
       first: true
     description: Open first task delete confirmation
+  expect_first_task_delete_button:
+    kind: expect_visible
+    locator:
+      by: testid
+      testid: tasks-row-delete-button
+      first: true
+    timeout_ms: 10000
+    description: First task delete action is visible
   expect_task_delete_dialog:
     kind: expect_visible
     locator:
@@ -412,6 +576,7 @@ action_library:
     locator:
       by: css
       selector: 'tbody tr:has-text("${ROLE_NAME}")'
+    timeout_ms: 15000
     description: Created role row is visible
   open_super_admin_role_detail:
     kind: click
@@ -574,7 +739,10 @@ flows:
       - use: fill_project_name
       - use: fill_project_description
       - use: submit_project_create
+      - use: expect_project_create_dialog_closed
+      - use: goto_projects
       - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
       - use: expect_created_project_row
 
   - id: project_read_dashboard
@@ -590,8 +758,57 @@ flows:
     steps:
       - use: goto_projects
       - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
       - use: open_first_project_dashboard
       - use: expect_project_dashboard_curve
+
+  - id: project_settings_read
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: read_project_settings_tabs
+    actor: app_user
+    crud:
+      - read
+    risk_level: medium
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: goto_projects
+      - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
+      - use: open_first_project_settings
+      - use: expect_project_settings_page
+      - use: expect_project_settings_members_section
+      - use: open_project_settings_resource_rates_tab
+      - use: expect_project_settings_resource_rates_section
+      - use: open_project_settings_general_tab
+      - use: expect_project_settings_general_section
+
+  - id: project_settings_rate_override
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: update_project_settings_resource_rate_override
+    actor: app_user
+    crud:
+      - update
+    risk_level: medium
+    preconditions:
+      - at_least_one_project_exists
+    steps:
+      - use: goto_projects
+      - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
+      - use: open_first_project_settings
+      - use: expect_project_settings_page
+      - use: open_project_settings_resource_rates_tab
+      - use: expect_project_settings_resource_rates_section
+      - use: fill_project_settings_rate_hourly
+      - use: open_project_settings_rate_currency_combobox
+      - use: select_project_settings_rate_currency
+      - use: select_first_visible_combobox_option
+      - use: submit_project_settings_rate_save
+      - use: expect_project_settings_rate_override_row
+      - use: reset_project_settings_rate_override
 
   - id: project_update
     module: project_management
@@ -606,7 +823,10 @@ flows:
     steps:
       - use: open_first_project_edit_dialog
       - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
+      - use: open_first_project_actions_menu
       - use: click_first_project_edit
+      - use: click_first_project_edit_compact
       - use: expect_project_edit_dialog
       - use: update_project_description
       - use: submit_project_save
@@ -624,7 +844,10 @@ flows:
     steps:
       - use: goto_projects
       - use: retry_projects_if_backend_failed
+      - use: filter_projects_by_created_name
+      - use: open_first_project_actions_menu
       - use: click_first_project_delete
+      - use: click_first_project_delete_compact
       - use: expect_project_delete_dialog
       - use: confirm_project_delete
 
@@ -661,15 +884,19 @@ flows:
       - tasks_page_accessible
     steps:
       - use: goto_tasks
+      - use: open_tasks_advanced_filters
       - use: switch_task_board_view
+      - use: open_tasks_advanced_filters
       - use: switch_task_gantt_view
       - use: expect_gantt_view_mode_combobox
       - use: expect_gantt_today_button
+      - use: open_gantt_advanced_panel
       - use: click_gantt_scroll_left
       - use: click_gantt_scroll_right
       - use: click_gantt_toggle_table
       - use: click_gantt_toggle_table
       - use: expect_gantt_dependency_add_button
+      - use: open_tasks_advanced_filters
       - use: switch_task_list_view
 
   - id: task_update
@@ -703,6 +930,8 @@ flows:
     steps:
       - use: goto_tasks
       - use: filter_tasks_by_updated_title
+      - use: wait_for_tasks_filter_settle
+      - use: expect_first_task_delete_button
       - use: click_first_task_delete
       - use: expect_task_delete_dialog
       - use: confirm_task_delete

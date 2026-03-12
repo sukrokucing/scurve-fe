@@ -30,6 +30,27 @@ Use `business_flow.yaml` as the single source to generate Playwright scenario te
 2. Run generated test with `.env` credentials:
    - `npm run test:e2e:scenario`
 
+## Responsive Locators and Fallback Pattern
+
+`business_flow.yaml` now uses a mobile-safe fallback pattern for action-heavy rows:
+
+- Primary desktop locator step uses `kind: click_if_visible` for direct row buttons.
+- Secondary mobile/tablet step opens compact actions (`projects-row-actions-toggle`) and clicks compact items.
+- Both steps can exist in sequence; non-visible locators are safely skipped by the generator.
+
+This keeps one YAML flow working across desktop and mobile-responsive UIs without duplicating the full flow definition.
+
+## Current Projects Coverage
+
+Projects module generated flows now include:
+
+1. `project_create`
+2. `project_read_dashboard`
+3. `project_settings_read` (members/resource-rates/general tab visibility)
+4. `project_settings_rate_override` (resource-rate override save + reset)
+5. `project_update` (desktop + compact action fallback)
+6. `project_delete` (desktop + compact action fallback)
+
 ## Env variables
 
 Credential fallback priority in current config:

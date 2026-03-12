@@ -1,10 +1,17 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEventHandler } from "react";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { addDays, format, isSameDay } from "date-fns";
 
-import { useProjectsQuery } from "@/api/queries/projects";
 import {
+    useMyProjectScopesQuery,
+    useProjectAssigneesQuery,
+    useProjectResourceRoleRatesQuery,
+    useProjectsQuery,
+    useResourceRolesQuery,
+} from "@/api/queries/projects";
+import {
+    useBatchDeleteTasks,
     useTasksByProject,
     useTasksByProjectList,
     useTaskMutation,
@@ -14,9 +21,13 @@ import {
     useDependencies,
     useDependencyMutation,
     useDeleteDependency,
+    useTaskWorkLogs,
+    useCreateTaskWorkLog,
+    useUpdateTaskWorkLog,
+    useDeleteTaskWorkLog,
 } from "@/api/queries/tasks";
-import { usersApi } from "@/api/users";
-import { openapi } from "@/api/openapiClient";
+import { useUsersLookupQuery } from "@/api/queries/users";
+import type { ApiWorkLog } from "@/api/openapiClient";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
 import type { Task, TaskStatus } from "@/types/domain";
@@ -27,14 +38,27 @@ type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useNetworkStore } from "@/store/networkStore";
-import { Dialog, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
+import { AppDataTable } from "@/components/ui/app-data-table";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     Table,
     TableBody,
@@ -53,6 +77,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
+import { cn } from "@/lib/utils";
 import {
     abandonTimeToTaskSession,
     clearTimeToTaskRecords,
@@ -74,6 +99,34 @@ const KANBAN_COLUMNS = [
 const BASE_DURATION_DAYS = [1, 2, 3, 5, 7, 10, 14, 21, 30, 60, 90] as const;
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_PROGRESS: Progress[] = [];
+const taskListColumnHelper = createColumnHelper<Task>();
+const workLogColumnHelper = createColumnHelper<ApiWorkLog>();
+
+type TaskSelectionCheckboxProps = {
+    checked: boolean;
+    label: string;
+    testId: string;
+    onToggle: (nextChecked: boolean) => void;
+    onClick?: MouseEventHandler<HTMLElement>;
+};
+
+function TaskSelectionCheckbox({ checked, label, testId, onToggle, onClick }: TaskSelectionCheckboxProps) {
+    return (
+        <Checkbox
+            aria-label={label}
+            checked={checked}
+            data-testid={testId}
+            onCheckedChange={(nextChecked) => {
+                onToggle(nextChecked === true);
+            }}
+            onClick={onClick}
+            className={cn(
+                "h-7 w-7 rounded-md border border-border/70 bg-background/60 text-primary shadow-none hover:border-primary/40 hover:bg-accent/35",
+                checked ? "border-primary/55 bg-accent/55" : "",
+            )}
+        />
+    );
+}
 
 function buildDurationOptions(currentPlan?: number | null) {
     const values = new Set<number>(BASE_DURATION_DAYS);
@@ -107,6 +160,32 @@ function formatDateForInput(isoDate: string | null | undefined): string {
     }
 }
 
+function formatDateForWorkLogInput(value?: string | null): string {
+    if (!value) return format(new Date(), "yyyy-MM-dd");
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return format(new Date(), "yyyy-MM-dd");
+    return format(parsed, "yyyy-MM-dd");
+}
+
+function formatCurrencyAmount(amount: number, currency = "USD"): string {
+    try {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency,
+            maximumFractionDigits: 2,
+        }).format(amount);
+    } catch {
+        return `${currency} ${amount.toFixed(2)}`;
+    }
+}
+
+function formatWorkLogDateLabel(value?: string | null): string {
+    if (!value) return "—";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return format(parsed, "MMM d, yyyy");
+}
+
 
 
 function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
@@ -121,21 +200,6 @@ function getStatusVariant(status: string): "success" | "info" | "error" | "secon
             return "success";
         default:
             return "secondary";
-    }
-}
-
-function getStatusLabel(status: TaskStatus): string {
-    switch (status) {
-        case "todo":
-            return "To Do";
-        case "in_progress":
-            return "In Progress";
-        case "blocked":
-            return "Blocked";
-        case "done":
-            return "Done";
-        default:
-            return status;
     }
 }
 
@@ -180,9 +244,14 @@ function mapTaskStatusToApi(status: TaskStatus): "pending" | "in_progress" | "bl
 // Types
 type TaskFormMode = 'today' | 'plan' | 'range';
 type KanbanTaskItem = (Task & { column: TaskStatus }) & Record<string, unknown>;
+type ResourceRoleOption = {
+    value: string;
+    label: string;
+    ratePerHour: number;
+    currency: string;
+};
 
 export function TasksPage() {
-    const queryClient = useQueryClient();
     const currentUserId = useAuthStore((state) => state.user?.id);
     const { data: projects } = useProjectsQuery();
     const [selectedProject, setSelectedProject] = useState<string>("");
@@ -273,20 +342,56 @@ export function TasksPage() {
 
     const { data: dependenciesData } = useDependencies(selectedProject ?? "");
 
-    const allTasks = (allTasksData as Task[] | undefined) ?? EMPTY_TASKS;
-    const listTasks = listTasksData?.tasks ?? EMPTY_TASKS;
+    const allTasksRaw = allTasksData as Task[] | undefined;
+    const allTasks = Array.isArray(allTasksRaw) ? allTasksRaw : EMPTY_TASKS;
+    const listTasksRaw = listTasksData?.tasks;
+    const listTasks = Array.isArray(listTasksRaw) ? listTasksRaw : EMPTY_TASKS;
     const listTotalCount = listTasksData?.total ?? listTasks.length;
     const tasks = view === "list" ? listTasks : allTasks;
-    const progress = (progressData as Progress[] | undefined) ?? EMPTY_PROGRESS;
+    const progressRaw = progressData as Progress[] | undefined;
+    const progress = Array.isArray(progressRaw) ? progressRaw : EMPTY_PROGRESS;
+    const dependencies = Array.isArray(dependenciesData) ? dependenciesData : [];
     const isLoading = (view === "list" ? isLoadingListTasks : isLoadingAllTasks) || (view === "gantt" && isLoadingProgress);
-    const { data: usersLookup } = useQuery({
-        queryKey: ["users", "lookup"],
-        queryFn: () => usersApi.listUsers({ page: 1, per_page: 500 }),
-        staleTime: 5 * 60 * 1000,
+    const { data: projectAssignees = [] } = useProjectAssigneesQuery(selectedProject ?? "", {
+        enabled: Boolean(selectedProject),
     });
+    const { data: usersLookup } = useUsersLookupQuery();
+    const { data: projectResourceRoleRates = [] } = useProjectResourceRoleRatesQuery(selectedProject ?? "", {
+        enabled: Boolean(selectedProject),
+    });
+    const { data: myProjectScopes = [] } = useMyProjectScopesQuery({
+        enabled: Boolean(selectedProject),
+    });
+    const { data: globalResourceRoles = [] } = useResourceRolesQuery({
+        enabled: Boolean(selectedProject) && projectResourceRoleRates.length === 0,
+    });
+
+    const projectAssigneeList = useMemo(
+        () => projectAssignees,
+        [projectAssignees],
+    );
+
+    const assignableUsers = useMemo(() => {
+        if (projectAssigneeList.length > 0) {
+            return projectAssigneeList;
+        }
+        return usersLookup?.users ?? [];
+    }, [projectAssigneeList, usersLookup?.users]);
+
+    const assigneeDirectory = useMemo(() => {
+        const entries = new Map<string, { id: string; name?: string | null; email: string }>();
+        (usersLookup?.users ?? []).forEach((user) => {
+            entries.set(user.id, user);
+        });
+        projectAssigneeList.forEach((user) => {
+            entries.set(user.id, user);
+        });
+        return entries;
+    }, [projectAssigneeList, usersLookup?.users]);
+
     const assigneeById = useMemo(
-        () => new Map((usersLookup?.users ?? []).map((user) => [user.id, user])),
-        [usersLookup?.users]
+        () => assigneeDirectory,
+        [assigneeDirectory],
     );
 
     const getAssigneeLabel = useCallback((assigneeId?: string) => {
@@ -362,11 +467,10 @@ export function TasksPage() {
     const [bulkStatus, setBulkStatus] = useState<string>("");
     const [bulkAssignee, setBulkAssignee] = useState<string>("");
     const [bulkProgress, setBulkProgress] = useState<number>(0);
-    const [isBulkStatusUpdating, setIsBulkStatusUpdating] = useState(false);
-    const [isBulkAssigneeUpdating, setIsBulkAssigneeUpdating] = useState(false);
-    const [isBulkProgressUpdating, setIsBulkProgressUpdating] = useState(false);
+    const [bulkProgressTouched, setBulkProgressTouched] = useState(false);
+    const [isBulkApplying, setIsBulkApplying] = useState(false);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-    const isBulkBusy = isBulkStatusUpdating || isBulkAssigneeUpdating || isBulkProgressUpdating || isBulkDeleting;
+    const isBulkBusy = isBulkApplying || isBulkDeleting;
 
     const selectedOnPageCount = useMemo(
         () => pagedTasks.reduce((count, task) => (selectedTaskIdSet.has(task.id) ? count + 1 : count), 0),
@@ -391,30 +495,69 @@ export function TasksPage() {
     const allFilteredSelected = view === "list"
         ? allPageSelected
         : (filteredTasks.length > 0 && selectedFilteredCount === filteredTasks.length);
+    const hasBulkDraftChanges = Boolean(bulkStatus) || Boolean(bulkAssignee) || bulkProgressTouched;
+    const resetBulkDraft = useCallback(() => {
+        setBulkStatus("");
+        setBulkAssignee("");
+        setBulkProgress(0);
+        setBulkProgressTouched(false);
+    }, []);
     const assigneeOptions = useMemo(
         () => [
             { value: "__unassigned__", label: "Unassigned" },
-            ...(usersLookup?.users ?? []).map((user) => ({
+            ...assignableUsers.map((user) => ({
                 value: user.id,
                 label: user.name?.trim()
                     ? `${user.name} (${user.email})`
                     : user.email,
             })),
         ],
-        [usersLookup?.users]
+        [assignableUsers]
     );
     const assigneeFilterOptions = useMemo(
         () => [
             { value: "all", label: "All Assignees" },
-            ...(usersLookup?.users ?? []).map((user) => ({
+            ...assignableUsers.map((user) => ({
                 value: user.id,
                 label: user.name?.trim()
                     ? `${user.name} (${user.email})`
                     : user.email,
             })),
         ],
-        [usersLookup?.users]
+        [assignableUsers]
     );
+    const allowedResourceRoleIds = useMemo(() => {
+        const scopes = Array.isArray(myProjectScopes) ? myProjectScopes : [];
+        const selectedScope = scopes.find((scope) => scope.project_id === selectedProject);
+        const resourceRoles = selectedScope?.resource_roles ?? [];
+        return new Set(resourceRoles.map((role) => role.id));
+    }, [myProjectScopes, selectedProject]);
+    const resourceRoleOptions = useMemo<ResourceRoleOption[]>(() => {
+        const normalize = (options: ResourceRoleOption[]) => {
+            if (allowedResourceRoleIds.size === 0) return options;
+            return options.filter((option) => allowedResourceRoleIds.has(option.value));
+        };
+
+        if (Array.isArray(projectResourceRoleRates) && projectResourceRoleRates.length > 0) {
+            return normalize(projectResourceRoleRates.map((role) => ({
+                value: role.resource_role_id,
+                label: `${role.resource_role_name} (${formatCurrencyAmount(role.hourly_rate, role.currency)}/hr)`,
+                ratePerHour: role.hourly_rate,
+                currency: role.currency,
+            })));
+        }
+
+        if (Array.isArray(globalResourceRoles) && globalResourceRoles.length > 0) {
+            return normalize(globalResourceRoles.map((role) => ({
+                value: role.id,
+                label: `${role.name} (${formatCurrencyAmount(role.default_hourly_rate, role.currency)}/hr)`,
+                ratePerHour: role.default_hourly_rate,
+                currency: role.currency,
+            })));
+        }
+
+        return [];
+    }, [allowedResourceRoleIds, globalResourceRoles, projectResourceRoleRates]);
 
     const kanbanTasks = useMemo<KanbanTaskItem[]>(
         () => filteredTasks.map((task) => ({ ...task, column: task.status })),
@@ -429,17 +572,8 @@ export function TasksPage() {
         return counts;
     }, [filteredTasks]);
 
-    // Virtualizer for List View
+    // List view table scroll container (desktop).
     const parentRef = useRef<HTMLDivElement>(null);
-    const rowVirtualizer = useVirtualizer({
-        count: pagedTasks.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 53, // Approximate height of a table row
-        overscan: 5,
-    });
-    const virtualRows = rowVirtualizer.getVirtualItems();
-    const firstVirtualRow = virtualRows[0];
-    const lastVirtualRow = virtualRows[virtualRows.length - 1];
 
     useEffect(() => {
         if (page > totalPages) {
@@ -472,11 +606,9 @@ export function TasksPage() {
 
     useEffect(() => {
         setSelectedTaskIds([]);
-        setBulkStatus("");
-        setBulkAssignee("");
-        setBulkProgress(0);
+        resetBulkDraft();
         setIsSelectionActionsOpen(false);
-    }, [selectedProject, view]);
+    }, [resetBulkDraft, selectedProject, view]);
 
     const toggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
         setSelectedTaskIds((current) => {
@@ -523,23 +655,78 @@ export function TasksPage() {
         void refetchAllTasks();
     }, [refetchAllTasks, refetchListTasks, view]);
 
-    const createForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
+    const createForm = useForm<TaskFormValues>({
+        defaultValues: { title: "", description: "", plan: 1, progress: 0, status: "todo" },
+    });
     const [createOpen, setCreateOpen] = useState(false);
+    const [quickCreateTitle, setQuickCreateTitle] = useState("");
     const createRef = useRef<HTMLInputElement | null>(null);
     const timeToTaskSessionIdRef = useRef<string | null>(null);
     const [timeToTaskSummary, setTimeToTaskSummary] = useState(() =>
         getTimeToTaskSummary(currentUserId),
     );
+    const [showTimeToTaskInsights, setShowTimeToTaskInsights] = useState(false);
     const [editing, setEditing] = useState<Task | null>(null);
-    const editForm = useForm<TaskFormValues>({ defaultValues: { title: "", plan: 1, progress: 0, status: "todo" } });
+    const editForm = useForm<TaskFormValues>({
+        defaultValues: { title: "", description: "", plan: 1, progress: 0, status: "todo" },
+    });
+    const [workLogHours, setWorkLogHours] = useState<string>("1");
+    const [workLogDate, setWorkLogDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+    const [workLogResourceRoleId, setWorkLogResourceRoleId] = useState<string>("");
+    const [workLogNote, setWorkLogNote] = useState<string>("");
+    const [editingWorkLogId, setEditingWorkLogId] = useState<string | null>(null);
 
     const createMutation = useTaskMutation(selectedProject);
+    const quickCreateMutation = useTaskMutation(selectedProject);
     const deleteMutation = useDeleteTask(selectedProject);
-    const updateMutation = useUpdateTask();
+    const inlineUpdateMutation = useUpdateTask();
+    const editUpdateMutation = useUpdateTask();
     const ganttUpdateMutation = useUpdateTask();
     const ganttBatchUpdateMutation = useBatchUpdateTasks(selectedProject);
+    const bulkUpdateTasksMutation = useBatchUpdateTasks(selectedProject, {
+        notify: false,
+        optimistic: false,
+    });
+    const bulkDeleteTasksMutation = useBatchDeleteTasks(selectedProject, { notify: false });
     const dependencyMutation = useDependencyMutation(selectedProject);
     const deleteDependencyMutation = useDeleteDependency(selectedProject);
+    const taskWorkLogsQuery = useTaskWorkLogs(selectedProject, editing?.id, {
+        enabled: Boolean(selectedProject && editing?.id),
+    });
+    const createTaskWorkLogMutation = useCreateTaskWorkLog(selectedProject, editing?.id);
+    const updateTaskWorkLogMutation = useUpdateTaskWorkLog(selectedProject, editing?.id);
+    const deleteTaskWorkLogMutation = useDeleteTaskWorkLog(selectedProject, editing?.id);
+    const taskWorkLogs = useMemo(() => {
+        const rows = Array.isArray(taskWorkLogsQuery.data) ? taskWorkLogsQuery.data : [];
+        return [...rows].sort((a, b) => {
+            const aTime = new Date(a.work_date || a.updated_at || a.created_at).getTime();
+            const bTime = new Date(b.work_date || b.updated_at || b.created_at).getTime();
+            return bTime - aTime;
+        });
+    }, [taskWorkLogsQuery.data]);
+    const selectedWorkLogRole = useMemo(
+        () => resourceRoleOptions.find((role) => role.value === workLogResourceRoleId) ?? null,
+        [resourceRoleOptions, workLogResourceRoleId],
+    );
+    const draftWorkLogEstimatedCost = useMemo(() => {
+        const parsedHours = Number.parseFloat(workLogHours);
+        if (!selectedWorkLogRole || !Number.isFinite(parsedHours) || parsedHours <= 0) return null;
+        return parsedHours * selectedWorkLogRole.ratePerHour;
+    }, [selectedWorkLogRole, workLogHours]);
+    const isWorkLogSaving = createTaskWorkLogMutation.status === "pending"
+        || updateTaskWorkLogMutation.status === "pending"
+        || deleteTaskWorkLogMutation.status === "pending";
+
+    useEffect(() => {
+        if (!editing) return;
+        if (resourceRoleOptions.length === 0) {
+            if (workLogResourceRoleId) setWorkLogResourceRoleId("");
+            return;
+        }
+        if (!workLogResourceRoleId || !resourceRoleOptions.some((role) => role.value === workLogResourceRoleId)) {
+            setWorkLogResourceRoleId(resourceRoleOptions[0].value);
+        }
+    }, [editing, resourceRoleOptions, workLogResourceRoleId]);
 
     const refreshTimeToTaskSummary = useCallback(() => {
         setTimeToTaskSummary(getTimeToTaskSummary(currentUserId));
@@ -580,6 +767,49 @@ export function TasksPage() {
             view,
         });
     }, [beginTimeToTaskSession, createOpen, selectedProject, view]);
+
+    const handleQuickCreate = useCallback(async () => {
+        const normalizedTitle = quickCreateTitle.trim();
+        if (!normalizedTitle) {
+            toast.error("Task title is required");
+            return;
+        }
+        if (!selectedProject) {
+            toast.error("Select a project before creating tasks");
+            return;
+        }
+
+        const sessionId = timeToTaskSessionIdRef.current ?? beginTimeToTaskSession();
+        markTimeToTaskIntent(sessionId, {
+            projectId: selectedProject,
+            view,
+        });
+
+        try {
+            await quickCreateMutation.mutateAsync({
+                name: normalizedTitle,
+                status: "todo",
+                progress: 0,
+            });
+            completeTimeToTaskSession(sessionId, {
+                projectId: selectedProject,
+                view,
+                reason: "quick-create",
+            });
+            beginTimeToTaskSession();
+            refreshTimeToTaskSummary();
+            setQuickCreateTitle("");
+        } catch {
+            // Errors are handled by useTaskMutation toast messaging.
+        }
+    }, [
+        beginTimeToTaskSession,
+        quickCreateMutation,
+        quickCreateTitle,
+        refreshTimeToTaskSummary,
+        selectedProject,
+        view,
+    ]);
 
     const [ganttLocalOverrides, setGanttLocalOverrides] = useState<Record<string, Partial<Task>>>({});
     const ganttQueuedUpdatesRef = useRef<Map<string, GanttTask>>(new Map());
@@ -748,6 +978,13 @@ export function TasksPage() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
     const [bulkDeleteTaskIds, setBulkDeleteTaskIds] = useState<string[]>([]);
+    const resetWorkLogDraft = useCallback((preferredRoleId?: string) => {
+        setWorkLogHours("1");
+        setWorkLogDate(format(new Date(), "yyyy-MM-dd"));
+        setWorkLogResourceRoleId(preferredRoleId ?? resourceRoleOptions[0]?.value ?? "");
+        setWorkLogNote("");
+        setEditingWorkLogId(null);
+    }, [resourceRoleOptions]);
 
     const openTaskEditor = useCallback((task: Task) => {
         setEditing(task);
@@ -765,6 +1002,7 @@ export function TasksPage() {
         setEditMode(mode);
         editForm.reset({
             title: task.name,
+            description: task.description ?? "",
             plan: task.durationDays ?? 1,
             start_date: formatDateForInput(task.startDate),
             end_date: formatDateForInput(task.endDate),
@@ -772,116 +1010,337 @@ export function TasksPage() {
             status: task.status,
             projectId: task.projectId,
         });
-    }, [editForm]);
+        resetWorkLogDraft(resourceRoleOptions[0]?.value);
+    }, [editForm, resetWorkLogDraft, resourceRoleOptions]);
 
-    const handleBulkStatusApply = useCallback(async () => {
-        if (!selectedProject || !bulkStatus || selectedTaskIds.length === 0) return;
-        const targetStatus = bulkStatus as TaskStatus;
-        setIsBulkStatusUpdating(true);
+    const handleStartEditWorkLog = useCallback((workLog: ApiWorkLog) => {
+        setEditingWorkLogId(workLog.id);
+        setWorkLogHours(String(workLog.hours));
+        setWorkLogDate(formatDateForWorkLogInput(workLog.work_date));
+        setWorkLogResourceRoleId(workLog.resource_role_id);
+        setWorkLogNote(workLog.note ?? "");
+    }, []);
+
+    const handleCancelWorkLogEdit = useCallback(() => {
+        resetWorkLogDraft(workLogResourceRoleId || resourceRoleOptions[0]?.value);
+    }, [resetWorkLogDraft, resourceRoleOptions, workLogResourceRoleId]);
+
+    const handleSaveWorkLog = useCallback(async () => {
+        if (!editing?.id || !selectedProject) {
+            toast.error("Select a task before editing work logs.");
+            return;
+        }
+
+        const parsedHours = Number.parseFloat(workLogHours);
+        if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
+            toast.error("Work-log hours must be greater than 0.");
+            return;
+        }
+
+        if (!workLogResourceRoleId) {
+            toast.error("Choose a resource role.");
+            return;
+        }
+
+        const trimmedNote = workLogNote.trim();
+        const payload = {
+            hours: parsedHours,
+            resource_role_id: workLogResourceRoleId,
+            work_date: workLogDate || undefined,
+            note: trimmedNote || null,
+        };
 
         try {
-            await openapi.batchUpdateTasks(selectedProject, {
-                tasks: selectedTaskIds.map((taskId) => ({
-                    id: taskId,
-                    status: mapTaskStatusToApi(targetStatus),
-                })),
-            });
-            toast.success(`Updated ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"} to ${getStatusLabel(targetStatus)}.`);
-            setSelectedTaskIds([]);
-            setBulkStatus("");
-            setBulkAssignee("");
-            setBulkProgress(0);
-            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(`Failed to update tasks: ${message}`);
-        } finally {
-            setIsBulkStatusUpdating(false);
+            if (editingWorkLogId) {
+                await updateTaskWorkLogMutation.mutateAsync({
+                    id: editingWorkLogId,
+                    payload,
+                });
+            } else {
+                await createTaskWorkLogMutation.mutateAsync(payload);
+            }
+
+            resetWorkLogDraft(workLogResourceRoleId || resourceRoleOptions[0]?.value);
+        } catch {
+            // Mutation hooks already surface toast errors.
         }
-    }, [bulkStatus, queryClient, selectedProject, selectedTaskIds]);
+    }, [
+        createTaskWorkLogMutation,
+        editing?.id,
+        editingWorkLogId,
+        resetWorkLogDraft,
+        resourceRoleOptions,
+        selectedProject,
+        updateTaskWorkLogMutation,
+        workLogDate,
+        workLogHours,
+        workLogNote,
+        workLogResourceRoleId,
+    ]);
 
-    const handleBulkAssigneeApply = useCallback(async () => {
-        if (!selectedProject || !bulkAssignee || selectedTaskIds.length === 0) return;
-        const targetAssignee = bulkAssignee === "__unassigned__" ? "" : bulkAssignee;
-        setIsBulkAssigneeUpdating(true);
-
+    const handleDeleteWorkLog = useCallback(async (workLogId: string) => {
         try {
-            await openapi.batchUpdateTasks(selectedProject, {
-                tasks: selectedTaskIds.map((taskId) => ({
-                    id: taskId,
-                    assignee: targetAssignee || null,
-                })),
-            });
-            const assigneeLabel = bulkAssignee === "__unassigned__" ? "Unassigned" : getAssigneeLabel(targetAssignee);
-            toast.success(`Updated assignee for ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"} to ${assigneeLabel}.`);
-            setSelectedTaskIds([]);
-            setBulkStatus("");
-            setBulkAssignee("");
-            setBulkProgress(0);
-            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(`Failed to update assignees: ${message}`);
-        } finally {
-            setIsBulkAssigneeUpdating(false);
+            await deleteTaskWorkLogMutation.mutateAsync(workLogId);
+            if (editingWorkLogId === workLogId) {
+                resetWorkLogDraft(resourceRoleOptions[0]?.value);
+            }
+        } catch {
+            // Mutation hooks already surface toast errors.
         }
-    }, [bulkAssignee, getAssigneeLabel, queryClient, selectedProject, selectedTaskIds]);
+    }, [deleteTaskWorkLogMutation, editingWorkLogId, resetWorkLogDraft, resourceRoleOptions]);
 
-    const handleBulkProgressApply = useCallback(async () => {
+    const handleBulkApplyChanges = useCallback(async () => {
         if (!selectedProject || selectedTaskIds.length === 0) return;
-        const targetProgress = clampProgress(bulkProgress);
-        setIsBulkProgressUpdating(true);
+
+        const hasStatusChange = Boolean(bulkStatus);
+        const hasAssigneeChange = Boolean(bulkAssignee);
+        const hasProgressChange = bulkProgressTouched;
+
+        if (!hasStatusChange && !hasAssigneeChange && !hasProgressChange) {
+            toast.info("Choose at least one bulk field before applying changes.");
+            return;
+        }
+
+        setIsBulkApplying(true);
 
         try {
-            await openapi.batchUpdateTasks(selectedProject, {
-                tasks: selectedTaskIds.map((taskId) => ({
-                    id: taskId,
-                    progress: targetProgress,
-                })),
-            });
-            toast.success(`Updated progress to ${targetProgress}% for ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"}.`);
+            const updates = selectedTaskIds.map((taskId) => ({
+                id: taskId,
+                ...(hasStatusChange ? { status: mapTaskStatusToApi(bulkStatus as TaskStatus) } : {}),
+                ...(hasAssigneeChange
+                    ? { assignee: bulkAssignee === "__unassigned__" ? null : bulkAssignee }
+                    : {}),
+                ...(hasProgressChange ? { progress: clampProgress(bulkProgress) } : {}),
+            }));
+
+            await bulkUpdateTasksMutation.mutateAsync({ tasks: updates });
+
+            const appliedFields = [
+                hasStatusChange ? "status" : null,
+                hasAssigneeChange ? "assignee" : null,
+                hasProgressChange ? "progress" : null,
+            ].filter(Boolean).join(", ");
+
+            toast.success(
+                `Applied ${appliedFields} update${selectedTaskIds.length === 1 ? "" : "s"} to ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"}.`,
+            );
             setSelectedTaskIds([]);
-            setBulkStatus("");
-            setBulkAssignee("");
-            setBulkProgress(0);
-            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
+            resetBulkDraft();
+            setIsSelectionActionsOpen(false);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            toast.error(`Failed to update progress: ${message}`);
+            toast.error(`Failed to apply bulk updates: ${message}`);
         } finally {
-            setIsBulkProgressUpdating(false);
+            setIsBulkApplying(false);
         }
-    }, [bulkProgress, queryClient, selectedProject, selectedTaskIds]);
+    }, [
+        bulkAssignee,
+        bulkProgress,
+        bulkProgressTouched,
+        bulkStatus,
+        bulkUpdateTasksMutation,
+        resetBulkDraft,
+        selectedProject,
+        selectedTaskIds,
+    ]);
 
     const handleBulkDelete = useCallback(async (taskIds: string[]) => {
         if (!selectedProject || taskIds.length === 0) return;
         setIsBulkDeleting(true);
 
         try {
-            const result = await openapi.batchDeleteTasks(selectedProject, taskIds);
+            const result = await bulkDeleteTasksMutation.mutateAsync(taskIds);
             const deletedCount = Number.isFinite(result?.deleted) ? result.deleted : taskIds.length;
             toast.success(`Deleted ${deletedCount} task${deletedCount === 1 ? "" : "s"}.`);
             setSelectedTaskIds([]);
-            setBulkStatus("");
-            setBulkAssignee("");
-            setBulkProgress(0);
+            resetBulkDraft();
             setBulkDeleteTaskIds([]);
             setBulkDeleteConfirmOpen(false);
-
-            await queryClient.invalidateQueries({ queryKey: ["tasks", "project", selectedProject] });
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             toast.error(`Failed to delete selected tasks: ${message}`);
         } finally {
             setIsBulkDeleting(false);
         }
-    }, [queryClient, selectedProject]);
+    }, [bulkDeleteTasksMutation, resetBulkDraft, selectedProject]);
 
     const requestBulkDelete = useCallback(() => {
         if (!selectedProject || selectedTaskIds.length === 0) return;
         setBulkDeleteTaskIds(selectedTaskIds);
         setBulkDeleteConfirmOpen(true);
     }, [selectedProject, selectedTaskIds]);
+
+    const workLogColumns = useMemo<ColumnDef<ApiWorkLog, unknown>[]>(() => ([
+        workLogColumnHelper.accessor("work_date", {
+            header: "Date",
+            cell: (info) => formatWorkLogDateLabel(info.getValue()),
+        }),
+        workLogColumnHelper.accessor("hours", {
+            header: () => <div className="text-right">Hours</div>,
+            cell: (info) => <div className="text-right">{info.getValue().toFixed(2)}</div>,
+        }),
+        workLogColumnHelper.accessor("resource_role_name", {
+            header: "Role",
+        }),
+        workLogColumnHelper.display({
+            id: "cost",
+            header: () => <div className="text-right">Cost</div>,
+            cell: (info) => (
+                <div className="text-right">
+                    {formatCurrencyAmount(info.row.original.cost_amount, info.row.original.currency_snapshot)}
+                </div>
+            ),
+        }),
+        workLogColumnHelper.accessor("note", {
+            header: "Note",
+            cell: (info) => (
+                <span className="max-w-[220px] truncate" title={info.getValue() ?? ""}>
+                    {info.getValue()?.trim() ? info.getValue() : "—"}
+                </span>
+            ),
+        }),
+        workLogColumnHelper.display({
+            id: "actions",
+            header: () => <div className="w-40 text-right">Actions</div>,
+            cell: (info) => (
+                <div className="flex justify-end gap-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleStartEditWorkLog(info.row.original)}
+                        disabled={isWorkLogSaving}
+                        data-testid="tasks-work-log-edit-button"
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            void handleDeleteWorkLog(info.row.original.id);
+                        }}
+                        disabled={isWorkLogSaving}
+                        data-testid="tasks-work-log-delete-button"
+                    >
+                        Delete
+                    </Button>
+                </div>
+            ),
+        }),
+    ]), [handleDeleteWorkLog, handleStartEditWorkLog, isWorkLogSaving]);
+
+    const listColumns = useMemo<ColumnDef<Task, unknown>[]>(() => ([
+        taskListColumnHelper.display({
+            id: "selection",
+            header: () => (
+                <div className="flex items-center gap-2">
+                    <TaskSelectionCheckbox
+                        checked={allPageSelected}
+                        onToggle={toggleSelectAllOnPage}
+                        label="Select all tasks on current page"
+                        testId="tasks-select-all-page-checkbox"
+                    />
+                    <span>#</span>
+                </div>
+            ),
+            cell: (info) => {
+                const task = info.row.original;
+                return (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <TaskSelectionCheckbox
+                            checked={selectedTaskIdSet.has(task.id)}
+                            onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
+                            onClick={(event) => event.stopPropagation()}
+                            label={`Select task ${task.name}`}
+                            testId="tasks-row-select-checkbox"
+                        />
+                        <span>{((page - 1) * pageSize) + info.row.index + 1}</span>
+                    </div>
+                );
+            },
+        }),
+        taskListColumnHelper.accessor("name", {
+            header: "Name",
+            cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+        }),
+        taskListColumnHelper.accessor("status", {
+            header: "Status",
+            cell: (info) => (
+                <Badge variant={getStatusVariant(info.getValue())}>
+                    {info.getValue()}
+                </Badge>
+            ),
+        }),
+        taskListColumnHelper.display({
+            id: "assignee",
+            header: "Assignee",
+            cell: (info) => getAssigneeLabel(info.row.original.assigneeId),
+        }),
+        taskListColumnHelper.display({
+            id: "plan",
+            header: "Plan",
+            cell: (info) => info.row.original.durationDays ? `${info.row.original.durationDays}d` : "—",
+        }),
+        taskListColumnHelper.display({
+            id: "actions",
+            header: "Actions",
+            cell: (info) => {
+                const task = info.row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            data-testid="tasks-row-edit-button"
+                            onClick={() => openTaskEditor(task)}
+                        >
+                            Edit
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive-outline"
+                            data-testid="tasks-row-delete-button"
+                            onClick={() => {
+                                setTaskToDelete(task);
+                                setConfirmOpen(true);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                );
+            },
+        }),
+    ]), [
+        allPageSelected,
+        getAssigneeLabel,
+        openTaskEditor,
+        page,
+        pageSize,
+        selectedTaskIdSet,
+        toggleSelectAllOnPage,
+        toggleTaskSelection,
+    ]);
+
+    const listTable = useReactTable({
+        data: pagedTasks,
+        columns: listColumns,
+        getCoreRowModel: getCoreRowModel(),
+        getRowId: (row) => row.id,
+    });
+    const listRows = listTable.getRowModel().rows;
+    const rowVirtualizer = useVirtualizer({
+        count: listRows.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 53,
+        overscan: 5,
+        getItemKey: (index) => listRows[index]?.id ?? `task-row-${index}`,
+    });
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const firstVirtualRow = virtualRows[0];
+    const lastVirtualRow = virtualRows[virtualRows.length - 1];
 
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
@@ -914,7 +1373,7 @@ export function TasksPage() {
                         columns={KANBAN_COLUMNS}
                         data={kanbanTasks}
                         onColumnChange={(taskId, newColumnId) => {
-                            updateMutation.mutate({
+                            inlineUpdateMutation.mutate({
                                 id: taskId,
                                 projectId: selectedProject,
                                 payload: { status: newColumnId as TaskStatus }
@@ -938,29 +1397,7 @@ export function TasksPage() {
                                                 key={kanbanTask.id}
                                                 item={kanbanTask}
                                                 onDoubleClick={(item) => {
-                                                    const t = item;
-                                                    setEditing(t);
-                                                    const start = t.startDate ? new Date(t.startDate) : new Date();
-                                                    const end = t.endDate ? new Date(t.endDate) : new Date();
-                                                const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                                                let mode: 'plan' | 'range' | 'today' = 'range';
-
-                                                if (isSameDay(start, end)) {
-                                                    mode = 'today';
-                                                } else if (t.durationDays && diffDays === t.durationDays) {
-                                                    mode = 'plan';
-                                                }
-
-                                                setEditMode(mode);
-                                                editForm.reset({
-                                                    title: t.name,
-                                                    plan: t.durationDays ?? 1,
-                                                    start_date: formatDateForInput(t.startDate),
-                                                    end_date: formatDateForInput(t.endDate),
-                                                    progress: typeof t.progress === 'number' ? t.progress : 0,
-                                                    status: t.status,
-                                                    projectId: t.projectId
-                                                });
+                                                    openTaskEditor(item);
                                                 }}
                                             >
 
@@ -1006,7 +1443,7 @@ export function TasksPage() {
                     // are consistent even when list search/status filters are active.
                     tasks={mergedGanttTasks}
                     progress={progress}
-                    dependencies={dependenciesData ?? []}
+                    dependencies={dependencies}
                     pendingChangesCount={ganttPendingCount}
                     isSyncingChanges={ganttIsSyncing}
                     syncError={ganttSyncError}
@@ -1033,28 +1470,7 @@ export function TasksPage() {
                         // Find the full task object to edit
                         const taskToEdit = mergedGanttTasks.find(t => t.id === ganttTask.originalId);
                         if (taskToEdit) {
-                            setEditing(taskToEdit);
-                            const start = new Date(taskToEdit.startDate || "");
-                            const end = new Date(taskToEdit.endDate || "");
-                            const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                            let mode: 'plan' | 'range' | 'today' = 'range';
-
-                            if (isSameDay(start, end)) {
-                                mode = 'today';
-                            } else if (taskToEdit.durationDays && diffDays === taskToEdit.durationDays) {
-                                mode = 'plan';
-                            }
-
-                            setEditMode(mode);
-                            editForm.reset({
-                                title: taskToEdit.name,
-                                plan: taskToEdit.durationDays ?? 1,
-                                start_date: formatDateForInput(taskToEdit.startDate),
-                                end_date: formatDateForInput(taskToEdit.endDate),
-                                progress: typeof taskToEdit.progress === 'number' ? taskToEdit.progress : 0,
-                                status: taskToEdit.status,
-                                projectId: taskToEdit.projectId
-                            });
+                            openTaskEditor(taskToEdit);
                         }
                     }}
                 />
@@ -1070,13 +1486,11 @@ export function TasksPage() {
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-start gap-2 min-w-0">
-                                        <input
-                                            type="checkbox"
-                                            className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+                                        <TaskSelectionCheckbox
                                             checked={selectedTaskIdSet.has(task.id)}
-                                            onChange={(event) => toggleTaskSelection(task.id, event.target.checked)}
-                                            aria-label={`Select task ${task.name}`}
-                                            data-testid="tasks-row-select-checkbox"
+                                            onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
+                                            label={`Select task ${task.name}`}
+                                            testId="tasks-row-select-checkbox"
                                         />
                                         <div className="space-y-1 min-w-0">
                                             <p className="text-xs text-muted-foreground">
@@ -1137,26 +1551,17 @@ export function TasksPage() {
                 >
                     <Table>
                         <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                                <TableHead className="w-[90px]">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-border accent-primary"
-                                            checked={allPageSelected}
-                                            onChange={(event) => toggleSelectAllOnPage(event.target.checked)}
-                                            aria-label="Select all tasks on current page"
-                                            data-testid="tasks-select-all-page-checkbox"
-                                        />
-                                        <span>#</span>
-                                    </div>
-                                </TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Assignee</TableHead>
-                                <TableHead>Plan</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
+                            {listTable.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id}>
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
+                            ))}
                         </TableHeader>
                         <TableBody>
                             {virtualRows.length === 0 && (
@@ -1174,61 +1579,21 @@ export function TasksPage() {
                             ) : null}
 
                             {virtualRows.map((virtualItem) => {
-                                const task = pagedTasks[virtualItem.index];
-                                if (!task) return null; // Safety check
+                                const row = listRows[virtualItem.index];
+                                if (!row) return null;
                                 return (
                                     <TableRow
-                                        key={task.id}
+                                        key={row.id}
                                         data-index={virtualItem.index}
                                         ref={rowVirtualizer.measureElement}
-                                        onDoubleClick={() => openTaskEditor(task)}
+                                        onDoubleClick={() => openTaskEditor(row.original)}
                                         className="cursor-pointer hover:bg-surface-hover transition-colors"
                                     >
-                                        <TableCell className="text-muted-foreground">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    className="h-4 w-4 rounded border-border accent-primary"
-                                                    checked={selectedTaskIdSet.has(task.id)}
-                                                    onChange={(event) => toggleTaskSelection(task.id, event.target.checked)}
-                                                    onClick={(event) => event.stopPropagation()}
-                                                    aria-label={`Select task ${task.name}`}
-                                                    data-testid="tasks-row-select-checkbox"
-                                                />
-                                                <span>{((page - 1) * pageSize) + virtualItem.index + 1}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-medium">{task.name}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(task.status)}>
-                                                {task.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{getAssigneeLabel(task.assigneeId)}</TableCell>
-                                        <TableCell>{task.durationDays ? `${task.durationDays}d` : "—"}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    data-testid="tasks-row-edit-button"
-                                                    onClick={() => openTaskEditor(task)}
-                                                >
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive-outline"
-                                                    data-testid="tasks-row-delete-button"
-                                                    onClick={() => {
-                                                        setTaskToDelete(task);
-                                                        setConfirmOpen(true);
-                                                    }}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
                                     </TableRow>
                                 );
                             })}
@@ -1268,42 +1633,59 @@ export function TasksPage() {
                         className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
                         data-testid="tasks-time-to-task-summary"
                     >
+                        <span className="sr-only">
+                            Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%. Passive exits: {timeToTaskSummary.passiveExitCount}.
+                        </span>
                         <Badge variant="outline">
                             Time to Task p50: {formatDurationMs(timeToTaskSummary.p50Ms)}
                         </Badge>
                         <Badge variant="outline">
                             Last: {formatDurationMs(timeToTaskSummary.lastMs)}
                         </Badge>
-                        <Badge variant="outline">
-                            Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
-                        </Badge>
-                        <Badge variant="outline">
-                            Intent samples: {timeToTaskSummary.intentSampleCount}
-                        </Badge>
-                        <Badge variant="outline">
-                            Passive exits: {timeToTaskSummary.passiveExitCount}
-                        </Badge>
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant={showTimeToTaskInsights ? "secondary" : "ghost"}
                             size="sm"
                             className="h-10 px-3"
-                            onClick={() => {
-                                clearTimeToTaskRecords(currentUserId);
-                                if (timeToTaskSessionIdRef.current) {
-                                    abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
-                                }
-                                beginTimeToTaskSession();
-                                refreshTimeToTaskSummary();
-                            }}
-                            data-testid="tasks-time-to-task-reset-button"
-                            disabled={timeToTaskSummary.trackedSessionCount === 0}
+                            onClick={() => setShowTimeToTaskInsights((prev) => !prev)}
+                            data-testid="tasks-time-to-task-toggle-button"
                         >
-                            Reset Time to Task
+                            {showTimeToTaskInsights ? "Hide insights" : "Show insights"}
                         </Button>
+                        {showTimeToTaskInsights ? (
+                            <>
+                                <Badge variant="outline">
+                                    Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
+                                </Badge>
+                                <Badge variant="outline">
+                                    Intent samples: {timeToTaskSummary.intentSampleCount}
+                                </Badge>
+                                <Badge variant="outline">
+                                    Passive exits: {timeToTaskSummary.passiveExitCount}
+                                </Badge>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-10 px-3"
+                                    onClick={() => {
+                                        clearTimeToTaskRecords(currentUserId);
+                                        if (timeToTaskSessionIdRef.current) {
+                                            abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
+                                        }
+                                        beginTimeToTaskSession();
+                                        refreshTimeToTaskSummary();
+                                    }}
+                                    data-testid="tasks-time-to-task-reset-button"
+                                    disabled={timeToTaskSummary.trackedSessionCount === 0}
+                                >
+                                    Reset Time to Task
+                                </Button>
+                            </>
+                        ) : null}
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                     <Combobox
                         options={projects?.map(p => ({ label: p.name, value: p.id })) ?? []}
                         value={selectedProject}
@@ -1311,6 +1693,7 @@ export function TasksPage() {
                         className="w-56"
                         placeholder="Select project"
                         searchPlaceholder="Search projects..."
+                        triggerTestId="tasks-project-combobox"
                     />
                     <Button
                         type="button"
@@ -1320,6 +1703,40 @@ export function TasksPage() {
                     >
                         {isRateLimited ? "Cooling down..." : (isRefetching ? "Refreshing…" : "Refresh")}
                     </Button>
+                    <div className="flex min-w-[280px] flex-1 flex-col gap-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <Label htmlFor="tasks-quick-create-input" className="text-xs text-muted-foreground">
+                                Quick add task
+                            </Label>
+                            <span className="text-[11px] text-muted-foreground">Press Enter to create instantly</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                id="tasks-quick-create-input"
+                                value={quickCreateTitle}
+                                onChange={(event) => setQuickCreateTitle(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        void handleQuickCreate();
+                                    }
+                                }}
+                                placeholder="Type title..."
+                                data-testid="tasks-quick-create-input"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    void handleQuickCreate();
+                                }}
+                                disabled={!selectedProject || quickCreateMutation.isPending || !quickCreateTitle.trim()}
+                                data-testid="tasks-quick-create-button"
+                            >
+                                {quickCreateMutation.isPending ? "Adding…" : "Quick add"}
+                            </Button>
+                        </div>
+                    </div>
                     <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                         <DialogTrigger asChild>
                             <Button type="button" data-testid="tasks-new-button">New task</Button>
@@ -1361,9 +1778,11 @@ export function TasksPage() {
                                         const finalEndDate = endDate || (startDate && parsed.data.plan
                                             ? addDays(new Date(startDate), parsed.data.plan).toISOString()
                                             : null);
+                                        const normalizedDescription = parsed.data.description?.trim();
 
                                         createMutation.mutateAsync({
                                             name: parsed.data.title,
+                                            description: normalizedDescription || undefined,
                                             dueDate: dueDate,
                                             startDate: startDate,
                                             endDate: finalEndDate,
@@ -1434,6 +1853,26 @@ export function TasksPage() {
                                                             else if (field.ref && "current" in field.ref) (field.ref as { current?: HTMLInputElement | null }).current = e;
                                                             createRef.current = e;
                                                         }}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={createForm.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Description</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        {...field}
+                                                        value={field.value ?? ""}
+                                                        rows={4}
+                                                        placeholder="Add context, acceptance criteria, or notes (optional)"
+                                                        data-testid="tasks-create-description-input"
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
@@ -1672,6 +2111,7 @@ export function TasksPage() {
                                 placeholder="Status"
                                 searchPlaceholder="Search status..."
                                 className="w-full lg:w-[180px]"
+                                triggerTestId="tasks-filter-status-combobox"
                             />
                             <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
                                 <PopoverTrigger asChild>
@@ -1704,7 +2144,10 @@ export function TasksPage() {
                                         <div className="flex flex-wrap items-center gap-2">
                                             <Button
                                                 variant={view === "list" ? "default" : "outline"}
-                                                onClick={() => setView("list")}
+                                                onClick={() => {
+                                                    setView("list");
+                                                    setIsAdvancedFiltersOpen(false);
+                                                }}
                                                 className="h-9"
                                                 data-testid="tasks-view-list-button"
                                             >
@@ -1713,7 +2156,10 @@ export function TasksPage() {
                                             </Button>
                                             <Button
                                                 variant={view === "kanban" ? "default" : "outline"}
-                                                onClick={() => setView("kanban")}
+                                                onClick={() => {
+                                                    setView("kanban");
+                                                    setIsAdvancedFiltersOpen(false);
+                                                }}
                                                 className="h-9"
                                                 data-testid="tasks-view-board-button"
                                             >
@@ -1722,7 +2168,10 @@ export function TasksPage() {
                                             </Button>
                                             <Button
                                                 variant={view === "gantt" ? "default" : "outline"}
-                                                onClick={() => setView("gantt")}
+                                                onClick={() => {
+                                                    setView("gantt");
+                                                    setIsAdvancedFiltersOpen(false);
+                                                }}
                                                 className="h-9"
                                                 data-testid="tasks-view-gantt-button"
                                             >
@@ -1832,7 +2281,11 @@ export function TasksPage() {
                             <Badge variant="outline">View: {currentViewLabel}</Badge>
                             {activeAdvancedFilterCount > 0 ? (
                                 <Badge variant="outline">Filters: {activeAdvancedFilterCount}</Badge>
-                            ) : null}
+                            ) : (
+                                <span className="text-[11px] text-muted-foreground">
+                                    Advanced contains view switch and date/assignee filters.
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -1880,17 +2333,6 @@ export function TasksPage() {
                                                     className="w-full"
                                                     triggerTestId="tasks-bulk-status-combobox"
                                                 />
-                                                <Button
-                                                    type="button"
-                                                    className="w-full"
-                                                    onClick={() => {
-                                                        void handleBulkStatusApply();
-                                                    }}
-                                                    disabled={!bulkStatus || isBulkBusy}
-                                                    data-testid="tasks-bulk-apply-button"
-                                                >
-                                                    {isBulkStatusUpdating ? "Applying..." : "Apply status"}
-                                                </Button>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-muted-foreground">Assignee</Label>
@@ -1903,17 +2345,6 @@ export function TasksPage() {
                                                     className="w-full"
                                                     triggerTestId="tasks-bulk-assignee-combobox"
                                                 />
-                                                <Button
-                                                    type="button"
-                                                    className="w-full"
-                                                    onClick={() => {
-                                                        void handleBulkAssigneeApply();
-                                                    }}
-                                                    disabled={!bulkAssignee || isBulkBusy}
-                                                    data-testid="tasks-bulk-apply-assignee-button"
-                                                >
-                                                    {isBulkAssigneeUpdating ? "Applying..." : "Apply assignee"}
-                                                </Button>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-muted-foreground">Progress</Label>
@@ -1927,6 +2358,7 @@ export function TasksPage() {
                                                         onChange={(event) => {
                                                             const parsed = Number(event.target.value);
                                                             setBulkProgress(Number.isFinite(parsed) ? clampProgress(parsed) : 0);
+                                                            setBulkProgressTouched(true);
                                                         }}
                                                         className="h-10 w-24"
                                                         data-testid="tasks-bulk-progress-input"
@@ -1934,16 +2366,55 @@ export function TasksPage() {
                                                     />
                                                     <Button
                                                         type="button"
-                                                        className="flex-1"
+                                                        variant="outline"
+                                                        className="h-10 px-3"
                                                         onClick={() => {
-                                                            void handleBulkProgressApply();
+                                                            setBulkProgress((current) => clampProgress(current - 10));
+                                                            setBulkProgressTouched(true);
+                                                        }}
+                                                        disabled={isBulkBusy || !bulkProgressTouched}
+                                                    >
+                                                        -10
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="h-10 px-3"
+                                                        onClick={() => {
+                                                            setBulkProgress((current) => clampProgress(current + 10));
+                                                            setBulkProgressTouched(true);
                                                         }}
                                                         disabled={isBulkBusy}
-                                                        data-testid="tasks-bulk-apply-progress-button"
                                                     >
-                                                        {isBulkProgressUpdating ? "Applying..." : "Apply progress"}
+                                                        +10
                                                     </Button>
                                                 </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="text-xs text-muted-foreground">
+                                                Select one or more fields, then apply once for all selected tasks.
+                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={resetBulkDraft}
+                                                    disabled={!hasBulkDraftChanges || isBulkBusy}
+                                                    data-testid="tasks-bulk-reset-fields-button"
+                                                >
+                                                    Reset fields
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        void handleBulkApplyChanges();
+                                                    }}
+                                                    disabled={!hasBulkDraftChanges || isBulkBusy}
+                                                    data-testid="tasks-bulk-apply-button"
+                                                >
+                                                    {isBulkApplying ? "Applying..." : "Apply changes"}
+                                                </Button>
                                             </div>
                                         </div>
                                         <div className="flex justify-end">
@@ -1966,9 +2437,7 @@ export function TasksPage() {
                                     variant="ghost"
                                     onClick={() => {
                                         setSelectedTaskIds([]);
-                                        setBulkStatus("");
-                                        setBulkAssignee("");
-                                        setBulkProgress(0);
+                                        resetBulkDraft();
                                         setIsSelectionActionsOpen(false);
                                     }}
                                     data-testid="tasks-bulk-clear-selection-button"
@@ -1982,8 +2451,18 @@ export function TasksPage() {
                 </CardContent>
             </Card>
             {/* Edit dialog */}
-            <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+            <Dialog
+                open={Boolean(editing)}
+                onOpenChange={(open) => {
+                    if (!open && editUpdateMutation.status === "pending") return;
+                    if (!open) {
+                        setEditing(null);
+                        resetWorkLogDraft(resourceRoleOptions[0]?.value);
+                    }
+                }}
+            >
                 <AppDialogContent
+                    className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"
                     title="Edit task"
                     description="Update the task details and save your changes."
                 >
@@ -2000,6 +2479,14 @@ export function TasksPage() {
                                     });
                                     return;
                                 }
+                                const normalizedDescription = parsed.data.description?.trim();
+                                if (!normalizedDescription) {
+                                    editForm.setError("description", {
+                                        type: "manual",
+                                        message: "Description is required when updating a task.",
+                                    });
+                                    return;
+                                }
                                 const startDate = parsed.data.start_date
                                     ? new Date(parsed.data.start_date).toISOString()
                                     : undefined;
@@ -2011,11 +2498,12 @@ export function TasksPage() {
                                     ? addDays(new Date(startDate), parsed.data.plan).toISOString()
                                     : undefined);
 
-                                updateMutation.mutateAsync({
+                                editUpdateMutation.mutateAsync({
                                     id: editing.id,
                                     projectId: selectedProject,
                                     payload: {
                                         name: parsed.data.title,
+                                        description: normalizedDescription,
                                         startDate,
                                         endDate: finalEndDate,
                                         progress: parsed.data.progress,
@@ -2025,6 +2513,7 @@ export function TasksPage() {
 
                                     .then(() => {
                                         setEditing(null);
+                                        resetWorkLogDraft(resourceRoleOptions[0]?.value);
                                     })
                                     .catch((err: unknown) => {
                                         const fieldErrors = extractFieldErrorsFromAxios(err);
@@ -2054,10 +2543,27 @@ export function TasksPage() {
                                 </FormItem>
                             )} />
 
+                            <FormField control={editForm.control} name="description" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            {...field}
+                                            value={field.value ?? ""}
+                                            rows={4}
+                                            placeholder="Describe the task objective, constraints, and expected result"
+                                            data-testid="tasks-edit-description-input"
+                                            className={editForm.formState.errors.description ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0" : ""}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
                             {/* Schedule Mode Toggle - Horizontal Layout */}
                             <div className="space-y-2">
                                 <Label>Duration</Label>
-                                <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                                     <ToggleGroup
                                         type="single"
                                         value={editMode}
@@ -2102,7 +2608,7 @@ export function TasksPage() {
                                     {editMode === 'today' && (
                                         <Input
                                             type="time"
-                                            className="w-28"
+                                            className="w-full sm:w-32"
                                             value={editForm.watch("start_date") ? format(new Date(editForm.watch("start_date")!), "HH:mm") : format(new Date(), "HH:mm")}
                                             onChange={(e) => {
                                                 const val = e.target.value;
@@ -2136,14 +2642,14 @@ export function TasksPage() {
                                             options={buildDurationOptions(editForm.watch("plan"))}
                                             placeholder="Duration"
                                             searchPlaceholder="Search days..."
-                                            className="w-28"
+                                            className="w-full sm:w-36"
                                         />
                                     )}
                                 </div>
 
                                 {/* Date Range Inputs - Show below when range mode */}
                                 {editMode === 'range' && (
-                                    <div className="grid grid-cols-2 gap-3 pt-2">
+                                    <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
                                         <div className="space-y-1">
                                             <Label className="text-xs text-muted-foreground">Start</Label>
                                             <Input
@@ -2231,14 +2737,142 @@ export function TasksPage() {
                                 </FormItem>
                             )} />
 
-                            <div className="flex justify-end">
-                                <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-work-log-section">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold">Work logs (hours and cost)</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Log real effort with a project resource role. Dashboard hours and cost metrics use these entries.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Work date</Label>
+                                        <Input
+                                            type="date"
+                                            value={workLogDate}
+                                            onChange={(event) => setWorkLogDate(event.target.value)}
+                                            data-testid="tasks-work-log-date-input"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Hours</Label>
+                                        <Input
+                                            type="number"
+                                            min={0.25}
+                                            step={0.25}
+                                            value={workLogHours}
+                                            onChange={(event) => setWorkLogHours(event.target.value)}
+                                            data-testid="tasks-work-log-hours-input"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Resource role</Label>
+                                        <Combobox
+                                            value={workLogResourceRoleId}
+                                            onChange={setWorkLogResourceRoleId}
+                                            options={resourceRoleOptions}
+                                            placeholder="Select role"
+                                            searchPlaceholder="Search role..."
+                                            className="w-full"
+                                            triggerTestId="tasks-work-log-role-combobox"
+                                        />
+                                        {resourceRoleOptions.length === 0 ? (
+                                            <p className="text-xs text-muted-foreground">
+                                                No assigned resource role for this project. Ask a project owner/admin to assign one.
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Note (optional)</Label>
+                                        <Input
+                                            value={workLogNote}
+                                            onChange={(event) => setWorkLogNote(event.target.value)}
+                                            placeholder="Daily update or context"
+                                            data-testid="tasks-work-log-note-input"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        {draftWorkLogEstimatedCost !== null && selectedWorkLogRole
+                                            ? `Estimated cost: ${formatCurrencyAmount(draftWorkLogEstimatedCost, selectedWorkLogRole.currency)}`
+                                            : "Estimated cost appears after entering hours and role."}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        {editingWorkLogId ? (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={handleCancelWorkLogEdit}
+                                                disabled={isWorkLogSaving}
+                                                data-testid="tasks-work-log-cancel-edit-button"
+                                            >
+                                                Cancel edit
+                                            </Button>
+                                        ) : null}
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                void handleSaveWorkLog();
+                                            }}
+                                            disabled={isWorkLogSaving || resourceRoleOptions.length === 0}
+                                            data-testid="tasks-work-log-save-button"
+                                        >
+                                            {editingWorkLogId
+                                                ? (updateTaskWorkLogMutation.status === "pending" ? "Updating..." : "Update work log")
+                                                : (createTaskWorkLogMutation.status === "pending" ? "Adding..." : "Add work log")}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto rounded-md border border-border/70 bg-background">
+                                    <AppDataTable
+                                        data={taskWorkLogs}
+                                        columns={workLogColumns}
+                                        getRowId={(row) => row.id}
+                                        isLoading={taskWorkLogsQuery.isLoading}
+                                        loadingRow={(
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                                                    Loading work logs...
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                        emptyRow={(
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                                                    No work logs yet.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                        getRowProps={(row) => ({ "data-testid": row.original.id ? "tasks-work-log-row" : undefined })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setEditing(null);
+                                        resetWorkLogDraft(resourceRoleOptions[0]?.value);
+                                    }}
+                                    disabled={editUpdateMutation.status === "pending"}
+                                >
+                                    Cancel
+                                </Button>
                                 <Button
                                     type="submit"
-                                    disabled={updateMutation.status === "pending"}
+                                    disabled={editUpdateMutation.status === "pending"}
                                     data-testid="tasks-edit-save-button"
                                 >
-                                    {updateMutation.status === "pending" ? "Saving…" : "Save"}
+                                    {editUpdateMutation.status === "pending" ? "Saving…" : "Save"}
                                 </Button>
                             </div>
                         </form>
@@ -2247,63 +2881,78 @@ export function TasksPage() {
                 </AppDialogContent>
             </Dialog>
             {/* Confirm delete dialog */}
-            <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
-                <AppDialogContent
-                    title="Delete task"
-                    description="Are you sure you want to permanently delete this task? This action cannot be undone."
-                >
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                        <Button type="button" variant="destructive" onClick={() => {
-                            if (!taskToDelete) return;
-                            deleteMutation.mutate(taskToDelete.id);
-                            setConfirmOpen(false);
-                        }} data-testid="tasks-delete-confirm-button">
-                            Delete
-                        </Button>
-                    </div>
-                    <DialogFooter />
-                    <DialogClose />
-                </AppDialogContent>
-            </Dialog>
-            <Dialog
+            <AlertDialog open={confirmOpen} onOpenChange={(open) => { if (!open) setTaskToDelete(null); setConfirmOpen(open); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete task</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete this task? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button type="button" variant="ghost">Cancel</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    if (!taskToDelete) return;
+                                    deleteMutation.mutate(taskToDelete.id);
+                                    setConfirmOpen(false);
+                                }}
+                                data-testid="tasks-delete-confirm-button"
+                            >
+                                Delete
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog
                 open={bulkDeleteConfirmOpen}
                 onOpenChange={(open) => {
                     if (!open) setBulkDeleteTaskIds([]);
                     setBulkDeleteConfirmOpen(open);
                 }}
             >
-                <AppDialogContent
-                    title="Delete selected tasks"
-                    description={`Delete ${bulkDeleteTaskIds.length} selected task${bulkDeleteTaskIds.length === 1 ? "" : "s"}? This action cannot be undone.`}
-                >
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                                setBulkDeleteConfirmOpen(false);
-                                setBulkDeleteTaskIds([]);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={() => {
-                                void handleBulkDelete(bulkDeleteTaskIds);
-                            }}
-                            disabled={isBulkDeleting || bulkDeleteTaskIds.length === 0}
-                            data-testid="tasks-bulk-delete-confirm-button"
-                        >
-                            {isBulkDeleting ? "Deleting..." : "Delete"}
-                        </Button>
-                    </div>
-                    <DialogFooter />
-                    <DialogClose />
-                </AppDialogContent>
-            </Dialog>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete selected tasks</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Delete ${bulkDeleteTaskIds.length} selected task${bulkDeleteTaskIds.length === 1 ? "" : "s"}? This action cannot be undone.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => {
+                                    setBulkDeleteConfirmOpen(false);
+                                    setBulkDeleteTaskIds([]);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    void handleBulkDelete(bulkDeleteTaskIds);
+                                }}
+                                disabled={isBulkDeleting || bulkDeleteTaskIds.length === 0}
+                                data-testid="tasks-bulk-delete-confirm-button"
+                            >
+                                {isBulkDeleting ? "Deleting..." : "Delete"}
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

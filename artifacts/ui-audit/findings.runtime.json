@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-03-09T10:16:18.223Z",
+  "generatedAt": "2026-03-12T01:41:59.045Z",
+  "runId": "audit-1773279583842-lyh9f8",
   "source": "runtime",
-  "mode": "visual",
+  "mode": "full",
   "screenshotCount": 180,
   "findings": [],
   "observations": [
@@ -11,7 +12,7 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -33,7 +34,7 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -55,7 +56,7 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -77,14 +78,14 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -99,14 +100,14 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -121,14 +122,14 @@
       "viewport": "mobile",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -291,7 +292,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -313,7 +314,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -335,7 +336,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -494,7 +495,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -516,7 +517,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -538,7 +539,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -560,7 +561,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -582,7 +583,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -604,7 +605,7 @@
       "viewport": "tablet",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -633,7 +634,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": true,
@@ -658,7 +659,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": true,
@@ -683,7 +684,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": true,
@@ -977,7 +978,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -999,7 +1000,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -1021,7 +1022,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -1043,7 +1044,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -1065,7 +1066,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -1087,7 +1088,7 @@
       "viewport": "desktop",
       "states": {
         "loadingVisible": false,
-        "emptyVisible": true,
+        "emptyVisible": false,
         "errorVisible": false
       },
       "metrics": {
@@ -1323,7 +1324,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -1349,7 +1350,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,
@@ -1375,7 +1376,7 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": false,

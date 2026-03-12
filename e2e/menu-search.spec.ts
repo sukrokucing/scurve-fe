@@ -94,12 +94,44 @@ async function installApiMocks(page: Page) {
     });
 }
 
+async function expectSearchPanelAlignment(page: Page, rootSelector: string) {
+    const metrics = await page.evaluate((selector) => {
+        const root = document.querySelector(selector);
+        const inputWrap = root?.querySelector("[cmdk-input-wrapper]");
+        const list = root?.querySelector("[cmdk-list]");
+
+        if (!(inputWrap instanceof HTMLElement) || !(list instanceof HTMLElement)) {
+            return {
+                hasElements: false,
+                aligned: false,
+                widthDiff: null,
+                horizontalOverflow: true,
+            };
+        }
+
+        const wrapRect = inputWrap.getBoundingClientRect();
+        const listRect = list.getBoundingClientRect();
+        return {
+            hasElements: true,
+            aligned: Math.abs(wrapRect.left - listRect.left) < 1,
+            widthDiff: Math.abs(wrapRect.width - listRect.width),
+            horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        };
+    }, rootSelector);
+
+    expect(metrics.hasElements).toBeTruthy();
+    expect(metrics.aligned).toBeTruthy();
+    expect(metrics.widthDiff ?? 0).toBeLessThanOrEqual(1);
+    expect(metrics.horizontalOverflow).toBeFalsy();
+}
+
 test.beforeEach(async ({ page }) => {
     await seedAuthState(page);
     await installApiMocks(page);
 });
 
 test("desktop global search navigates by Enter and click", async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto("/tasks", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible({ timeout: 15_000 });
 
@@ -113,6 +145,7 @@ test("desktop global search navigates by Enter and click", async ({ page }) => {
 
     await page.getByTestId("global-menu-search-trigger").click();
     await expect(globalDialog).toBeVisible();
+    await expectSearchPanelAlignment(page, "[data-testid='global-menu-search-dialog']");
     await globalSearchInput.fill("role");
     await globalSearchInput.press("Enter");
     await expect(page).toHaveURL(/\/settings\/roles$/);
@@ -122,10 +155,11 @@ test("desktop global search navigates by Enter and click", async ({ page }) => {
     await sidebar.hover();
     await page.getByTestId("global-menu-search-trigger").click();
     await expect(globalDialog).toBeVisible();
+    await expectSearchPanelAlignment(page, "[data-testid='global-menu-search-dialog']");
     await globalSearchInput.fill("s");
-    const results = page.getByTestId("global-menu-search-result-item");
-    await expect(results.nth(1)).toBeVisible();
-    await results.nth(1).click();
+    const projectsResult = page.getByTestId("global-menu-search-result-item").filter({ hasText: "Projects" }).first();
+    await expect(projectsResult).toBeVisible();
+    await projectsResult.click();
     await expect(page).toHaveURL(/\/projects$/);
     await expect(globalDialog).toBeHidden();
 
@@ -133,19 +167,23 @@ test("desktop global search navigates by Enter and click", async ({ page }) => {
     await sidebar.hover();
     await page.getByTestId("global-menu-search-trigger").click();
     await expect(globalDialog).toBeVisible();
+    await expectSearchPanelAlignment(page, "[data-testid='global-menu-search-dialog']");
     await globalSearchInput.fill("zzzzzzzz");
+    await expect(page.getByText("No menu found")).toBeVisible();
     await globalSearchInput.press("Enter");
     await expect(page).toHaveURL(/\/tasks$/);
     await expect(globalDialog).toBeVisible();
 });
 
 test("global menu search opens via shortcut and sidebar trigger", async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto("/tasks", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible({ timeout: 15_000 });
 
     await page.keyboard.press("Control+k");
     const globalDialog = page.getByTestId("global-menu-search-dialog");
     await expect(globalDialog).toBeVisible();
+    await expectSearchPanelAlignment(page, "[data-testid='global-menu-search-dialog']");
 
     const globalSearchInput = page.getByTestId("global-menu-search-input");
     await globalSearchInput.fill("policy");
@@ -172,6 +210,7 @@ test.describe("mobile", () => {
 
         await mobileSearchTrigger.click();
         await expect(page.getByTestId("mobile-menu-search-sheet")).toBeVisible();
+        await expectSearchPanelAlignment(page, "[data-testid='mobile-menu-search-sheet']");
 
         const mobileSearchInput = page.getByTestId("mobile-menu-search-input");
         await mobileSearchInput.fill("flow");
@@ -182,9 +221,12 @@ test.describe("mobile", () => {
         await mobileSearchTrigger.click();
         await expect(page.getByTestId("mobile-menu-search-sheet")).toBeVisible();
         await mobileSearchInput.fill("project");
-        const mobileResults = page.getByTestId("mobile-menu-search-result-item");
-        await expect(mobileResults.first()).toBeVisible();
-        await mobileResults.first().click();
+        const mobileProjectsResult = page
+            .getByTestId("mobile-menu-search-result-item")
+            .filter({ hasText: "Projects" })
+            .first();
+        await expect(mobileProjectsResult).toBeVisible();
+        await mobileProjectsResult.click();
         await expect(page).toHaveURL(/\/projects$/);
         await expect(page.getByTestId("mobile-menu-search-sheet")).toBeHidden();
 

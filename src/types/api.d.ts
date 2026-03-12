@@ -144,6 +144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/s-curve/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Portfolio S Curve Summary
+         * @description Get Portfolio S Curve Summary Handles `GET` requests for `/portfolio/s-curve/summary`. Requires bearer authentication.
+         */
+        get: operations["get_portfolio_s_curve_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -260,6 +280,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/s-curve/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project S Curve Health
+         * @description Get Project S Curve Health Handles `GET` requests for `/projects/{id}/s-curve/health`. Requires bearer authentication.
+         */
+        get: operations["get_project_s_curve_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/assignees": {
         parameters: {
             query?: never;
@@ -324,6 +364,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Project Members
+         * @description List Project Members Handles `GET` requests for `/projects/{project_id}/members`. Requires bearer authentication.
+         */
+        get: operations["list_project_members"];
+        put?: never;
+        /**
+         * Create Project Member
+         * @description Create Project Member Handles `POST` requests for `/projects/{project_id}/members`. Requires bearer authentication.
+         */
+        post: operations["create_project_member"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Project Member
+         * @description Delete Project Member Handles `DELETE` requests for `/projects/{project_id}/members/{user_id}`. Requires bearer authentication.
+         */
+        delete: operations["delete_project_member"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/progress": {
         parameters: {
             query?: never;
@@ -339,6 +423,50 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/resource-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Project Resource Roles
+         * @description List Project Resource Roles Handles `GET` requests for `/projects/{project_id}/resource-roles`. Requires bearer authentication.
+         */
+        get: operations["list_project_resource_roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/resource-roles/{resource_role_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert Project Resource Role Rate
+         * @description Upsert Project Resource Role Rate Handles `PUT` requests for `/projects/{project_id}/resource-roles/{resource_role_id}/rate`. Requires bearer authentication.
+         */
+        put: operations["upsert_project_resource_role_rate"];
+        post?: never;
+        /**
+         * Delete Project Resource Role Rate
+         * @description Delete Project Resource Role Rate Handles `DELETE` requests for `/projects/{project_id}/resource-roles/{resource_role_id}/rate`. Requires bearer authentication.
+         */
+        delete: operations["delete_project_resource_role_rate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -487,6 +615,54 @@ export interface paths {
          * @description Delete Progress Handles `DELETE` requests for `/projects/{project_id}/tasks/{task_id}/progress/{id}`. Requires bearer authentication.
          */
         delete: operations["delete_progress"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{task_id}/work-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Logs
+         * @description List Work Logs Handles `GET` requests for `/projects/{project_id}/tasks/{task_id}/work-logs`. Requires bearer authentication.
+         */
+        get: operations["list_work_logs"];
+        put?: never;
+        /**
+         * Create Work Log
+         * @description Create Work Log Handles `POST` requests for `/projects/{project_id}/tasks/{task_id}/work-logs`. Requires bearer authentication.
+         */
+        post: operations["create_work_log"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{task_id}/work-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Work Log
+         * @description Update Work Log Handles `PUT` requests for `/projects/{project_id}/tasks/{task_id}/work-logs/{id}`. Requires bearer authentication.
+         */
+        put: operations["update_work_log"];
+        post?: never;
+        /**
+         * Delete Work Log
+         * @description Delete Work Log Handles `DELETE` requests for `/projects/{project_id}/tasks/{task_id}/work-logs/{id}`. Requires bearer authentication.
+         */
+        delete: operations["delete_work_log"];
         options?: never;
         head?: never;
         patch?: never;
@@ -716,6 +892,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Resource Roles
+         * @description List Resource Roles Handles `GET` requests for `/resource-roles`. Requires bearer authentication.
+         */
+        get: operations["list_resource_roles"];
+        put?: never;
+        /**
+         * Create Resource Role
+         * @description Create Resource Role Handles `POST` requests for `/resource-roles`. Requires bearer authentication.
+         */
+        post: operations["create_resource_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Resource Role
+         * @description Update Resource Role Handles `PUT` requests for `/resource-roles/{id}`. Requires bearer authentication.
+         */
+        put: operations["update_resource_role"];
+        post?: never;
+        /**
+         * Delete Resource Role
+         * @description Delete Resource Role Handles `DELETE` requests for `/resource-roles/{id}`. Requires bearer authentication.
+         */
+        delete: operations["delete_resource_role"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{task_id}/progress": {
         parameters: {
             query?: never;
@@ -775,6 +999,26 @@ export interface paths {
          * @description Creates a new user with password hash. Requires `user.manage` permission.
          */
         post: operations["create_user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Project Scopes
+         * @description List My Project Scopes Handles `GET` requests for `/users/me/projects`. Requires bearer authentication.
+         */
+        get: operations["list_my_project_scopes"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -864,10 +1108,24 @@ export interface components {
         CriticalPathResponse: {
             task_ids: string[];
         };
+        DashboardMetricPoint: {
+            date: string;
+            /** Format: double */
+            value: number;
+        };
         DashboardResponse: {
             actual: components["schemas"]["ActualPoint"][];
+            actual_source?: string | null;
+            currency?: string | null;
+            data_status: components["schemas"]["SCurveDataStatus"];
+            metric: components["schemas"]["SCurveMetric"];
+            metric_actual: components["schemas"]["DashboardMetricPoint"][];
+            metric_plan: components["schemas"]["DashboardMetricPoint"][];
+            metric_supported: boolean;
             plan: components["schemas"]["ProjectPlanPoint"][];
+            planned_source?: string | null;
             project: components["schemas"]["Project"];
+            unit?: string | null;
         };
         DeletedResponse: {
             message: string;
@@ -920,6 +1178,16 @@ export interface components {
         MessageResponse: {
             message: string;
         };
+        MyProjectScopeSummary: {
+            /** Format: uuid */
+            access_role_id: string;
+            access_role_name: string;
+            permissions: string[];
+            /** Format: uuid */
+            project_id: string;
+            project_name: string;
+            resource_roles: components["schemas"]["ResourceRoleRef"][];
+        };
         /** @description Paginated response for audit logs */
         PaginatedAuditLogs: {
             items: components["schemas"]["AuditLogEntry"][];
@@ -945,6 +1213,51 @@ export interface components {
             description?: string | null;
             /** @example project.archive */
             name: string;
+        };
+        PortfolioSCurveProjectSummary: {
+            /** Format: double */
+            actual_pct?: number | null;
+            actual_source?: string | null;
+            currency?: string | null;
+            data_status: components["schemas"]["SCurveDataStatus"];
+            /** Format: double */
+            elapsed_time_pct?: number | null;
+            /** Format: date-time */
+            last_updated_at: string;
+            metric_supported: boolean;
+            /** Format: double */
+            planned_pct?: number | null;
+            planned_source?: string | null;
+            /** Format: uuid */
+            project_id: string;
+            project_name: string;
+            rule_50_70_pass?: boolean | null;
+            rule_50_70_status: components["schemas"]["Rule5070Status"];
+            stage?: components["schemas"]["SCurveStage"] | null;
+            unit?: string | null;
+            /** Format: double */
+            variance_pct?: number | null;
+        };
+        PortfolioSCurveSummaryResponse: {
+            actual_source?: string | null;
+            /** Format: double */
+            avg_actual_pct?: number | null;
+            /** Format: double */
+            avg_planned_pct?: number | null;
+            /** Format: double */
+            avg_variance_pct?: number | null;
+            currency?: string | null;
+            data_status: components["schemas"]["SCurveDataStatus"];
+            decline_count: number;
+            lag_count: number;
+            log_count: number;
+            maturity_count: number;
+            metric: components["schemas"]["SCurveMetric"];
+            metric_supported: boolean;
+            planned_source?: string | null;
+            project_count: number;
+            projects: components["schemas"]["PortfolioSCurveProjectSummary"][];
+            unit?: string | null;
         };
         Progress: {
             /** Format: date-time */
@@ -1000,12 +1313,45 @@ export interface components {
             /** @example #3498db */
             theme_color?: string | null;
         };
+        ProjectMember: {
+            /** Format: uuid */
+            access_role_id: string;
+            access_role_name: string;
+            /** Format: date-time */
+            created_at: string;
+            resource_roles: components["schemas"]["ResourceRoleRef"][];
+            /** Format: date-time */
+            updated_at: string;
+            user_email: string;
+            /** Format: uuid */
+            user_id: string;
+            user_name: string;
+        };
+        ProjectMemberCreateRequest: {
+            /** Format: uuid */
+            access_role_id: string;
+            resource_role_ids: string[];
+            /** Format: uuid */
+            user_id: string;
+        };
         ProjectPlanCreateRequest: {
+            /** @example USD */
+            currency?: string | null;
             /**
              * Format: date-time
              * @example 2025-12-01T00:00:00Z
              */
             date: string;
+            /**
+             * Format: double
+             * @example 15200
+             */
+            planned_cost?: number | null;
+            /**
+             * Format: double
+             * @example 120.5
+             */
+            planned_hours?: number | null;
             /**
              * Format: int32
              * @example 10
@@ -1015,16 +1361,35 @@ export interface components {
         ProjectPlanPoint: {
             /** Format: date-time */
             created_at: string;
+            currency?: string | null;
             /** Format: date-time */
             date: string;
             /** Format: uuid */
             id: string;
+            /** Format: double */
+            planned_cost?: number | null;
+            /** Format: double */
+            planned_hours?: number | null;
             /** Format: int32 */
             planned_progress: number;
             /** Format: uuid */
             project_id: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ProjectResourceRoleRate: {
+            currency: string;
+            /** Format: double */
+            hourly_rate: number;
+            is_override: boolean;
+            /** Format: uuid */
+            resource_role_id: string;
+            resource_role_name: string;
+        };
+        ProjectResourceRoleRateUpsertRequest: {
+            currency: string;
+            /** Format: double */
+            hourly_rate: number;
         };
         ProjectUpdateRequest: {
             /** @example Updated description */
@@ -1047,6 +1412,38 @@ export interface components {
             new_password: string;
             /** @example abc123token */
             token: string;
+        };
+        ResourceRole: {
+            /** Format: date-time */
+            created_at: string;
+            currency: string;
+            /** Format: double */
+            default_hourly_rate: number;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ResourceRoleCreateRequest: {
+            currency: string;
+            /** Format: double */
+            default_hourly_rate: number;
+            description?: string | null;
+            name: string;
+        };
+        ResourceRoleRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ResourceRoleUpdateRequest: {
+            currency?: string | null;
+            /** Format: double */
+            default_hourly_rate?: number | null;
+            description?: string | null;
+            name?: string | null;
         };
         Role: {
             /** Format: date-time */
@@ -1072,6 +1469,36 @@ export interface components {
             /** Format: uuid */
             role_id: string;
         };
+        /** @enum {string} */
+        Rule5070Status: "unsupported_metric" | "insufficient_elapsed_time_data" | "insufficient_progress_data" | "insufficient_metric_data" | "pre_window" | "pass" | "fail" | "post_window_pass" | "post_window_fail";
+        /** @enum {string} */
+        SCurveDataStatus: "ok" | "insufficient_data" | "unsupported_metric";
+        SCurveHealthResponse: {
+            /** Format: double */
+            actual_pct?: number | null;
+            actual_source?: string | null;
+            currency?: string | null;
+            data_status: components["schemas"]["SCurveDataStatus"];
+            /** Format: double */
+            elapsed_time_pct?: number | null;
+            /** Format: date-time */
+            last_updated_at: string;
+            metric: components["schemas"]["SCurveMetric"];
+            metric_supported: boolean;
+            /** Format: double */
+            planned_pct?: number | null;
+            planned_source?: string | null;
+            rule_50_70_pass?: boolean | null;
+            rule_50_70_status: components["schemas"]["Rule5070Status"];
+            stage?: components["schemas"]["SCurveStage"] | null;
+            unit?: string | null;
+            /** Format: double */
+            variance_pct?: number | null;
+        };
+        /** @enum {string} */
+        SCurveMetric: "progress" | "hours" | "cost";
+        /** @enum {string} */
+        SCurveStage: "lag" | "log" | "maturity" | "decline";
         Task: {
             /** Format: uuid */
             assignee?: string | null;
@@ -1079,6 +1506,8 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             deleted_at?: string | null;
+            /** @example [Quick Add] Define launch checklist */
+            description: string;
             /** Format: date-time */
             due_date?: string | null;
             /** Format: int32 */
@@ -1160,6 +1589,8 @@ export interface components {
         TaskCreateRequest: {
             /** Format: uuid */
             assignee?: string | null;
+            /** @example [Quick Add] Define launch checklist */
+            description?: string | null;
             /**
              * Format: date-time
              * @example 2025-10-10T10:00:00Z
@@ -1205,6 +1636,7 @@ export interface components {
         TaskUpdateRequest: {
             /** Format: uuid */
             assignee?: string | null;
+            description?: string | null;
             /**
              * Format: date-time
              * @example 2025-11-01T10:00:00Z
@@ -1316,6 +1748,62 @@ export interface components {
             role_id: string;
             /** Format: uuid */
             user_id: string;
+        };
+        WorkLog: {
+            /** Format: double */
+            cost_amount: number;
+            /** Format: date-time */
+            created_at: string;
+            currency_snapshot: string;
+            /** Format: date-time */
+            deleted_at?: string | null;
+            /** Format: double */
+            hourly_rate_snapshot: number;
+            /** Format: double */
+            hours: number;
+            /** Format: uuid */
+            id: string;
+            note?: string | null;
+            /** Format: uuid */
+            project_id: string;
+            /** Format: uuid */
+            resource_role_id: string;
+            resource_role_name: string;
+            source: components["schemas"]["WorkLogSource"];
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            user_id?: string | null;
+            user_name?: string | null;
+            /** @example 2026-03-10 */
+            work_date: string;
+        };
+        WorkLogCreateRequest: {
+            /**
+             * Format: double
+             * @example 2.5
+             */
+            hours: number;
+            note?: string | null;
+            /** Format: uuid */
+            resource_role_id: string;
+            /** Format: uuid */
+            user_id?: string | null;
+            /** @example 2026-03-10 */
+            work_date?: string | null;
+        };
+        /** @enum {string} */
+        WorkLogSource: "manual" | "migrated_task_progress";
+        WorkLogUpdateRequest: {
+            /** Format: double */
+            hours?: number | null;
+            note?: string | null;
+            /** Format: uuid */
+            resource_role_id?: string | null;
+            /** @example 2026-03-10 */
+            work_date?: string | null;
         };
     };
     responses: never;
@@ -1584,6 +2072,29 @@ export interface operations {
             };
         };
     };
+    get_portfolio_s_curve_summary: {
+        parameters: {
+            query?: {
+                /** @description Metric type. Defaults to progress. */
+                metric?: components["schemas"]["SCurveMetric"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portfolio S-curve summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioSCurveSummaryResponse"];
+                };
+            };
+        };
+    };
     list_projects: {
         parameters: {
             query?: never;
@@ -1799,7 +2310,10 @@ export interface operations {
     };
     get_project_dashboard: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Metric type. Defaults to progress. */
+                metric?: components["schemas"]["SCurveMetric"] | null;
+            };
             header?: never;
             path: {
                 /**
@@ -1869,7 +2383,10 @@ export interface operations {
                 /**
                  * @example [
                  *       {
+                 *         "currency": "USD",
                  *         "date": "2025-12-01T00:00:00Z",
+                 *         "planned_cost": 15200,
+                 *         "planned_hours": 120.5,
                  *         "planned_progress": 10
                  *       }
                  *     ]
@@ -1922,6 +2439,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_project_s_curve_health: {
+        parameters: {
+            query?: {
+                /** @description Metric type. Defaults to progress. */
+                metric?: components["schemas"]["SCurveMetric"] | null;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project S-curve health */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SCurveHealthResponse"];
+                };
             };
         };
     };
@@ -2072,6 +2618,145 @@ export interface operations {
             };
         };
     };
+    list_project_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List active project members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "access_role_id": "55555555-5555-4555-8555-555555555555",
+                     *         "access_role_name": "project_owner",
+                     *         "created_at": "2026-03-10T00:00:00Z",
+                     *         "resource_roles": [
+                     *           {
+                     *             "id": "40000000-0000-0000-0000-000000000003",
+                     *             "name": "backend_engineer"
+                     *           },
+                     *           {
+                     *             "id": "40000000-0000-0000-0000-000000000006",
+                     *             "name": "project_manager"
+                     *           }
+                     *         ],
+                     *         "updated_at": "2026-03-10T00:00:00Z",
+                     *         "user_email": "ada@example.com",
+                     *         "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "user_name": "Ada Lovelace"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ProjectMember"][];
+                };
+            };
+        };
+    };
+    create_project_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "access_role_id": "55555555-5555-4555-8555-555555555555",
+                 *       "resource_role_ids": [
+                 *         "40000000-0000-0000-0000-000000000003",
+                 *         "40000000-0000-0000-0000-000000000006"
+                 *       ],
+                 *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProjectMemberCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Project member added or updated */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_role_id": "55555555-5555-4555-8555-555555555555",
+                     *       "access_role_name": "project_owner",
+                     *       "created_at": "2026-03-10T00:00:00Z",
+                     *       "resource_roles": [
+                     *         {
+                     *           "id": "40000000-0000-0000-0000-000000000003",
+                     *           "name": "backend_engineer"
+                     *         },
+                     *         {
+                     *           "id": "40000000-0000-0000-0000-000000000006",
+                     *           "name": "project_manager"
+                     *         }
+                     *       ],
+                     *       "updated_at": "2026-03-10T00:00:00Z",
+                     *       "user_email": "ada@example.com",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "user_name": "Ada Lovelace"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProjectMember"];
+                };
+            };
+        };
+    };
+    delete_project_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description User id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project member soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_project_progress: {
         parameters: {
             query?: {
@@ -2117,6 +2802,122 @@ export interface operations {
             };
         };
     };
+    list_project_resource_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List project effective resource role rates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "currency": "USD",
+                     *         "hourly_rate": 88,
+                     *         "is_override": true,
+                     *         "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                     *         "resource_role_name": "backend_engineer"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ProjectResourceRoleRate"][];
+                };
+            };
+        };
+    };
+    upsert_project_resource_role_rate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Resource role id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                resource_role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "currency": "USD",
+                 *       "hourly_rate": 88
+                 *     }
+                 */
+                "application/json": components["schemas"]["ProjectResourceRoleRateUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Project resource role rate upserted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "currency": "USD",
+                     *       "hourly_rate": 88,
+                     *       "is_override": true,
+                     *       "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                     *       "resource_role_name": "backend_engineer"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProjectResourceRoleRate"];
+                };
+            };
+        };
+    };
+    delete_project_resource_role_rate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Resource role id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                resource_role_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Project resource role rate deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_tasks: {
         parameters: {
             query?: {
@@ -2127,7 +2928,7 @@ export interface operations {
                  * @example 00000000-0000-0000-0000-000000000000
                  */
                 task_id?: string | null;
-                /** @description Title search keyword. */
+                /** @description Title search keyword. Trimmed; max 128 characters. '%' and '_' are treated as literal characters. */
                 q?: string | null;
                 /** @description Filter by task status. Supports comma-separated values (e.g. todo,done). */
                 status?: string | null;
@@ -2148,9 +2949,9 @@ export interface operations {
                 sort_by?: components["schemas"]["TaskSortBy"] | null;
                 /** @description Sort direction. */
                 sort_dir?: components["schemas"]["TaskSortDir"] | null;
-                /** @description Page number (1-based, default 1). */
+                /** @description Page number (1-based, default 1). Values below 1 are treated as 1. */
                 page?: number | null;
-                /** @description Items per page (default 50, max 100). */
+                /** @description Items per page (default 50). Clamped to 1..100. */
                 per_page?: number | null;
             };
             header?: never;
@@ -2736,6 +3537,225 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Progress soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_work_logs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List work logs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "cost_amount": 352,
+                     *         "created_at": "2026-03-10T07:00:00Z",
+                     *         "currency_snapshot": "USD",
+                     *         "deleted_at": null,
+                     *         "hourly_rate_snapshot": 88,
+                     *         "hours": 4,
+                     *         "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                     *         "note": "Implemented server-side pagination",
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                     *         "resource_role_name": "backend_engineer",
+                     *         "source": "manual",
+                     *         "task_id": "33333333-3333-4333-8333-333333333333",
+                     *         "updated_at": "2026-03-10T07:00:00Z",
+                     *         "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *         "user_name": "Ada Lovelace",
+                     *         "work_date": "2026-03-10"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["WorkLog"][];
+                };
+            };
+        };
+    };
+    create_work_log: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "hours": 3.5,
+                 *       "note": "Implemented pagination filters",
+                 *       "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                 *       "work_date": "2026-03-10"
+                 *     }
+                 */
+                "application/json": components["schemas"]["WorkLogCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Work log created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "cost_amount": 352,
+                     *       "created_at": "2026-03-10T07:00:00Z",
+                     *       "currency_snapshot": "USD",
+                     *       "deleted_at": null,
+                     *       "hourly_rate_snapshot": 88,
+                     *       "hours": 4,
+                     *       "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                     *       "note": "Implemented server-side pagination",
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
+                     *       "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                     *       "resource_role_name": "backend_engineer",
+                     *       "source": "manual",
+                     *       "task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "updated_at": "2026-03-10T07:00:00Z",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "user_name": "Ada Lovelace",
+                     *       "work_date": "2026-03-10"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkLog"];
+                };
+            };
+        };
+    };
+    update_work_log: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id: string;
+                /**
+                 * @description Work log id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "hours": 4,
+                 *       "note": "Expanded to include sorting support"
+                 *     }
+                 */
+                "application/json": components["schemas"]["WorkLogUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Work log updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "cost_amount": 352,
+                     *       "created_at": "2026-03-10T07:00:00Z",
+                     *       "currency_snapshot": "USD",
+                     *       "deleted_at": null,
+                     *       "hourly_rate_snapshot": 88,
+                     *       "hours": 4,
+                     *       "id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                     *       "note": "Implemented server-side pagination",
+                     *       "project_id": "44444444-4444-4444-8444-444444444444",
+                     *       "resource_role_id": "40000000-0000-0000-0000-000000000003",
+                     *       "resource_role_name": "backend_engineer",
+                     *       "source": "manual",
+                     *       "task_id": "33333333-3333-4333-8333-333333333333",
+                     *       "updated_at": "2026-03-10T07:00:00Z",
+                     *       "user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                     *       "user_name": "Ada Lovelace",
+                     *       "work_date": "2026-03-10"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkLog"];
+                };
+            };
+        };
+    };
+    delete_work_log: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                task_id: string;
+                /**
+                 * @description Work log id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Work log deleted */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3357,6 +4377,153 @@ export interface operations {
             };
         };
     };
+    list_resource_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List global resource roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "created_at": "2026-03-10T00:00:00Z",
+                     *         "currency": "USD",
+                     *         "default_hourly_rate": 70,
+                     *         "description": "Backend engineering project contribution role",
+                     *         "id": "40000000-0000-0000-0000-000000000003",
+                     *         "name": "backend_engineer",
+                     *         "updated_at": "2026-03-10T00:00:00Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ResourceRole"][];
+                };
+            };
+        };
+    };
+    create_resource_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "currency": "USD",
+                 *       "default_hourly_rate": 72.5,
+                 *       "description": "Builds and maintains project data pipelines",
+                 *       "name": "data_engineer"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ResourceRoleCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Resource role created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-03-10T00:00:00Z",
+                     *       "currency": "USD",
+                     *       "default_hourly_rate": 70,
+                     *       "description": "Backend engineering project contribution role",
+                     *       "id": "40000000-0000-0000-0000-000000000003",
+                     *       "name": "backend_engineer",
+                     *       "updated_at": "2026-03-10T00:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResourceRole"];
+                };
+            };
+        };
+    };
+    update_resource_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Resource role id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "default_hourly_rate": 78,
+                 *       "description": "Updated description"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ResourceRoleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Resource role updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-03-10T00:00:00Z",
+                     *       "currency": "USD",
+                     *       "default_hourly_rate": 70,
+                     *       "description": "Backend engineering project contribution role",
+                     *       "id": "40000000-0000-0000-0000-000000000003",
+                     *       "name": "backend_engineer",
+                     *       "updated_at": "2026-03-10T00:00:00Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResourceRole"];
+                };
+            };
+        };
+    };
+    delete_resource_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Resource role id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resource role soft deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_progress_by_task: {
         parameters: {
             query?: never;
@@ -3432,11 +4599,11 @@ export interface operations {
     list_users: {
         parameters: {
             query?: {
-                /** @description Optional search query (name or email) */
+                /** @description Optional search query (name or email). Trimmed; max 128 characters. '%' and '_' are treated as literal characters. */
                 q?: string | null;
-                /** @description Page number (1-based, default 1) */
+                /** @description Page number (1-based, default 1). Values below 1 are treated as 1. */
                 page?: number | null;
-                /** @description Items per page (default 25, max 100) */
+                /** @description Items per page (default 25). Clamped to 1..100. */
                 per_page?: number | null;
             };
             header?: never;
@@ -3515,6 +4682,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_my_project_scopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accessible projects with effective scoped permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "access_role_id": "55555555-5555-4555-8555-555555555555",
+                     *         "access_role_name": "project_owner",
+                     *         "permissions": [
+                     *           "project.view",
+                     *           "task.create",
+                     *           "task.view",
+                     *           "progress.create",
+                     *           "progress.view"
+                     *         ],
+                     *         "project_id": "44444444-4444-4444-8444-444444444444",
+                     *         "project_name": "Launch Planning",
+                     *         "resource_roles": [
+                     *           {
+                     *             "id": "40000000-0000-0000-0000-000000000003",
+                     *             "name": "backend_engineer"
+                     *           }
+                     *         ]
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["MyProjectScopeSummary"][];
+                };
             };
         };
     };

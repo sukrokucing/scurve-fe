@@ -8,6 +8,21 @@ type ProjectCreateRequest = components["schemas"]["ProjectCreateRequest"];
 type ProjectUpdateRequest = components["schemas"]["ProjectUpdateRequest"];
 type ApiTask = components["schemas"]["Task"];
 type ApiProgress = components["schemas"]["Progress"];
+type ApiTaskAssignee = components["schemas"]["TaskAssignee"];
+type ApiProjectMember = components["schemas"]["ProjectMember"];
+type ApiProjectMemberCreateRequest = components["schemas"]["ProjectMemberCreateRequest"];
+type ApiMyProjectScopeSummary = components["schemas"]["MyProjectScopeSummary"];
+type ApiSCurveMetric = components["schemas"]["SCurveMetric"];
+type ApiSCurveHealthResponse = components["schemas"]["SCurveHealthResponse"];
+type ApiPortfolioSCurveSummaryResponse = components["schemas"]["PortfolioSCurveSummaryResponse"];
+type ApiResourceRole = components["schemas"]["ResourceRole"];
+type ApiResourceRoleCreateRequest = components["schemas"]["ResourceRoleCreateRequest"];
+type ApiResourceRoleUpdateRequest = components["schemas"]["ResourceRoleUpdateRequest"];
+type ApiProjectResourceRoleRate = components["schemas"]["ProjectResourceRoleRate"];
+type ApiProjectResourceRoleRateUpsertRequest = components["schemas"]["ProjectResourceRoleRateUpsertRequest"];
+type ApiWorkLog = components["schemas"]["WorkLog"];
+type ApiWorkLogCreateRequest = components["schemas"]["WorkLogCreateRequest"];
+type ApiWorkLogUpdateRequest = components["schemas"]["WorkLogUpdateRequest"];
 type TaskCreateRequest = components["schemas"]["TaskCreateRequest"];
 type TaskUpdateRequest = components["schemas"]["TaskUpdateRequest"];
 type ApiTaskDependency = components["schemas"]["TaskDependency"];
@@ -63,7 +78,7 @@ function mapApiTaskToDomain(t: ApiTask): DomainTask {
     return {
         id: t.id,
         name: t.title,
-        description: undefined,
+        description: t.description ?? undefined,
         status: mapStatus(t.status),
         projectId: t.project_id,
         assigneeId: t.assignee ?? undefined,
@@ -82,15 +97,6 @@ function mapApiProjectToDomain(p: ApiProject): DomainProject {
         id: p.id,
         name: p.name,
         description: p.description ?? undefined,
-        // backend doesn't expose status/startDate/endDate/progress in this OpenAPI — provide sensible defaults
-        status: "active",
-        startDate: (p as unknown as Record<string, unknown>)["start_date"] as string | undefined ??
-            (p as unknown as Record<string, unknown>)["startDate"] as string | undefined ??
-            undefined,
-        endDate: (p as unknown as Record<string, unknown>)["end_date"] as string | undefined ??
-            (p as unknown as Record<string, unknown>)["endDate"] as string | undefined ??
-            undefined,
-        progress: ((p as unknown as Record<string, unknown>)["progress"] as number | undefined) ?? 0,
         theme_color: p.theme_color,
     };
 }
@@ -188,8 +194,10 @@ export const openapi = {
     },
 
     // Dashboard & Plan
-    async getProjectDashboard(id: string): Promise<ApiDashboardResponse> {
-        const { data } = await api.get<ApiDashboardResponse>(`/projects/${id}/dashboard`);
+    async getProjectDashboard(id: string, metric: ApiSCurveMetric = "progress"): Promise<ApiDashboardResponse> {
+        const { data } = await api.get<ApiDashboardResponse>(`/projects/${id}/dashboard`, {
+            params: { metric },
+        });
         return data;
     },
 
@@ -199,6 +207,108 @@ export const openapi = {
 
     async clearProjectPlan(id: string): Promise<void> {
         await api.delete(`/projects/${id}/plan`);
+    },
+
+    async listProjectAssignees(projectId: string): Promise<ApiTaskAssignee[]> {
+        const { data } = await api.get<ApiTaskAssignee[]>(`/projects/${projectId}/assignees`);
+        return Array.isArray(data) ? data : [];
+    },
+
+    async listProjectMembers(projectId: string): Promise<ApiProjectMember[]> {
+        const { data } = await api.get<ApiProjectMember[]>(`/projects/${projectId}/members`);
+        return data;
+    },
+
+    async addProjectMember(projectId: string, payload: ApiProjectMemberCreateRequest): Promise<ApiProjectMember> {
+        const { data } = await api.post<ApiProjectMember>(`/projects/${projectId}/members`, payload);
+        return data;
+    },
+
+    async removeProjectMember(projectId: string, userId: string): Promise<void> {
+        await api.delete(`/projects/${projectId}/members/${userId}`);
+    },
+
+    async listMyProjectScopes(): Promise<ApiMyProjectScopeSummary[]> {
+        const { data } = await api.get<ApiMyProjectScopeSummary[]>("/users/me/projects");
+        return data;
+    },
+
+    async listResourceRoles(): Promise<ApiResourceRole[]> {
+        const { data } = await api.get<ApiResourceRole[]>("/resource-roles");
+        return Array.isArray(data) ? data : [];
+    },
+
+    async createResourceRole(payload: ApiResourceRoleCreateRequest): Promise<ApiResourceRole> {
+        const { data } = await api.post<ApiResourceRole>("/resource-roles", payload);
+        return data;
+    },
+
+    async updateResourceRole(id: string, payload: ApiResourceRoleUpdateRequest): Promise<ApiResourceRole> {
+        const { data } = await api.put<ApiResourceRole>(`/resource-roles/${id}`, payload);
+        return data;
+    },
+
+    async deleteResourceRole(id: string): Promise<void> {
+        await api.delete(`/resource-roles/${id}`);
+    },
+
+    async listProjectResourceRoles(projectId: string): Promise<ApiProjectResourceRoleRate[]> {
+        const { data } = await api.get<ApiProjectResourceRoleRate[]>(`/projects/${projectId}/resource-roles`);
+        return Array.isArray(data) ? data : [];
+    },
+
+    async upsertProjectResourceRoleRate(
+        projectId: string,
+        resourceRoleId: string,
+        payload: ApiProjectResourceRoleRateUpsertRequest,
+    ): Promise<ApiProjectResourceRoleRate> {
+        const { data } = await api.put<ApiProjectResourceRoleRate>(
+            `/projects/${projectId}/resource-roles/${resourceRoleId}/rate`,
+            payload,
+        );
+        return data;
+    },
+
+    async deleteProjectResourceRoleRate(projectId: string, resourceRoleId: string): Promise<void> {
+        await api.delete(`/projects/${projectId}/resource-roles/${resourceRoleId}/rate`);
+    },
+
+    async listTaskWorkLogs(projectId: string, taskId: string): Promise<ApiWorkLog[]> {
+        const { data } = await api.get<ApiWorkLog[]>(`/projects/${projectId}/tasks/${taskId}/work-logs`);
+        return Array.isArray(data) ? data : [];
+    },
+
+    async createTaskWorkLog(projectId: string, taskId: string, payload: ApiWorkLogCreateRequest): Promise<ApiWorkLog> {
+        const { data } = await api.post<ApiWorkLog>(`/projects/${projectId}/tasks/${taskId}/work-logs`, payload);
+        return data;
+    },
+
+    async updateTaskWorkLog(
+        projectId: string,
+        taskId: string,
+        id: string,
+        payload: ApiWorkLogUpdateRequest,
+    ): Promise<ApiWorkLog> {
+        const { data } = await api.put<ApiWorkLog>(`/projects/${projectId}/tasks/${taskId}/work-logs/${id}`, payload);
+        return data;
+    },
+
+    async deleteTaskWorkLog(projectId: string, taskId: string, id: string): Promise<void> {
+        await api.delete(`/projects/${projectId}/tasks/${taskId}/work-logs/${id}`);
+    },
+
+    async getProjectSCurveHealth(id: string, metric: ApiSCurveMetric = "progress"): Promise<ApiSCurveHealthResponse> {
+        const { data } = await api.get<ApiSCurveHealthResponse>(`/projects/${id}/s-curve/health`, {
+            params: { metric },
+        });
+        return data;
+    },
+
+    async getPortfolioSCurveSummary(metric: ApiSCurveMetric = "progress"): Promise<ApiPortfolioSCurveSummaryResponse> {
+        const { data } = await api.get<ApiPortfolioSCurveSummaryResponse>("/portfolio/s-curve/summary", {
+            params: { metric },
+        });
+        return data;
     },
 
     async getProjectCriticalPath(id: string): Promise<string[]> {
@@ -219,4 +329,18 @@ export type {
     ApiProjectPlanPoint,
     TaskListQueryParams,
     PaginatedTasksResult,
+    ApiProjectMember,
+    ApiProjectMemberCreateRequest,
+    ApiMyProjectScopeSummary,
+    ApiSCurveMetric,
+    ApiSCurveHealthResponse,
+    ApiPortfolioSCurveSummaryResponse,
+    ApiResourceRole,
+    ApiResourceRoleCreateRequest,
+    ApiResourceRoleUpdateRequest,
+    ApiProjectResourceRoleRate,
+    ApiProjectResourceRoleRateUpsertRequest,
+    ApiWorkLog,
+    ApiWorkLogCreateRequest,
+    ApiWorkLogUpdateRequest,
 };

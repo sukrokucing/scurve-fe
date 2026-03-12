@@ -16,6 +16,7 @@ export type MenuSection = "main" | "settings";
 export type MenuEntry = {
     id: string;
     label: string;
+    description?: string;
     to: string;
     section: MenuSection;
     keywords: string[];
@@ -30,6 +31,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "dashboard",
         label: "Dashboard",
+        description: "Portfolio health and S-curve snapshots",
         to: "/",
         section: "main",
         keywords: ["home", "overview", "summary"],
@@ -40,6 +42,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "projects",
         label: "Projects",
+        description: "Manage project setup, members, and rates",
         to: "/projects",
         section: "main",
         keywords: ["portfolio", "delivery", "roadmap"],
@@ -50,6 +53,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "tasks",
         label: "Tasks",
+        description: "Quick create and execution tracking",
         to: "/tasks",
         section: "main",
         keywords: ["todo", "work items", "execution"],
@@ -60,6 +64,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "settings",
         label: "Settings",
+        description: "Workspace access and governance controls",
         to: "/settings",
         section: "settings",
         keywords: ["admin", "configuration", "workspace"],
@@ -70,6 +75,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "settings-users",
         label: "Users",
+        description: "Search users and assign access",
         to: "/settings/users",
         section: "settings",
         keywords: ["members", "accounts", "people"],
@@ -80,6 +86,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "settings-roles",
         label: "Roles",
+        description: "Define role bundles and permissions",
         to: "/settings/roles",
         section: "settings",
         keywords: ["rbac", "permissions", "access control"],
@@ -90,6 +97,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "settings-policy",
         label: "Policy",
+        description: "Review and edit permission matrix",
         to: "/settings/policy",
         section: "settings",
         keywords: ["rules", "governance", "authorization"],
@@ -100,6 +108,7 @@ const MENU_ENTRIES: MenuEntry[] = [
     {
         id: "settings-flow",
         label: "Access Flow",
+        description: "Inspect inheritance and role links",
         to: "/settings/flow",
         section: "settings",
         keywords: ["inheritance", "hierarchy", "relationship flow"],
@@ -121,4 +130,3 @@ export const SETTINGS_NAV_MENU_ENTRIES = bySurface("settings-nav");
 export const SEARCH_MENU_ENTRIES = MENU_ENTRIES
     .filter((entry) => entry.surfaces.includes("search") && !entry.hidden && !entry.disabled)
     .sort(sortByPriorityAndLabel);
-

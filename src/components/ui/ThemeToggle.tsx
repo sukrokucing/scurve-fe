@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useLocalStorage } from "@/hooks/vendor/reactUse";
 
 type ThemeName = "glass" | "dark" | "light";
 
@@ -21,13 +22,12 @@ function normalizeTheme(value: string | null): ThemeName {
 }
 
 export function ThemeToggle() {
-    const [theme, setTheme] = useState<ThemeName>(() => {
-        try {
-            return normalizeTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
-        } catch {
-            return DEFAULT_THEME;
-        }
-    });
+    const [storedTheme, setStoredTheme] = useLocalStorage<string>(
+        THEME_STORAGE_KEY,
+        DEFAULT_THEME,
+        { raw: true },
+    );
+    const theme = normalizeTheme(storedTheme ?? DEFAULT_THEME);
 
     useEffect(() => {
         try {
@@ -41,18 +41,15 @@ export function ThemeToggle() {
                 root.classList.add("dark");
             }
 
-            window.localStorage.setItem(THEME_STORAGE_KEY, theme);
         } catch {
             // ignore
         }
     }, [theme]);
 
     const toggleTheme = () => {
-        setTheme((current) => {
-            const currentIndex = THEME_SEQUENCE.indexOf(current);
-            const nextIndex = (currentIndex + 1) % THEME_SEQUENCE.length;
-            return THEME_SEQUENCE[nextIndex];
-        });
+        const currentIndex = THEME_SEQUENCE.indexOf(theme);
+        const nextIndex = (currentIndex + 1) % THEME_SEQUENCE.length;
+        setStoredTheme(THEME_SEQUENCE[nextIndex]);
     };
 
     return (

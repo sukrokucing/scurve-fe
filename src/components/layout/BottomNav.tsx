@@ -22,15 +22,15 @@ export function BottomNav() {
 
     return (
         <>
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border px-2 pb-safe pt-2">
-                <div className="grid grid-cols-5 items-stretch pointer-events-auto">
+            <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/80 px-1 pb-safe pt-2 backdrop-blur-lg md:hidden">
+                <div className="pointer-events-auto grid grid-cols-5 items-stretch gap-0.5">
                     {BOTTOM_NAV_MENU_ENTRIES.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
                             className={({ isActive }) =>
                                 cn(
-                                    "flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
+                                    "flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                                     isActive
                                         ? "bg-accent text-foreground"
                                         : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -38,7 +38,12 @@ export function BottomNav() {
                             }
                         >
                             <item.icon className="h-5 w-5" />
-                            <span className="text-xs font-medium">{item.label}</span>
+                            <span
+                                className="max-w-full truncate text-[10px] font-medium leading-none tracking-tight"
+                                title={item.label}
+                            >
+                                {item.label}
+                            </span>
                         </NavLink>
                     ))}
 
@@ -47,7 +52,7 @@ export function BottomNav() {
                         aria-label="Open menu search"
                         data-testid="bottom-nav-search-trigger"
                         className={cn(
-                            "flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
+                            "flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                             isSearchOpen
                                 ? "bg-accent text-foreground"
                                 : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -55,7 +60,12 @@ export function BottomNav() {
                         onClick={() => setIsSearchOpen(true)}
                     >
                         <Search className="h-5 w-5" />
-                        <span className="text-xs font-medium">Search</span>
+                        <span
+                            className="max-w-full truncate text-[10px] font-medium leading-none tracking-tight"
+                            title="Search"
+                        >
+                            Search
+                        </span>
                     </button>
                 </div>
             </nav>

@@ -6,7 +6,7 @@ export interface Project {
     id: Identifier;
     name: string;
     description?: string;
-    status: ProjectStatus;
+    status?: ProjectStatus;
     startDate?: string;
     endDate?: string;
     progress?: number;

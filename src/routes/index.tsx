@@ -10,6 +10,7 @@ const RegisterForm = lazy(() => import("@/auth/RegisterForm").then((m) => ({ def
 const AuthLayout = lazy(() => import("@/pages/auth/AuthLayout").then((m) => ({ default: m.AuthLayout })));
 const DashboardPage = lazy(() => import("@/pages/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ProjectsPage = lazy(() => import("@/pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
+const ProjectSettingsPage = lazy(() => import("@/pages/projects/ProjectSettingsPage").then((m) => ({ default: m.ProjectSettingsPage })));
 const TasksPage = lazy(() => import("@/pages/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
 const AppLayout = lazy(() => import("@/components/layout/AppLayout").then((m) => ({ default: m.AppLayout })));
 const ProjectDashboard = lazy(() => import("@/components/dashboard/ProjectDashboard").then((m) => ({ default: m.ProjectDashboard })));
@@ -102,7 +103,15 @@ export const router = createBrowserRouter([
                                                 <ProjectDashboard />
                                             </Suspense>
                                         ),
-                                    }
+                                    },
+                                    {
+                                        path: ":id/settings",
+                                        element: (
+                                            <Suspense fallback={<LoadingFallback />}>
+                                                <ProjectSettingsPage />
+                                            </Suspense>
+                                        ),
+                                    },
                                 ]
                             },
 

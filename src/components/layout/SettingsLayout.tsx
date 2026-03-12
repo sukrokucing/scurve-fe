@@ -21,8 +21,8 @@ export function SettingsLayout() {
                                 to={item.to}
                                 className={({ isActive }) =>
                                     cn(
-                                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all group",
-                                        "min-h-11",
+                                        "flex items-start gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all group",
+                                        "min-h-11 lg:min-h-[58px]",
                                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                                         isActive
                                             ? "bg-primary text-primary-foreground shadow-sm"
@@ -30,8 +30,24 @@ export function SettingsLayout() {
                                     )
                                 }
                             >
-                                <item.icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
-                                <span>{item.label}</span>
+                                {({ isActive }) => (
+                                    <>
+                                        <item.icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110 mt-0.5" />
+                                        <span className="flex min-w-0 flex-col gap-0.5">
+                                            <span>{item.label}</span>
+                                            {item.description ? (
+                                                <span
+                                                    className={cn(
+                                                        "hidden text-xs font-normal lg:block",
+                                                        isActive ? "text-primary-foreground/85" : "text-muted-foreground",
+                                                    )}
+                                                >
+                                                    {item.description}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </>
+                                )}
                             </NavLink>
                         ))}
                     </nav>

@@ -32,6 +32,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Table stack guard
+        run: npm run qa:tables
+
       - name: Build
         run: npm run build
 

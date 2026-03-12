@@ -1,0 +1,26 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYTg1YWViZS01NjA3LTRkZDMtYmU0NS01OWJjYTI5ODQ0NmQiLCJleHAiOjE3NzMyMDI0NjcsImlhdCI6MTc3MzExNjA2N30.ijk-KXp8Ib6D3W_L8-E7gP5v6L-KGGpSi6af3o0tKC8",
+  "user": {
+    "id": "ba85aebe-5607-4dd3-be45-59bca298446d",
+    "name": "Demo Data Analyst",
+    "email": "demo.data.analyst@example.com"
+  },
+  "permissions": [
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "data_analyst"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "data_analyst"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "data_analyst"
+    }
+  ],
+  "createdAt": "2026-03-10T04:14:27.323Z"
+}

@@ -1,0 +1,10 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjQ4ZDk2YS03NjVlLTRmYWUtOTk3Ny05NjkxMTBjZmZiODYiLCJleHAiOjE3NzMxOTUzNDAsImlhdCI6MTc3MzEwODk0MH0.TUeiCDiUosXdBTmPxAuxgZiOE7M7YIE5jYNcGYiPebE",
+  "user": {
+    "id": "a248d96a-765e-4fae-9977-969110cffb86",
+    "name": "Jimmy",
+    "email": "jimmy@dwp.co.id"
+  },
+  "permissions": [],
+  "createdAt": "2026-03-10T02:15:51.027Z"
+}

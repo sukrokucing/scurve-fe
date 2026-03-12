@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { MenuSearchPanel } from "@/components/navigation/MenuSearchPanel";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { Dialog } from "@/components/ui/dialog";
+import { useEvent } from "@/hooks/vendor/reactUse";
 import { OPEN_GLOBAL_MENU_SEARCH_EVENT } from "@/navigation/menuSearchEvents";
 
 function isEditableTarget(target: EventTarget | null) {
@@ -13,35 +14,33 @@ function isEditableTarget(target: EventTarget | null) {
 
 export function GlobalMenuSearchDialog() {
     const [open, setOpen] = useState(false);
+    const browserWindow = typeof window === "undefined" ? undefined : window;
     const shortcutLabel = useMemo(
         () => (typeof navigator !== "undefined" && /mac/i.test(navigator.platform) ? "⌘K" : "Ctrl+K"),
         [],
     );
 
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
-            if (isEditableTarget(event.target)) return;
-            event.preventDefault();
-            setOpen(true);
-        };
-
-        const onOpen = () => setOpen(true);
-
-        window.addEventListener("keydown", onKeyDown);
-        window.addEventListener(OPEN_GLOBAL_MENU_SEARCH_EVENT, onOpen);
-        return () => {
-            window.removeEventListener("keydown", onKeyDown);
-            window.removeEventListener(OPEN_GLOBAL_MENU_SEARCH_EVENT, onOpen);
-        };
+    const handleShortcut = useCallback((event: Event) => {
+        if (!(event instanceof KeyboardEvent)) return;
+        if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
+        if (isEditableTarget(event.target)) return;
+        event.preventDefault();
+        setOpen(true);
     }, []);
+
+    const handleOpenEvent = useCallback(() => {
+        setOpen(true);
+    }, []);
+
+    useEvent("keydown", handleShortcut, browserWindow);
+    useEvent(OPEN_GLOBAL_MENU_SEARCH_EVENT, handleOpenEvent, browserWindow);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <AppDialogContent
                 title="Search Menu"
                 description="Find a destination quickly and press Enter to open the first result."
-                className="w-[min(920px,calc(100vw-2rem))] max-w-none"
+                className="w-[min(920px,calc(100vw-2rem))] max-w-none border-0"
                 data-testid="global-menu-search-dialog"
             >
                 <MenuSearchPanel

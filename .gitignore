@@ -20,6 +20,7 @@ test-results/
 artifacts/ui-audit/screenshots/**/*.png
 artifacts/perf-upgrade/
 artifacts/perf-probes/metrics.json
+artifacts/demo-persona-seed.json
 
 # Editor directories and files
 .vscode/*

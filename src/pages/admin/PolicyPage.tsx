@@ -14,7 +14,7 @@ export const PolicyPage = () => {
                         Access Policy
                     </h1>
                     <p className="text-muted-foreground">
-                        Configure global role-based access control (RBAC) policies efficiently.
+                        Configure global role-based access control (RBAC) policies efficiently. Use the in-matrix guide for first-time setup.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

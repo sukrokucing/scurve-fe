@@ -255,12 +255,10 @@ export function GanttView({
     const scrollToToday = useCallback(() => {
         if (chartContainerRef.current && ganttTasks.length > 0) {
             const today = new Date();
-            // Check if today is within range
-            if (today < dateRange.start || today > dateRange.end) {
-                return;
-            }
-
-            const x = dateToX(today, dateRange.start, viewMode);
+            const clampedDate = today < dateRange.start
+                ? dateRange.start
+                : (today > dateRange.end ? dateRange.end : today);
+            const x = dateToX(clampedDate, dateRange.start, viewMode);
             // Scroll to center the today line (subtract half viewport width)
             const viewportWidth = chartContainerRef.current.clientWidth;
             const targetX = Math.max(0, x - viewportWidth / 2);
