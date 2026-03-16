@@ -23,6 +23,11 @@ type ApiProjectResourceRoleRateUpsertRequest = components["schemas"]["ProjectRes
 type ApiWorkLog = components["schemas"]["WorkLog"];
 type ApiWorkLogCreateRequest = components["schemas"]["WorkLogCreateRequest"];
 type ApiWorkLogUpdateRequest = components["schemas"]["WorkLogUpdateRequest"];
+type ApiTaskProgressComponent = components["schemas"]["TaskProgressComponent"];
+type ApiTaskProgressComponentInput = components["schemas"]["TaskProgressComponentInput"];
+type ReplaceTaskProgressComponentsRequest = components["schemas"]["ReplaceTaskProgressComponentsRequest"];
+type ApiTaskHealthRuleSetResponse = components["schemas"]["TaskHealthRuleSetResponse"];
+type UpdateTaskHealthRulesRequest = components["schemas"]["UpdateTaskHealthRulesRequest"];
 type TaskCreateRequest = components["schemas"]["TaskCreateRequest"];
 type TaskUpdateRequest = components["schemas"]["TaskUpdateRequest"];
 type ApiTaskDependency = components["schemas"]["TaskDependency"];
@@ -43,6 +48,7 @@ type TaskListQueryParams = {
     q?: string;
     status?: string;
     schedule_status?: string;
+    health_status?: string;
     assignee_id?: string;
     start_from?: string;
     start_to?: string;
@@ -89,6 +95,13 @@ function mapApiTaskToDomain(t: ApiTask): DomainTask {
         durationDays: t.duration_days ?? undefined,
         parentId: t.parent_id ?? undefined,
         progress: t.progress ?? 0,
+        executionStatus: t.execution_status ?? undefined,
+        actualProgressPct: t.actual_progress_pct ?? undefined,
+        expectedProgressPct: t.expected_progress_pct ?? undefined,
+        variancePct: t.variance_pct ?? undefined,
+        healthStatus: t.health_status ?? undefined,
+        progressMethod: t.progress_method ?? undefined,
+        taskWeight: t.task_weight ?? undefined,
         completedAt: t.completed_at ?? undefined,
         completedAtIsBackfilled: t.completed_at_is_backfilled,
         scheduleStatus: t.schedule_status ?? undefined,
@@ -301,6 +314,36 @@ export const openapi = {
         await api.delete(`/projects/${projectId}/tasks/${taskId}/work-logs/${id}`);
     },
 
+    async listTaskProgressComponents(projectId: string, taskId: string): Promise<ApiTaskProgressComponent[]> {
+        const { data } = await api.get<ApiTaskProgressComponent[]>(`/projects/${projectId}/tasks/${taskId}/progress-components`);
+        return Array.isArray(data) ? data : [];
+    },
+
+    async replaceTaskProgressComponents(
+        projectId: string,
+        taskId: string,
+        payload: ReplaceTaskProgressComponentsRequest,
+    ): Promise<ApiTaskProgressComponent[]> {
+        const { data } = await api.put<ApiTaskProgressComponent[]>(
+            `/projects/${projectId}/tasks/${taskId}/progress-components`,
+            payload,
+        );
+        return Array.isArray(data) ? data : [];
+    },
+
+    async getTaskHealthRules(projectId: string): Promise<ApiTaskHealthRuleSetResponse> {
+        const { data } = await api.get<ApiTaskHealthRuleSetResponse>(`/projects/${projectId}/task-health/rules`);
+        return data;
+    },
+
+    async updateTaskHealthRules(
+        projectId: string,
+        payload: UpdateTaskHealthRulesRequest,
+    ): Promise<ApiTaskHealthRuleSetResponse> {
+        const { data } = await api.put<ApiTaskHealthRuleSetResponse>(`/projects/${projectId}/task-health/rules`, payload);
+        return data;
+    },
+
     async getProjectSCurveHealth(id: string, metric: ApiSCurveMetric = "progress"): Promise<ApiSCurveHealthResponse> {
         const { data } = await api.get<ApiSCurveHealthResponse>(`/projects/${id}/s-curve/health`, {
             params: { metric },
@@ -347,4 +390,9 @@ export type {
     ApiWorkLog,
     ApiWorkLogCreateRequest,
     ApiWorkLogUpdateRequest,
+    ApiTaskProgressComponent,
+    ApiTaskProgressComponentInput,
+    ReplaceTaskProgressComponentsRequest,
+    ApiTaskHealthRuleSetResponse,
+    UpdateTaskHealthRulesRequest,
 };

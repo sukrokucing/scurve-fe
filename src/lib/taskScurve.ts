@@ -1,13 +1,8 @@
-import type { Task, TaskStatus } from "@/types/domain";
+import type { Task, TaskExecutionStatus, TaskHealthStatus, TaskStatus } from "@/types/domain";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-export type TaskHealthState =
-    | "ahead"
-    | "on_track"
-    | "at_risk"
-    | "critical"
-    | "needs_plan";
+export type TaskHealthState = TaskHealthStatus;
 
 export type TaskScurveSnapshot = {
     expected: number | null;
@@ -44,22 +39,31 @@ function resolvePlannedEnd(task: Pick<Task, "startDate" | "endDate" | "dueDate" 
     return null;
 }
 
-export function getTaskStatusLabel(status: TaskStatus) {
+export function getTaskStatusLabel(status?: TaskStatus | TaskExecutionStatus | null) {
     switch (status) {
         case "todo":
+        case "not_started":
             return "Not Started";
         case "in_progress":
             return "In Progress";
         case "blocked":
             return "Blocked";
         case "done":
+        case "completed":
             return "Completed";
         default:
-            return status;
+            return "Unknown";
     }
 }
 
-export function getTaskExpectedProgress(task: Pick<Task, "startDate" | "endDate" | "dueDate" | "durationDays">, now = new Date()) {
+export function getTaskExpectedProgress(
+    task: Pick<Task, "startDate" | "endDate" | "dueDate" | "durationDays" | "expectedProgressPct">,
+    now = new Date(),
+) {
+    if (typeof task.expectedProgressPct === "number" && Number.isFinite(task.expectedProgressPct)) {
+        return clampPercent(task.expectedProgressPct);
+    }
+
     const startDate = parseDate(task.startDate);
     const plannedEnd = resolvePlannedEnd(task);
 
@@ -74,21 +78,29 @@ export function getTaskExpectedProgress(task: Pick<Task, "startDate" | "endDate"
     return clampPercent(((now.getTime() - startDate.getTime()) / totalDuration) * 100);
 }
 
-export function getTaskActualProgress(task: Pick<Task, "progress" | "status">) {
+export function getTaskActualProgress(task: Pick<Task, "actualProgressPct" | "progress" | "status" | "executionStatus">) {
+    if (typeof task.actualProgressPct === "number" && Number.isFinite(task.actualProgressPct)) {
+        return clampPercent(task.actualProgressPct);
+    }
+
     if (typeof task.progress === "number" && Number.isFinite(task.progress)) {
         return clampPercent(task.progress);
     }
 
-    if (task.status === "done") return 100;
+    if (task.executionStatus === "completed" || task.status === "done") return 100;
     return 0;
 }
 
-export function getTaskVariance(expected: number | null, actual: number) {
+export function getTaskVariance(expected: number | null, actual: number, variancePct?: number | null) {
+    if (typeof variancePct === "number" && Number.isFinite(variancePct)) {
+        return variancePct;
+    }
     if (expected === null) return null;
     return actual - expected;
 }
 
-export function getTaskHealthState(variance: number | null, expected: number | null): TaskHealthState {
+export function getTaskHealthState(variance: number | null, expected: number | null, healthStatus?: TaskHealthStatus | null): TaskHealthState {
+    if (healthStatus) return healthStatus;
     if (expected === null || variance === null) return "needs_plan";
     if (variance >= 10) return "ahead";
     if (variance <= -25) return "critical";
@@ -139,11 +151,27 @@ export function formatTaskVariance(value: number | null) {
     return `${rounded > 0 ? "+" : ""}${rounded}%`;
 }
 
-export function getTaskScurveSnapshot(task: Pick<Task, "startDate" | "endDate" | "dueDate" | "durationDays" | "progress" | "status">, now = new Date()): TaskScurveSnapshot {
+export function getTaskScurveSnapshot(
+    task: Pick<
+        Task,
+        | "startDate"
+        | "endDate"
+        | "dueDate"
+        | "durationDays"
+        | "progress"
+        | "status"
+        | "executionStatus"
+        | "actualProgressPct"
+        | "expectedProgressPct"
+        | "variancePct"
+        | "healthStatus"
+    >,
+    now = new Date(),
+): TaskScurveSnapshot {
     const expected = getTaskExpectedProgress(task, now);
     const actual = getTaskActualProgress(task);
-    const variance = getTaskVariance(expected, actual);
-    const health = getTaskHealthState(variance, expected);
+    const variance = getTaskVariance(expected, actual, task.variancePct);
+    const health = getTaskHealthState(variance, expected, task.healthStatus);
 
     return {
         expected,

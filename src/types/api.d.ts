@@ -472,6 +472,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/task-health/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Health Rules
+         * @description Get Task Health Rules Handles `GET` requests for `/projects/{project_id}/task-health/rules`. Requires bearer authentication.
+         */
+        get: operations["get_task_health_rules"];
+        /**
+         * Update Task Health Rules
+         * @description Update Task Health Rules Handles `PUT` requests for `/projects/{project_id}/task-health/rules`. Requires bearer authentication.
+         */
+        put: operations["update_task_health_rules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/tasks": {
         parameters: {
             query?: never;
@@ -561,6 +585,30 @@ export interface paths {
          */
         get: operations["list_task_activity"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{id}/progress-components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Task Progress Components
+         * @description List Task Progress Components Handles `GET` requests for `/projects/{project_id}/tasks/{id}/progress-components`. Requires bearer authentication.
+         */
+        get: operations["list_task_progress_components"];
+        /**
+         * Replace Task Progress Components
+         * @description Replace Task Progress Components Handles `PUT` requests for `/projects/{project_id}/tasks/{id}/progress-components`. Requires bearer authentication.
+         */
+        put: operations["replace_task_progress_components"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1415,6 +1463,9 @@ export interface components {
             /** @example S3cureP@ssw0rd */
             password: string;
         };
+        ReplaceTaskProgressComponentsRequest: {
+            components: components["schemas"]["TaskProgressComponentInput"][];
+        };
         ResetPasswordRequest: {
             /** @example NewSecureP@ss456 */
             new_password: string;
@@ -1508,8 +1559,29 @@ export interface components {
         /** @enum {string} */
         SCurveStage: "lag" | "log" | "maturity" | "decline";
         Task: {
+            /**
+             * Format: double
+             * @example 45
+             */
+            actual_progress_pct?: number | null;
+            /** @example tasks.progress */
+            actual_progress_source?: string | null;
             /** Format: uuid */
             assignee?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            baseline_end_at?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            baseline_start_at?: string | null;
+            /** @example false */
+            blocked_flag: boolean;
+            /** @example Waiting for dependency sign-off */
+            blocked_reason?: string | null;
             /**
              * Format: date-time
              * @example 2025-10-12T14:30:00Z
@@ -1532,12 +1604,25 @@ export interface components {
              * @example 2025-10-15T17:00:00Z
              */
             end_date?: string | null;
+            execution_status: components["schemas"]["TaskExecutionStatus"];
+            /**
+             * Format: double
+             * @example 40
+             */
+            expected_progress_pct?: number | null;
+            /** @example tasks.baseline_linear */
+            expected_progress_source?: string | null;
+            health_status: components["schemas"]["TaskHealthStatus"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             parent_id?: string | null;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @example 45
+             */
             progress: number;
+            progress_method: components["schemas"]["TaskProgressMethod"];
             /** Format: uuid */
             project_id: string;
             schedule_status: components["schemas"]["TaskScheduleStatus"];
@@ -1546,10 +1631,21 @@ export interface components {
              * @example 2025-10-01T09:00:00Z
              */
             start_date?: string | null;
+            /** @example pending */
             status: string;
+            /**
+             * Format: double
+             * @example 1
+             */
+            task_weight: number;
             title: string;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: double
+             * @example 5
+             */
+            variance_pct?: number | null;
         };
         TaskActivityEntry: {
             action: string;
@@ -1605,6 +1701,20 @@ export interface components {
         TaskCreateRequest: {
             /** Format: uuid */
             assignee?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            baseline_end_at?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            baseline_start_at?: string | null;
+            /** @example false */
+            blocked_flag?: boolean | null;
+            /** @example Waiting for stakeholder review */
+            blocked_reason?: string | null;
             /** @example [Quick Add] Define launch checklist */
             description?: string | null;
             /**
@@ -1624,6 +1734,7 @@ export interface components {
              * @example 0
              */
             progress?: number | null;
+            progress_method?: components["schemas"]["TaskProgressMethod"] | null;
             /**
              * Format: date-time
              * @example 2025-10-01T09:00:00Z
@@ -1631,6 +1742,11 @@ export interface components {
             start_date?: string | null;
             /** @example pending */
             status?: string | null;
+            /**
+             * Format: double
+             * @example 1
+             */
+            task_weight?: number | null;
             /** @example Define launch checklist */
             title: string;
         };
@@ -1646,9 +1762,129 @@ export interface components {
             type_: string;
         };
         /** @enum {string} */
+        TaskExecutionStatus: "not_started" | "in_progress" | "blocked" | "completed";
+        TaskHealthRule: {
+            health_status: components["schemas"]["TaskHealthStatus"];
+            /**
+             * Format: int32
+             * @example 1
+             */
+            priority: number;
+            /**
+             * Format: double
+             * @example -25
+             */
+            variance_from?: number | null;
+            /**
+             * Format: double
+             * @example -10
+             */
+            variance_to?: number | null;
+        };
+        TaskHealthRuleInput: {
+            health_status: components["schemas"]["TaskHealthStatus"];
+            /**
+             * Format: double
+             * @example -25
+             */
+            variance_from?: number | null;
+            /**
+             * Format: double
+             * @example -10
+             */
+            variance_to?: number | null;
+        };
+        TaskHealthRuleSetResponse: {
+            /** Format: uuid */
+            project_id?: string | null;
+            rules: components["schemas"]["TaskHealthRule"][];
+            /** @example project */
+            scope: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @enum {string} */
+        TaskHealthStatus: "ahead" | "on_track" | "at_risk" | "critical" | "needs_plan";
+        TaskProgressComponent: {
+            /**
+             * Format: date-time
+             * @example 2025-10-04T14:00:00Z
+             */
+            completed_at?: string | null;
+            /**
+             * Format: double
+             * @example 100
+             */
+            completion_pct: number;
+            /** @example milestone */
+            component_type: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @example Requirements signed off */
+            name: string;
+            /**
+             * Format: date-time
+             * @example 2025-10-03T09:00:00Z
+             */
+            planned_at?: string | null;
+            /**
+             * Format: int32
+             * @example 1
+             */
+            sort_order: number;
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            updated_at: string;
+            /**
+             * Format: double
+             * @example 40
+             */
+            weight: number;
+        };
+        TaskProgressComponentInput: {
+            /**
+             * Format: date-time
+             * @example 2025-10-04T14:00:00Z
+             */
+            completed_at?: string | null;
+            /**
+             * Format: double
+             * @example 100
+             */
+            completion_pct: number;
+            /** @example milestone */
+            component_type: string;
+            /** Format: uuid */
+            id?: string | null;
+            /** @example Requirements signed off */
+            name: string;
+            /**
+             * Format: date-time
+             * @example 2025-10-03T09:00:00Z
+             */
+            planned_at?: string | null;
+            /**
+             * Format: int32
+             * @example 1
+             */
+            sort_order?: number | null;
+            /**
+             * Format: double
+             * @example 40
+             */
+            weight: number;
+        };
+        /** @enum {string} */
+        TaskProgressMethod: "manual_percent_legacy" | "weighted_components";
+        /** @enum {string} */
         TaskScheduleStatus: "finished_early" | "overdue" | "on_time" | "not_specified";
         /** @enum {string} */
-        TaskSortBy: "start_date" | "due_date" | "created_at" | "updated_at" | "title" | "status" | "progress";
+        TaskSortBy: "start_date" | "due_date" | "created_at" | "updated_at" | "title" | "status" | "progress" | "expected_progress_pct" | "actual_progress_pct" | "variance_pct" | "health_status";
         /** @enum {string} */
         TaskSortDir: "asc" | "desc";
         TaskStatusCounts: {
@@ -1666,6 +1902,18 @@ export interface components {
         TaskUpdateRequest: {
             /** Format: uuid */
             assignee?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-15T17:00:00Z
+             */
+            baseline_end_at?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-01T09:00:00Z
+             */
+            baseline_start_at?: string | null;
+            blocked_flag?: boolean | null;
+            blocked_reason?: string | null;
             description?: string | null;
             /**
              * Format: date-time
@@ -1681,12 +1929,15 @@ export interface components {
             parent_id?: string | null;
             /** Format: int32 */
             progress?: number | null;
+            progress_method?: components["schemas"]["TaskProgressMethod"] | null;
             /**
              * Format: date-time
              * @example 2025-10-01T09:00:00Z
              */
             start_date?: string | null;
             status?: string | null;
+            /** Format: double */
+            task_weight?: number | null;
             title?: string | null;
         };
         TelemetryBatchRequest: {
@@ -1736,6 +1987,9 @@ export interface components {
         TelemetryIngestResponse: {
             /** @example 12 */
             accepted: number;
+        };
+        UpdateTaskHealthRulesRequest: {
+            rules: components["schemas"]["TaskHealthRuleInput"][];
         };
         UpdateUserRequest: {
             /** @example updated@example.com */
@@ -2955,6 +3209,62 @@ export interface operations {
             };
         };
     };
+    get_task_health_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective task health rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskHealthRuleSetResponse"];
+                };
+            };
+        };
+    };
+    update_task_health_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskHealthRulesRequest"];
+            };
+        };
+        responses: {
+            /** @description Project-specific task health rules saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskHealthRuleSetResponse"];
+                };
+            };
+        };
+    };
     list_tasks: {
         parameters: {
             query?: {
@@ -2971,6 +3281,8 @@ export interface operations {
                 status?: string | null;
                 /** @description Filter by backend-computed schedule status. Supports comma-separated values: finished_early, overdue, on_time, not_specified. */
                 schedule_status?: string | null;
+                /** @description Filter by derived task health status. Supports comma-separated values: ahead, on_track, at_risk, critical, needs_plan. */
+                health_status?: string | null;
                 /**
                  * @description Filter by assignee user id.
                  * @example 00000000-0000-0000-0000-000000000000
@@ -3346,6 +3658,72 @@ export interface operations {
                      *     ]
                      */
                     "application/json": components["schemas"]["TaskActivityEntry"][];
+                };
+            };
+        };
+    };
+    list_task_progress_components: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List task progress components */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskProgressComponent"][];
+                };
+            };
+        };
+    };
+    replace_task_progress_components: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Project id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                project_id: string;
+                /**
+                 * @description Task id
+                 * @example 00000000-0000-0000-0000-000000000000
+                 */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceTaskProgressComponentsRequest"];
+            };
+        };
+        responses: {
+            /** @description Replace task progress components */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskProgressComponent"][];
                 };
             };
         };

@@ -132,6 +132,44 @@ test("project settings supports members and resource rates CRUD", async ({ page,
     }
 });
 
+test("project settings task health rules save and reset", async ({ page }) => {
+    test.skip(!createdProjectId, "No created project id from previous test.");
+    if (!createdProjectId) return;
+
+    await page.goto(`/projects/${createdProjectId}/settings?tab=task-health`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("project-settings-task-health-section")).toBeVisible({ timeout: 15_000 });
+
+    const onTrackRuleRow = page.locator('[data-testid="project-settings-task-health-rule-row"]', { hasText: "On Track" }).first();
+    await expect(onTrackRuleRow).toBeVisible({ timeout: 10_000 });
+
+    const fromInput = onTrackRuleRow.getByTestId("project-settings-task-health-from-input");
+    const originalValue = await fromInput.inputValue();
+    const parsedOriginal = Number.parseFloat(originalValue);
+    const nextValue = Number.isFinite(parsedOriginal)
+        ? (parsedOriginal + 0.5).toFixed(1)
+        : "-9.5";
+
+    await fromInput.fill(nextValue);
+    const saveResponsePromise = page.waitForResponse((response) => (
+        response.request().method() === "PUT"
+        && response.url().includes(`/api/projects/${createdProjectId}/task-health/rules`)
+    ));
+    await page.getByTestId("project-settings-task-health-save-button").click();
+    const saveResponse = await saveResponsePromise;
+    expect(saveResponse.ok()).toBeTruthy();
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("project-settings-task-health-section")).toBeVisible({ timeout: 15_000 });
+
+    const reloadedOnTrackRuleRow = page.locator('[data-testid="project-settings-task-health-rule-row"]', { hasText: "On Track" }).first();
+    const reloadedFromInput = reloadedOnTrackRuleRow.getByTestId("project-settings-task-health-from-input");
+    await expect(reloadedFromInput).toHaveValue(nextValue);
+
+    await reloadedFromInput.fill(nextValue === "999.0" ? "998.5" : "999.0");
+    await page.getByTestId("project-settings-task-health-reset-button").click();
+    await expect(reloadedFromInput).toHaveValue(nextValue);
+});
+
 test("project dashboard remains readable after setup flow", async ({ page }) => {
     test.skip(!createdProjectId, "No created project id from previous test.");
     if (!createdProjectId) return;

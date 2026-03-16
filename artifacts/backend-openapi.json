@@ -1079,6 +1079,20 @@
         ],
         "type": "object"
       },
+      "ReplaceTaskProgressComponentsRequest": {
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/TaskProgressComponentInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "components"
+        ],
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "properties": {
           "new_password": {
@@ -1383,8 +1397,40 @@
       },
       "Task": {
         "properties": {
+          "actual_progress_pct": {
+            "example": 45,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "actual_progress_source": {
+            "example": "tasks.progress",
+            "nullable": true,
+            "type": "string"
+          },
           "assignee": {
             "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "baseline_end_at": {
+            "example": "2025-10-15T17:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "baseline_start_at": {
+            "example": "2025-10-01T09:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "blocked_flag": {
+            "example": false,
+            "type": "boolean"
+          },
+          "blocked_reason": {
+            "example": "Waiting for dependency sign-off",
             "nullable": true,
             "type": "string"
           },
@@ -1427,6 +1473,23 @@
             "nullable": true,
             "type": "string"
           },
+          "execution_status": {
+            "$ref": "#/components/schemas/TaskExecutionStatus"
+          },
+          "expected_progress_pct": {
+            "example": 40,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "expected_progress_source": {
+            "example": "tasks.baseline_linear",
+            "nullable": true,
+            "type": "string"
+          },
+          "health_status": {
+            "$ref": "#/components/schemas/TaskHealthStatus"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -1437,8 +1500,12 @@
             "type": "string"
           },
           "progress": {
+            "example": 45,
             "format": "int32",
             "type": "integer"
+          },
+          "progress_method": {
+            "$ref": "#/components/schemas/TaskProgressMethod"
           },
           "project_id": {
             "format": "uuid",
@@ -1454,7 +1521,13 @@
             "type": "string"
           },
           "status": {
+            "example": "pending",
             "type": "string"
+          },
+          "task_weight": {
+            "example": 1,
+            "format": "double",
+            "type": "number"
           },
           "title": {
             "type": "string"
@@ -1462,6 +1535,12 @@
           "updated_at": {
             "format": "date-time",
             "type": "string"
+          },
+          "variance_pct": {
+            "example": 5,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
           }
         },
         "required": [
@@ -1470,9 +1549,14 @@
           "title",
           "description",
           "status",
+          "progress_method",
+          "blocked_flag",
+          "task_weight",
           "progress",
           "completed_at_is_backfilled",
           "schedule_status",
+          "execution_status",
+          "health_status",
           "created_at",
           "updated_at"
         ],
@@ -1628,6 +1712,28 @@
             "nullable": true,
             "type": "string"
           },
+          "baseline_end_at": {
+            "example": "2025-10-15T17:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "baseline_start_at": {
+            "example": "2025-10-01T09:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "blocked_flag": {
+            "example": false,
+            "nullable": true,
+            "type": "boolean"
+          },
+          "blocked_reason": {
+            "example": "Waiting for stakeholder review",
+            "nullable": true,
+            "type": "string"
+          },
           "description": {
             "example": "[Quick Add] Define launch checklist",
             "nullable": true,
@@ -1656,6 +1762,14 @@
             "nullable": true,
             "type": "integer"
           },
+          "progress_method": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskProgressMethod"
+              }
+            ],
+            "nullable": true
+          },
           "start_date": {
             "example": "2025-10-01T09:00:00Z",
             "format": "date-time",
@@ -1666,6 +1780,12 @@
             "example": "pending",
             "nullable": true,
             "type": "string"
+          },
+          "task_weight": {
+            "example": 1,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
           },
           "title": {
             "example": "Define launch checklist",
@@ -1708,6 +1828,237 @@
         ],
         "type": "object"
       },
+      "TaskExecutionStatus": {
+        "enum": [
+          "not_started",
+          "in_progress",
+          "blocked",
+          "completed"
+        ],
+        "type": "string"
+      },
+      "TaskHealthRule": {
+        "properties": {
+          "health_status": {
+            "$ref": "#/components/schemas/TaskHealthStatus"
+          },
+          "priority": {
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "variance_from": {
+            "example": -25,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "variance_to": {
+            "example": -10,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "health_status",
+          "priority"
+        ],
+        "type": "object"
+      },
+      "TaskHealthRuleInput": {
+        "properties": {
+          "health_status": {
+            "$ref": "#/components/schemas/TaskHealthStatus"
+          },
+          "variance_from": {
+            "example": -25,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "variance_to": {
+            "example": -10,
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "health_status"
+        ],
+        "type": "object"
+      },
+      "TaskHealthRuleSetResponse": {
+        "properties": {
+          "project_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/TaskHealthRule"
+            },
+            "type": "array"
+          },
+          "scope": {
+            "example": "project",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "rules",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "TaskHealthStatus": {
+        "enum": [
+          "ahead",
+          "on_track",
+          "at_risk",
+          "critical",
+          "needs_plan"
+        ],
+        "type": "string"
+      },
+      "TaskProgressComponent": {
+        "properties": {
+          "completed_at": {
+            "example": "2025-10-04T14:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "completion_pct": {
+            "example": 100,
+            "format": "double",
+            "type": "number"
+          },
+          "component_type": {
+            "example": "milestone",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "example": "Requirements signed off",
+            "type": "string"
+          },
+          "planned_at": {
+            "example": "2025-10-03T09:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sort_order": {
+            "example": 1,
+            "format": "int32",
+            "type": "integer"
+          },
+          "task_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "weight": {
+            "example": 40,
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "task_id",
+          "name",
+          "component_type",
+          "weight",
+          "completion_pct",
+          "sort_order",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "TaskProgressComponentInput": {
+        "properties": {
+          "completed_at": {
+            "example": "2025-10-04T14:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "completion_pct": {
+            "example": 100,
+            "format": "double",
+            "type": "number"
+          },
+          "component_type": {
+            "example": "milestone",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "example": "Requirements signed off",
+            "type": "string"
+          },
+          "planned_at": {
+            "example": "2025-10-03T09:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "sort_order": {
+            "example": 1,
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "weight": {
+            "example": 40,
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "component_type",
+          "weight",
+          "completion_pct"
+        ],
+        "type": "object"
+      },
+      "TaskProgressMethod": {
+        "enum": [
+          "manual_percent_legacy",
+          "weighted_components"
+        ],
+        "type": "string"
+      },
       "TaskScheduleStatus": {
         "enum": [
           "finished_early",
@@ -1725,7 +2076,11 @@
           "updated_at",
           "title",
           "status",
-          "progress"
+          "progress",
+          "expected_progress_pct",
+          "actual_progress_pct",
+          "variance_pct",
+          "health_status"
         ],
         "type": "string"
       },
@@ -1775,6 +2130,26 @@
             "nullable": true,
             "type": "string"
           },
+          "baseline_end_at": {
+            "example": "2025-10-15T17:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "baseline_start_at": {
+            "example": "2025-10-01T09:00:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "blocked_flag": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "blocked_reason": {
+            "nullable": true,
+            "type": "string"
+          },
           "description": {
             "nullable": true,
             "type": "string"
@@ -1801,6 +2176,14 @@
             "nullable": true,
             "type": "integer"
           },
+          "progress_method": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskProgressMethod"
+              }
+            ],
+            "nullable": true
+          },
           "start_date": {
             "example": "2025-10-01T09:00:00Z",
             "format": "date-time",
@@ -1810,6 +2193,11 @@
           "status": {
             "nullable": true,
             "type": "string"
+          },
+          "task_weight": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
           },
           "title": {
             "nullable": true,
@@ -1940,6 +2328,20 @@
         },
         "required": [
           "accepted"
+        ],
+        "type": "object"
+      },
+      "UpdateTaskHealthRulesRequest": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/TaskHealthRuleInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules"
         ],
         "type": "object"
       },
@@ -3701,6 +4103,94 @@
         ]
       }
     },
+    "/projects/{project_id}/task-health/rules": {
+      "get": {
+        "description": "Get Task Health Rules Handles `GET` requests for `/projects/{project_id}/task-health/rules`. Requires bearer authentication.",
+        "operationId": "get_task_health_rules",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskHealthRuleSetResponse"
+                }
+              }
+            },
+            "description": "Effective task health rules"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get Task Health Rules",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "put": {
+        "description": "Update Task Health Rules Handles `PUT` requests for `/projects/{project_id}/task-health/rules`. Requires bearer authentication.",
+        "operationId": "update_task_health_rules",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskHealthRulesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskHealthRuleSetResponse"
+                }
+              }
+            },
+            "description": "Project-specific task health rules saved"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update Task Health Rules",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
     "/projects/{project_id}/tasks": {
       "get": {
         "description": "List Tasks Handles `GET` requests for `/projects/{project_id}/tasks`. Requires bearer authentication.",
@@ -3763,6 +4253,16 @@
             "description": "Filter by backend-computed schedule status. Supports comma-separated values: finished_early, overdue, on_time, not_specified.",
             "in": "query",
             "name": "schedule_status",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by derived task health status. Supports comma-separated values: ahead, on_track, at_risk, critical, needs_plan.",
+            "in": "query",
+            "name": "health_status",
             "required": false,
             "schema": {
               "nullable": true,
@@ -4353,6 +4853,122 @@
           }
         ],
         "summary": "List Task Activity",
+        "tags": [
+          "Tasks"
+        ]
+      }
+    },
+    "/projects/{project_id}/tasks/{id}/progress-components": {
+      "get": {
+        "description": "List Task Progress Components Handles `GET` requests for `/projects/{project_id}/tasks/{id}/progress-components`. Requires bearer authentication.",
+        "operationId": "list_task_progress_components",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaskProgressComponent"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "List task progress components"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List Task Progress Components",
+        "tags": [
+          "Tasks"
+        ]
+      },
+      "put": {
+        "description": "Replace Task Progress Components Handles `PUT` requests for `/projects/{project_id}/tasks/{id}/progress-components`. Requires bearer authentication.",
+        "operationId": "replace_task_progress_components",
+        "parameters": [
+          {
+            "description": "Project id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Task id",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceTaskProgressComponentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaskProgressComponent"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Replace task progress components"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Replace Task Progress Components",
         "tags": [
           "Tasks"
         ]

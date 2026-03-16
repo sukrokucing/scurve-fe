@@ -179,7 +179,7 @@ export function GanttView({
                 start: startDate,
                 end: endDate,
                 type: isMilestone ? 'milestone' : 'task',
-                progress: t.progress ?? taskProgress?.progress ?? 0,
+                progress: t.actualProgressPct ?? t.progress ?? taskProgress?.progress ?? 0,
                 progressId: taskProgress?.id,
                 dependencies: taskDependencies,
                 isDisabled: false,

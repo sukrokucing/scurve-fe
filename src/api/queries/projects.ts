@@ -8,6 +8,8 @@ import type {
     ApiPortfolioSCurveSummaryResponse,
     ApiSCurveHealthResponse,
     ApiSCurveMetric,
+    ApiTaskHealthRuleSetResponse,
+    UpdateTaskHealthRulesRequest,
 } from "@/api/openapiClient";
 import type { Project } from "@/types/domain";
 
@@ -28,6 +30,7 @@ export const projectsKeys = {
     assignees: (id: string) => [...PROJECTS_QUERY_KEY, id, "assignees"] as const,
     members: (id: string) => [...PROJECTS_QUERY_KEY, id, "settings", "members"] as const,
     resourceRoleRates: (id: string) => [...PROJECTS_QUERY_KEY, id, "settings", "resource-role-rates"] as const,
+    taskHealthRules: (id: string) => [...PROJECTS_QUERY_KEY, id, "settings", "task-health-rules"] as const,
     resourceRoles: [...PROJECTS_QUERY_KEY, "resource-roles"] as const,
     myScopes: [...PROJECTS_QUERY_KEY, "my-scopes"] as const,
     sCurveHealth: (id: string, metric: ApiSCurveMetric) => [...projectsKeys.detail(id), "s-curve-health", metric] as const,
@@ -125,6 +128,22 @@ export function useProjectResourceRoleRatesQuery(projectId: string, options?: { 
                 return await openapi.listProjectResourceRoles(projectId);
             } catch (err: unknown) {
                 if (isNoAccessError(err)) return [];
+                throw err;
+            }
+        },
+        enabled: Boolean(projectId) && (options?.enabled ?? true),
+    });
+}
+
+export function useProjectTaskHealthRulesQuery(projectId: string, options?: { enabled?: boolean }) {
+    return useQuery<ApiTaskHealthRuleSetResponse | null>({
+        queryKey: projectsKeys.taskHealthRules(projectId),
+        queryFn: async () => {
+            if (!projectId) return null;
+            try {
+                return await openapi.getTaskHealthRules(projectId);
+            } catch (err: unknown) {
+                if (isNoAccessError(err)) return null;
                 throw err;
             }
         },
@@ -303,6 +322,22 @@ export function useDeleteProjectResourceRoleRateMutation(projectId?: string) {
         onSuccess: () => {
             if (!projectId) return;
             queryClient.invalidateQueries({ queryKey: projectsKeys.resourceRoleRates(projectId) });
+        },
+    });
+}
+
+export function useUpdateTaskHealthRulesMutation(projectId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (payload: UpdateTaskHealthRulesRequest) => {
+            if (!projectId) throw new Error("projectId is required");
+            return openapi.updateTaskHealthRules(projectId, payload);
+        },
+        onSuccess: () => {
+            if (!projectId) return;
+            queryClient.invalidateQueries({ queryKey: projectsKeys.taskHealthRules(projectId) });
+            queryClient.invalidateQueries({ queryKey: projectsKeys.detail(projectId), exact: false });
+            queryClient.invalidateQueries({ queryKey: ["tasks", "project", projectId], exact: false });
         },
     });
 }

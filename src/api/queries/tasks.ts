@@ -13,6 +13,8 @@ import type {
     ApiWorkLog,
     ApiWorkLogCreateRequest,
     ApiWorkLogUpdateRequest,
+    ApiTaskProgressComponent,
+    ReplaceTaskProgressComponentsRequest,
 } from "@/api/openapiClient";
 
 type Progress = components["schemas"]["Progress"];
@@ -30,6 +32,8 @@ export const tasksKeys = {
         [...tasksKeys.byProject(projectId), "list", params] as const,
     dependencies: (projectId: string) => [...tasksKeys.projectScope(projectId), "dependencies"] as const,
     workLogs: (projectId: string, taskId: string) => [...TASKS_QUERY_KEY, "project", projectId, "task", taskId, "work-logs"] as const,
+    progressComponents: (projectId: string, taskId: string) =>
+        [...TASKS_QUERY_KEY, "project", projectId, "task", taskId, "progress-components"] as const,
 };
 
 export function useTasksByProject(projectId: string, progress?: boolean, options?: { enabled?: boolean }) {
@@ -107,7 +111,10 @@ export function useTaskMutation(projectId?: string) {
                 ...(payload.dueDate !== undefined && payload.dueDate !== "" ? { due_date: payload.dueDate } : {}),
                 ...(payload.startDate !== undefined && payload.startDate !== "" ? { start_date: payload.startDate } : {}),
                 ...(payload.endDate !== undefined && payload.endDate !== "" ? { end_date: payload.endDate } : {}),
-                ...(payload.progress !== undefined ? { progress: payload.progress } : {}),
+                ...(payload.progress !== undefined && payload.progressMethod !== "weighted_components"
+                    ? { progress: payload.progress }
+                    : {}),
+                ...(payload.progressMethod !== undefined ? { progress_method: payload.progressMethod } : {}),
                 status: mapStatusToApi(payload.status),
             };
             if (Object.prototype.hasOwnProperty.call(payload, "description")) {
@@ -193,8 +200,11 @@ export function useUpdateTask() {
             if (args.payload.endDate !== undefined) {
                 body.end_date = args.payload.endDate;
             }
-            if (args.payload.progress !== undefined) {
+            if (args.payload.progress !== undefined && args.payload.progressMethod !== "weighted_components") {
                 body.progress = args.payload.progress;
+            }
+            if (args.payload.progressMethod !== undefined) {
+                body.progress_method = args.payload.progressMethod;
             }
             if (Object.prototype.hasOwnProperty.call(args.payload, "assigneeId")) {
                 body.assignee = args.payload.assigneeId === ""
@@ -225,11 +235,14 @@ export function useUpdateTask() {
             if (variables.projectId && previousTasks) {
                 queryClient.setQueryData<Task[]>(
                     tasksKeys.byProject(variables.projectId),
-                    previousTasks.map(task =>
-                        task.id === variables.id
-                            ? { ...task, ...variables.payload }
-                            : task
-                    )
+                    previousTasks.map((task) => {
+                        if (task.id !== variables.id) return task;
+                        const nextTask = { ...task, ...variables.payload };
+                        if (typeof variables.payload.progress === "number") {
+                            nextTask.actualProgressPct = variables.payload.progress;
+                        }
+                        return nextTask;
+                    }),
                 );
             }
 
@@ -377,7 +390,12 @@ export function useBatchUpdateTasks(
                             ...(update.start_date !== undefined ? { startDate: update.start_date } : {}),
                             ...(update.end_date !== undefined ? { endDate: update.end_date } : {}),
                             ...(update.due_date !== undefined ? { dueDate: update.due_date } : {}),
-                            ...(update.progress !== undefined ? { progress: update.progress ?? task.progress } : {}),
+                            ...(update.progress !== undefined
+                                ? {
+                                    progress: update.progress ?? task.progress,
+                                    actualProgressPct: update.progress ?? task.actualProgressPct,
+                                }
+                                : {}),
                         };
                     }),
                 );
@@ -443,6 +461,17 @@ export function useTaskWorkLogs(projectId?: string, taskId?: string, options?: {
     });
 }
 
+export function useTaskProgressComponents(projectId?: string, taskId?: string, options?: { enabled?: boolean }) {
+    return useQuery<ApiTaskProgressComponent[]>({
+        queryKey: tasksKeys.progressComponents(projectId ?? "", taskId ?? ""),
+        queryFn: async () => {
+            if (!projectId || !taskId) return [];
+            return openapi.listTaskProgressComponents(projectId, taskId);
+        },
+        enabled: Boolean(projectId && taskId) && (options?.enabled ?? true),
+    });
+}
+
 function invalidateTaskWorkLogRelatedQueries(queryClient: ReturnType<typeof useQueryClient>, projectId?: string, taskId?: string) {
     if (!projectId) return;
     if (taskId) {
@@ -450,6 +479,16 @@ function invalidateTaskWorkLogRelatedQueries(queryClient: ReturnType<typeof useQ
     }
     queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId), exact: false });
     // Dashboard and S-curve metrics can depend on work logs for hours/cost.
+    queryClient.invalidateQueries({ queryKey: projectsKeys.detail(projectId), exact: false });
+    queryClient.invalidateQueries({ queryKey: projectsKeys.all, exact: false });
+}
+
+function invalidateTaskProgressQueries(queryClient: ReturnType<typeof useQueryClient>, projectId?: string, taskId?: string) {
+    if (!projectId) return;
+    if (taskId) {
+        queryClient.invalidateQueries({ queryKey: tasksKeys.progressComponents(projectId, taskId) });
+    }
+    queryClient.invalidateQueries({ queryKey: tasksKeys.byProject(projectId), exact: false });
     queryClient.invalidateQueries({ queryKey: projectsKeys.detail(projectId), exact: false });
     queryClient.invalidateQueries({ queryKey: projectsKeys.all, exact: false });
 }
@@ -504,6 +543,24 @@ export function useDeleteTaskWorkLog(projectId?: string, taskId?: string) {
         onError: (err: unknown) => {
             const message = err instanceof Error ? err.message : String(err);
             toast.error(`Failed to delete work log: ${message}`);
+        },
+    });
+}
+
+export function useReplaceTaskProgressComponents(projectId?: string, taskId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (payload: ReplaceTaskProgressComponentsRequest) => {
+            if (!projectId || !taskId) throw new Error("projectId and taskId are required to update progress components");
+            return openapi.replaceTaskProgressComponents(projectId, taskId, payload);
+        },
+        onSuccess: () => {
+            invalidateTaskProgressQueries(queryClient, projectId, taskId);
+            toast.success("Progress components updated");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update progress components: ${message}`);
         },
     });
 }

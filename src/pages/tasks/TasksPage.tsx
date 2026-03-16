@@ -22,15 +22,17 @@ import {
     useDependencyMutation,
     useDeleteDependency,
     useTaskWorkLogs,
+    useTaskProgressComponents,
     useCreateTaskWorkLog,
     useUpdateTaskWorkLog,
     useDeleteTaskWorkLog,
+    useReplaceTaskProgressComponents,
 } from "@/api/queries/tasks";
 import { useUsersLookupQuery } from "@/api/queries/users";
-import type { ApiWorkLog } from "@/api/openapiClient";
+import type { ApiTaskProgressComponent, ApiWorkLog } from "@/api/openapiClient";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
-import type { Task, TaskScheduleStatus, TaskStatus } from "@/types/domain";
+import type { Task, TaskProgressMethod, TaskScheduleStatus, TaskStatus } from "@/types/domain";
 import type { components } from "@/types/api";
 import { toast } from "sonner";
 
@@ -109,6 +111,23 @@ const EMPTY_TASKS: Task[] = [];
 const EMPTY_PROGRESS: Progress[] = [];
 const taskListColumnHelper = createColumnHelper<Task>();
 const workLogColumnHelper = createColumnHelper<ApiWorkLog>();
+const DEFAULT_TASK_FORM_VALUES: TaskFormValues = {
+    title: "",
+    description: "",
+    plan: 1,
+    progress: 0,
+    status: "todo",
+};
+
+type TaskProgressComponentDraft = {
+    id?: string;
+    name: string;
+    weight: string;
+    completionPct: string;
+    componentType: string;
+    plannedAt: string;
+    completedAt: string;
+};
 
 type TaskSelectionCheckboxProps = {
     checked: boolean;
@@ -187,6 +206,13 @@ function formatCurrencyAmount(amount: number, currency = "USD"): string {
     }
 }
 
+function normalizeDateTimeLocalToIso(value?: string | null) {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toISOString();
+}
+
 function formatWorkLogDateLabel(value?: string | null): string {
     if (!value) return "—";
     const parsed = new Date(value);
@@ -194,17 +220,49 @@ function formatWorkLogDateLabel(value?: string | null): string {
     return format(parsed, "MMM d, yyyy");
 }
 
+function isWeightedProgressTask(task?: Pick<Task, "progressMethod"> | null) {
+    return task?.progressMethod === "weighted_components";
+}
 
+function getProgressMethodLabel(progressMethod?: TaskProgressMethod | null) {
+    return progressMethod === "weighted_components" ? "Weighted" : "Manual";
+}
+
+function mapProgressComponentToDraft(component: ApiTaskProgressComponent): TaskProgressComponentDraft {
+    return {
+        id: component.id,
+        name: component.name,
+        weight: String(component.weight),
+        completionPct: String(component.completion_pct),
+        componentType: component.component_type || "milestone",
+        plannedAt: formatDateForInput(component.planned_at),
+        completedAt: formatDateForInput(component.completed_at),
+    };
+}
+
+function createEmptyProgressComponentDraft(sortOrder = 1): TaskProgressComponentDraft {
+    return {
+        name: "",
+        weight: sortOrder === 1 ? "100" : "0",
+        completionPct: "0",
+        componentType: "milestone",
+        plannedAt: "",
+        completedAt: "",
+    };
+}
 
 function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
     switch (status) {
         case "todo":
+        case "pending":
+        case "not_started":
             return "secondary";
         case "in_progress":
             return "info";
         case "blocked":
             return "error";
         case "done":
+        case "completed":
             return "success";
         default:
             return "secondary";
@@ -327,6 +385,7 @@ export function TasksPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [scheduleStatusFilter, setScheduleStatusFilter] = useState<string>("all");
+    const [healthStatusFilter, setHealthStatusFilter] = useState<string>("all");
     const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
     const [startFromFilter, setStartFromFilter] = useState("");
     const [startToFilter, setStartToFilter] = useState("");
@@ -347,6 +406,7 @@ export function TasksPage() {
             q: normalizedSearchQuery || undefined,
             status: apiStatusFilter,
             schedule_status: scheduleStatusFilter === "all" ? undefined : scheduleStatusFilter,
+            health_status: healthStatusFilter === "all" ? undefined : healthStatusFilter,
             assignee_id: apiAssigneeFilter,
             start_from: startFromFilter || undefined,
             start_to: startToFilter || undefined,
@@ -365,6 +425,7 @@ export function TasksPage() {
             normalizedSearchQuery,
             page,
             pageSize,
+            healthStatusFilter,
             scheduleStatusFilter,
             startFromFilter,
             startToFilter,
@@ -410,6 +471,12 @@ export function TasksPage() {
     const listTasks = Array.isArray(listTasksRaw) ? listTasksRaw : EMPTY_TASKS;
     const listTotalCount = listTasksData?.total ?? listTasks.length;
     const tasks = view === "list" ? listTasks : allTasks;
+    const taskLookup = useMemo(() => {
+        const next = new Map<string, Task>();
+        allTasks.forEach((task) => next.set(task.id, task));
+        listTasks.forEach((task) => next.set(task.id, task));
+        return next;
+    }, [allTasks, listTasks]);
     const progressRaw = progressData as Progress[] | undefined;
     const progress = Array.isArray(progressRaw) ? progressRaw : EMPTY_PROGRESS;
     const dependencies = Array.isArray(dependenciesData) ? dependenciesData : [];
@@ -478,16 +545,18 @@ export function TasksPage() {
             const matchesSearch = task.name.toLowerCase().includes(normalizedSearchQueryLower);
             const matchesStatus = statusFilter === "all" || task.status === statusFilter;
             const matchesScheduleStatus = matchesScheduleStatusFilter(task.scheduleStatus, scheduleStatusFilter);
+            const matchesHealthStatus = healthStatusFilter === "all" || task.healthStatus === healthStatusFilter;
             const matchesAssignee = assigneeFilter === "all" || task.assigneeId === assigneeFilter;
             const matchesStartDate = isWithinDateRange(task.startDate, startFromFilter || undefined, startToFilter || undefined);
             const matchesDueDate = isWithinDateRange(task.dueDate, dueFromFilter || undefined, dueToFilter || undefined);
-            return matchesSearch && matchesStatus && matchesScheduleStatus && matchesAssignee && matchesStartDate && matchesDueDate;
+            return matchesSearch && matchesStatus && matchesScheduleStatus && matchesHealthStatus && matchesAssignee && matchesStartDate && matchesDueDate;
         });
     }, [
         allTasks,
         assigneeFilter,
         dueFromFilter,
         dueToFilter,
+        healthStatusFilter,
         listTasks,
         normalizedSearchQueryLower,
         scheduleStatusFilter,
@@ -506,6 +575,7 @@ export function TasksPage() {
     const totalFilteredCount = view === "list" ? listTotalCount : filteredTasks.length;
     const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
     const hasAdvancedFilters = assigneeFilter !== "all"
+        || healthStatusFilter !== "all"
         || scheduleStatusFilter !== "all"
         || startFromFilter !== ""
         || startToFilter !== ""
@@ -514,13 +584,14 @@ export function TasksPage() {
     const activeAdvancedFilterCount = useMemo(() => {
         let count = 0;
         if (assigneeFilter !== "all") count += 1;
+        if (healthStatusFilter !== "all") count += 1;
         if (scheduleStatusFilter !== "all") count += 1;
         if (startFromFilter) count += 1;
         if (startToFilter) count += 1;
         if (dueFromFilter) count += 1;
         if (dueToFilter) count += 1;
         return count;
-    }, [assigneeFilter, dueFromFilter, dueToFilter, scheduleStatusFilter, startFromFilter, startToFilter]);
+    }, [assigneeFilter, dueFromFilter, dueToFilter, healthStatusFilter, scheduleStatusFilter, startFromFilter, startToFilter]);
     const currentViewLabel = useMemo(() => {
         if (view === "kanban") return "Board";
         if (view === "gantt") return "Gantt";
@@ -548,6 +619,15 @@ export function TasksPage() {
             : filteredTasks.reduce((count, task) => (selectedTaskIdSet.has(task.id) ? count + 1 : count), 0)),
         [filteredTasks, selectedOnPageCount, selectedTaskIdSet, view]
     );
+    const selectedTasks = useMemo(
+        () => selectedTaskIds.map((taskId) => taskLookup.get(taskId)).filter((task): task is Task => Boolean(task)),
+        [selectedTaskIds, taskLookup],
+    );
+    const selectedWeightedTaskCount = useMemo(
+        () => selectedTasks.filter((task) => isWeightedProgressTask(task)).length,
+        [selectedTasks],
+    );
+    const canBulkEditProgress = selectedTasks.length > 0 && selectedWeightedTaskCount < selectedTasks.length;
     const selectionScopeLabel = useMemo(() => {
         if (view === "list") {
             return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
@@ -599,6 +679,17 @@ export function TasksPage() {
             { value: "overdue", label: "Overdue" },
             { value: "on_time", label: "On Time" },
             { value: "not_specified", label: "Not Specified" },
+        ],
+        [],
+    );
+    const healthStatusFilterOptions = useMemo(
+        () => [
+            { value: "all", label: "All Health States" },
+            { value: "ahead", label: "Ahead" },
+            { value: "on_track", label: "On Track" },
+            { value: "at_risk", label: "At Risk" },
+            { value: "critical", label: "Critical" },
+            { value: "needs_plan", label: "Needs Plan" },
         ],
         [],
     );
@@ -733,9 +824,10 @@ export function TasksPage() {
     }, [refetchAllTasks, refetchListTasks, view]);
 
     const createForm = useForm<TaskFormValues>({
-        defaultValues: { title: "", description: "", plan: 1, progress: 0, status: "todo" },
+        defaultValues: DEFAULT_TASK_FORM_VALUES,
     });
     const [createOpen, setCreateOpen] = useState(false);
+    const [createProgressMethod, setCreateProgressMethod] = useState<TaskProgressMethod>("manual_percent_legacy");
     const [quickCreateTitle, setQuickCreateTitle] = useState("");
     const createRef = useRef<HTMLInputElement | null>(null);
     const timeToTaskSessionIdRef = useRef<string | null>(null);
@@ -745,13 +837,14 @@ export function TasksPage() {
     const [showTimeToTaskInsights, setShowTimeToTaskInsights] = useState(false);
     const [editing, setEditing] = useState<Task | null>(null);
     const editForm = useForm<TaskFormValues>({
-        defaultValues: { title: "", description: "", plan: 1, progress: 0, status: "todo" },
+        defaultValues: DEFAULT_TASK_FORM_VALUES,
     });
     const [workLogHours, setWorkLogHours] = useState<string>("1");
     const [workLogDate, setWorkLogDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
     const [workLogResourceRoleId, setWorkLogResourceRoleId] = useState<string>("");
     const [workLogNote, setWorkLogNote] = useState<string>("");
     const [editingWorkLogId, setEditingWorkLogId] = useState<string | null>(null);
+    const [progressComponentDrafts, setProgressComponentDrafts] = useState<TaskProgressComponentDraft[]>([]);
 
     const createMutation = useTaskMutation(selectedProject);
     const quickCreateMutation = useTaskMutation(selectedProject);
@@ -770,9 +863,13 @@ export function TasksPage() {
     const taskWorkLogsQuery = useTaskWorkLogs(selectedProject, editing?.id, {
         enabled: Boolean(selectedProject && editing?.id),
     });
+    const taskProgressComponentsQuery = useTaskProgressComponents(selectedProject, editing?.id, {
+        enabled: Boolean(selectedProject && editing?.id && isWeightedProgressTask(editing)),
+    });
     const createTaskWorkLogMutation = useCreateTaskWorkLog(selectedProject, editing?.id);
     const updateTaskWorkLogMutation = useUpdateTaskWorkLog(selectedProject, editing?.id);
     const deleteTaskWorkLogMutation = useDeleteTaskWorkLog(selectedProject, editing?.id);
+    const replaceTaskProgressComponentsMutation = useReplaceTaskProgressComponents(selectedProject, editing?.id);
     const taskWorkLogs = useMemo(() => {
         const rows = Array.isArray(taskWorkLogsQuery.data) ? taskWorkLogsQuery.data : [];
         return [...rows].sort((a, b) => {
@@ -781,6 +878,15 @@ export function TasksPage() {
             return bTime - aTime;
         });
     }, [taskWorkLogsQuery.data]);
+    const taskProgressComponents = useMemo(() => {
+        const rows = Array.isArray(taskProgressComponentsQuery.data) ? taskProgressComponentsQuery.data : [];
+        return [...rows].sort((a, b) => a.sort_order - b.sort_order);
+    }, [taskProgressComponentsQuery.data]);
+    const isEditingWeightedTask = isWeightedProgressTask(editing);
+    const editingTaskScurve = useMemo(
+        () => (editing ? getTaskScurveSnapshot(editing) : null),
+        [editing],
+    );
     const selectedWorkLogRole = useMemo(
         () => resourceRoleOptions.find((role) => role.value === workLogResourceRoleId) ?? null,
         [resourceRoleOptions, workLogResourceRoleId],
@@ -793,6 +899,20 @@ export function TasksPage() {
     const isWorkLogSaving = createTaskWorkLogMutation.status === "pending"
         || updateTaskWorkLogMutation.status === "pending"
         || deleteTaskWorkLogMutation.status === "pending";
+    const isProgressComponentsSaving = replaceTaskProgressComponentsMutation.status === "pending";
+
+    const resetCreateTaskForm = useCallback(() => {
+        createForm.reset(DEFAULT_TASK_FORM_VALUES);
+        setCreateMode("plan");
+        setCreateProgressMethod("manual_percent_legacy");
+    }, [createForm]);
+
+    const handleCreateDialogOpenChange = useCallback((open: boolean) => {
+        setCreateOpen(open);
+        if (!open) {
+            resetCreateTaskForm();
+        }
+    }, [resetCreateTaskForm]);
 
     useEffect(() => {
         if (!editing) return;
@@ -804,6 +924,24 @@ export function TasksPage() {
             setWorkLogResourceRoleId(resourceRoleOptions[0].value);
         }
     }, [editing, resourceRoleOptions, workLogResourceRoleId]);
+
+    useEffect(() => {
+        if (!editing || !isWeightedProgressTask(editing)) {
+            setProgressComponentDrafts([]);
+            return;
+        }
+
+        if (taskProgressComponentsQuery.isLoading) {
+            return;
+        }
+
+        if (taskProgressComponents.length === 0) {
+            setProgressComponentDrafts([createEmptyProgressComponentDraft()]);
+            return;
+        }
+
+        setProgressComponentDrafts(taskProgressComponents.map(mapProgressComponentToDraft));
+    }, [editing, taskProgressComponents, taskProgressComponentsQuery.isLoading]);
 
     const refreshTimeToTaskSummary = useCallback(() => {
         setTimeToTaskSummary(getTimeToTaskSummary(currentUserId));
@@ -867,6 +1005,7 @@ export function TasksPage() {
                 name: normalizedTitle,
                 status: "todo",
                 progress: 0,
+                progressMethod: "manual_percent_legacy",
             });
             completeTimeToTaskSession(sessionId, {
                 projectId: selectedProject,
@@ -946,6 +1085,7 @@ export function TasksPage() {
                 try {
                     if (updates.length === 1) {
                         const task = updates[0];
+                        const sourceTask = taskLookup.get(task.originalId);
                         await ganttUpdateMutation.mutateAsync({
                             id: task.originalId,
                             projectId: selectedProject,
@@ -954,20 +1094,23 @@ export function TasksPage() {
                                 startDate: task.start.toISOString(),
                                 endDate: task.end.toISOString(),
                                 dueDate: task.end.toISOString(),
-                                progress: task.progress,
                                 durationDays: getDurationDays(task.start, task.end),
+                                ...(!isWeightedProgressTask(sourceTask) ? { progress: task.progress } : {}),
                             },
                         });
                     } else {
                         await ganttBatchUpdateMutation.mutateAsync({
-                            tasks: updates.map((task) => ({
-                                id: task.originalId,
-                                title: task.name,
-                                start_date: task.start.toISOString(),
-                                end_date: task.end.toISOString(),
-                                due_date: task.end.toISOString(),
-                                progress: task.progress,
-                            })),
+                            tasks: updates.map((task) => {
+                                const sourceTask = taskLookup.get(task.originalId);
+                                return {
+                                    id: task.originalId,
+                                    title: task.name,
+                                    start_date: task.start.toISOString(),
+                                    end_date: task.end.toISOString(),
+                                    due_date: task.end.toISOString(),
+                                    ...(!isWeightedProgressTask(sourceTask) ? { progress: task.progress } : {}),
+                                };
+                            }),
                         });
                     }
                     clearGanttOverridesFor(updatedTaskIds);
@@ -988,7 +1131,7 @@ export function TasksPage() {
             setGanttIsSyncing(false);
             setGanttPendingCount(ganttQueuedUpdatesRef.current.size);
         }
-    }, [clearGanttOverridesFor, ganttBatchUpdateMutation, ganttUpdateMutation, selectedProject]);
+    }, [clearGanttOverridesFor, ganttBatchUpdateMutation, ganttUpdateMutation, selectedProject, taskLookup]);
 
     const scheduleGanttFlush = useCallback(() => {
         clearGanttFlushTimer();
@@ -1009,22 +1152,32 @@ export function TasksPage() {
 
         setGanttLocalOverrides((prev) => {
             const next = { ...prev };
+            let skippedWeightedProgressEdit = false;
             updatedTasks.forEach((task) => {
+                const sourceTask = taskLookup.get(task.originalId);
+                const sourceProgress = sourceTask?.actualProgressPct ?? sourceTask?.progress ?? task.progress;
+                const canPersistProgress = !isWeightedProgressTask(sourceTask);
+                if (!canPersistProgress && Math.round(task.progress) !== Math.round(sourceProgress)) {
+                    skippedWeightedProgressEdit = true;
+                }
                 next[task.originalId] = {
                     ...(next[task.originalId] ?? {}),
                     name: task.name,
                     startDate: task.start.toISOString(),
                     endDate: task.end.toISOString(),
                     dueDate: task.end.toISOString(),
-                    progress: task.progress,
+                    progress: canPersistProgress ? task.progress : sourceProgress,
                     durationDays: getDurationDays(task.start, task.end),
                 };
             });
+            if (skippedWeightedProgressEdit) {
+                toast.info("Weighted tasks manage progress through components. Use Edit task to update component progress.");
+            }
             return next;
         });
 
         scheduleGanttFlush();
-    }, [scheduleGanttFlush, selectedProject]);
+    }, [scheduleGanttFlush, selectedProject, taskLookup]);
 
     const retryGanttSync = useCallback(() => {
         if (ganttQueuedUpdatesRef.current.size === 0 || ganttFlushInFlightRef.current) {
@@ -1083,7 +1236,9 @@ export function TasksPage() {
             plan: task.durationDays ?? 1,
             start_date: formatDateForInput(task.startDate),
             end_date: formatDateForInput(task.endDate),
-            progress: typeof task.progress === "number" ? task.progress : 0,
+            progress: typeof task.actualProgressPct === "number"
+                ? task.actualProgressPct
+                : (typeof task.progress === "number" ? task.progress : 0),
             status: task.status,
             projectId: task.projectId,
         });
@@ -1166,41 +1321,123 @@ export function TasksPage() {
         }
     }, [deleteTaskWorkLogMutation, editingWorkLogId, resetWorkLogDraft, resourceRoleOptions]);
 
+    const updateProgressComponentDraft = useCallback((
+        index: number,
+        key: keyof TaskProgressComponentDraft,
+        value: string,
+    ) => {
+        setProgressComponentDrafts((current) => current.map((draft, draftIndex) => (
+            draftIndex === index ? { ...draft, [key]: value } : draft
+        )));
+    }, []);
+
+    const addProgressComponentDraft = useCallback(() => {
+        setProgressComponentDrafts((current) => [...current, createEmptyProgressComponentDraft(current.length + 1)]);
+    }, []);
+
+    const removeProgressComponentDraft = useCallback((index: number) => {
+        setProgressComponentDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index));
+    }, []);
+
+    const totalProgressComponentWeight = useMemo(
+        () => progressComponentDrafts.reduce((sum, draft) => {
+            const weight = Number.parseFloat(draft.weight);
+            return sum + (Number.isFinite(weight) ? weight : 0);
+        }, 0),
+        [progressComponentDrafts],
+    );
+
+    const handleSaveProgressComponents = useCallback(async () => {
+        if (!selectedProject || !editing?.id || !isWeightedProgressTask(editing)) return;
+
+        const componentsPayload = progressComponentDrafts.map((draft, index) => {
+            const weight = Number.parseFloat(draft.weight);
+            const completionPct = Number.parseFloat(draft.completionPct);
+
+            return {
+                ...(draft.id ? { id: draft.id } : {}),
+                name: draft.name.trim(),
+                weight: Number.isFinite(weight) ? weight : NaN,
+                completion_pct: Number.isFinite(completionPct) ? clampProgress(completionPct) : NaN,
+                component_type: draft.componentType.trim() || "milestone",
+                planned_at: normalizeDateTimeLocalToIso(draft.plannedAt),
+                completed_at: normalizeDateTimeLocalToIso(draft.completedAt),
+                sort_order: index + 1,
+            };
+        });
+
+        if (componentsPayload.length === 0) {
+            toast.info("Add at least one progress component before saving.");
+            return;
+        }
+
+        const invalidComponent = componentsPayload.find((component) => !component.name || !Number.isFinite(component.weight) || !Number.isFinite(component.completion_pct));
+        if (invalidComponent) {
+            toast.error("Each progress component needs a name, weight, and completion percentage.");
+            return;
+        }
+
+        try {
+            await replaceTaskProgressComponentsMutation.mutateAsync({
+                components: componentsPayload,
+            });
+        } catch {
+            // Mutation hook already surfaces a toast.
+        }
+    }, [editing, progressComponentDrafts, replaceTaskProgressComponentsMutation, selectedProject]);
+
     const handleBulkApplyChanges = useCallback(async () => {
         if (!selectedProject || selectedTaskIds.length === 0) return;
 
         const hasStatusChange = Boolean(bulkStatus);
         const hasAssigneeChange = Boolean(bulkAssignee);
         const hasProgressChange = bulkProgressTouched;
+        const tasksForBulkOperation = selectedTaskIds
+            .map((taskId) => taskLookup.get(taskId))
+            .filter((task): task is Task => Boolean(task));
+        const weightedTaskCount = tasksForBulkOperation.filter((task) => isWeightedProgressTask(task)).length;
 
         if (!hasStatusChange && !hasAssigneeChange && !hasProgressChange) {
             toast.info("Choose at least one bulk field before applying changes.");
             return;
         }
 
+        if (hasProgressChange && weightedTaskCount === selectedTaskIds.length) {
+            toast.info("Selected tasks use weighted components. Update their component progress inside the task editor.");
+            return;
+        }
+
         setIsBulkApplying(true);
 
         try {
-            const updates = selectedTaskIds.map((taskId) => ({
-                id: taskId,
-                ...(hasStatusChange ? { status: mapTaskStatusToApi(bulkStatus as TaskStatus) } : {}),
-                ...(hasAssigneeChange
-                    ? { assignee: bulkAssignee === "__unassigned__" ? null : bulkAssignee }
-                    : {}),
-                ...(hasProgressChange ? { progress: clampProgress(bulkProgress) } : {}),
-            }));
+            const updates = selectedTaskIds.map((taskId) => {
+                const task = taskLookup.get(taskId);
+                const includeProgress = hasProgressChange && !isWeightedProgressTask(task);
+
+                return {
+                    id: taskId,
+                    ...(hasStatusChange ? { status: mapTaskStatusToApi(bulkStatus as TaskStatus) } : {}),
+                    ...(hasAssigneeChange
+                        ? { assignee: bulkAssignee === "__unassigned__" ? null : bulkAssignee }
+                        : {}),
+                    ...(includeProgress ? { progress: clampProgress(bulkProgress) } : {}),
+                };
+            });
 
             await bulkUpdateTasksMutation.mutateAsync({ tasks: updates });
 
             const appliedFields = [
                 hasStatusChange ? "status" : null,
                 hasAssigneeChange ? "assignee" : null,
-                hasProgressChange ? "progress" : null,
+                hasProgressChange && weightedTaskCount < selectedTaskIds.length ? "progress" : null,
             ].filter(Boolean).join(", ");
 
             toast.success(
                 `Applied ${appliedFields} update${selectedTaskIds.length === 1 ? "" : "s"} to ${selectedTaskIds.length} task${selectedTaskIds.length === 1 ? "" : "s"}.`,
             );
+            if (hasProgressChange && weightedTaskCount > 0) {
+                toast.info(`Skipped direct progress updates for ${weightedTaskCount} weighted task${weightedTaskCount === 1 ? "" : "s"}.`);
+            }
             setSelectedTaskIds([]);
             resetBulkDraft();
             setIsSelectionActionsOpen(false);
@@ -1219,6 +1456,7 @@ export function TasksPage() {
         resetBulkDraft,
         selectedProject,
         selectedTaskIds,
+        taskLookup,
     ]);
 
     const handleBulkDelete = useCallback(async (taskIds: string[]) => {
@@ -1345,8 +1583,8 @@ export function TasksPage() {
         taskListColumnHelper.accessor("status", {
             header: "Status",
             cell: (info) => (
-                <Badge variant={getStatusVariant(info.getValue())}>
-                    {getTaskStatusLabel(info.getValue())}
+                <Badge variant={getStatusVariant(info.row.original.executionStatus ?? info.getValue())}>
+                    {getTaskStatusLabel(info.row.original.executionStatus ?? info.getValue())}
                 </Badge>
             ),
         }),
@@ -1359,6 +1597,9 @@ export function TasksPage() {
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
                             {getScheduleStatusLabel(task.scheduleStatus)}
+                        </Badge>
+                        <Badge variant="outline" title={`Progress method: ${getProgressMethodLabel(task.progressMethod)}`}>
+                            {getProgressMethodLabel(task.progressMethod)}
                         </Badge>
                         {task.completedAtIsBackfilled ? (
                             <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
@@ -1661,14 +1902,17 @@ export function TasksPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <Badge variant={getStatusVariant(task.status)}>
-                                        {getTaskStatusLabel(task.status)}
+                                    <Badge variant={getStatusVariant(task.executionStatus ?? task.status)}>
+                                        {getTaskStatusLabel(task.executionStatus ?? task.status)}
                                     </Badge>
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
                                         {getScheduleStatusLabel(task.scheduleStatus)}
+                                    </Badge>
+                                    <Badge variant="outline" title={`Progress method: ${getProgressMethodLabel(task.progressMethod)}`}>
+                                        {getProgressMethodLabel(task.progressMethod)}
                                     </Badge>
                                     {task.completedAtIsBackfilled ? (
                                         <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
@@ -1925,13 +2169,13 @@ export function TasksPage() {
                             </Button>
                         </div>
                     </div>
-                    <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                    <Dialog open={createOpen} onOpenChange={handleCreateDialogOpenChange}>
                         <DialogTrigger asChild>
                             <Button type="button" data-testid="tasks-new-button">New task</Button>
                         </DialogTrigger>
                         <AppDialogContent
                             title="Create task"
-                            description="Create a new task for your project with optional progress tracking."
+                            description="Create a new task for your project with manual or weighted progress tracking."
                         >
                             <Form {...createForm}>
                                 <form
@@ -1975,7 +2219,10 @@ export function TasksPage() {
                                             startDate: startDate,
                                             endDate: finalEndDate,
                                             status: (parsed.data.status ?? "todo") as TaskStatus,
-                                            progress: parsed.data.progress || 0,
+                                            progress: createProgressMethod === "manual_percent_legacy"
+                                                ? (parsed.data.progress || 0)
+                                                : undefined,
+                                            progressMethod: createProgressMethod,
                                         })
                                             .then(() => {
                                                 const activeSessionId = timeToTaskSessionIdRef.current;
@@ -1987,8 +2234,7 @@ export function TasksPage() {
                                                 }
                                                 beginTimeToTaskSession();
                                                 refreshTimeToTaskSummary();
-                                                setCreateOpen(false);
-                                                createForm.reset();
+                                                handleCreateDialogOpenChange(false);
                                             })
                                             .catch((err: unknown) => {
                                                 const fieldErrors = extractFieldErrorsFromAxios(err);
@@ -2222,35 +2468,81 @@ export function TasksPage() {
                                         </p>
                                     </div>
 
-                                    {/* Progress - Optional */}
-                                    <FormField
-                                        control={createForm.control}
-                                        name="progress"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="flex items-center justify-between text-muted-foreground">
-                                                    <span>Progress (Optional)</span>
-                                                    <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
-                                                        {field.value ?? 0}%
-                                                    </span>
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="range"
-                                                        min="0"
-                                                        max="100"
-                                                        step="5"
-                                                        value={field.value ?? 0}
-                                                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                                        className="w-full"
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
+                                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4" data-testid="tasks-create-progress-method-section">
+                                        <div className="space-y-1">
+                                            <Label>Progress tracking</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Manual works best for quick tasks. Weighted is better when completion depends on multiple deliverables.
+                                            </p>
+                                        </div>
+                                        <ToggleGroup
+                                            type="single"
+                                            value={createProgressMethod}
+                                            onValueChange={(value) => {
+                                                if (value !== "manual_percent_legacy" && value !== "weighted_components") {
+                                                    return;
+                                                }
+                                                setCreateProgressMethod(value);
+                                                if (value === "weighted_components") {
+                                                    createForm.setValue("progress", 0);
+                                                }
+                                            }}
+                                            className="flex flex-wrap justify-start gap-2"
+                                            data-testid="tasks-create-progress-method-toggle"
+                                        >
+                                            <ToggleGroupItem
+                                                value="manual_percent_legacy"
+                                                data-testid="tasks-create-progress-method-manual"
+                                            >
+                                                Manual percent
+                                            </ToggleGroupItem>
+                                            <ToggleGroupItem
+                                                value="weighted_components"
+                                                data-testid="tasks-create-progress-method-weighted"
+                                            >
+                                                Weighted components
+                                            </ToggleGroupItem>
+                                        </ToggleGroup>
+
+                                        {createProgressMethod === "manual_percent_legacy" ? (
+                                            <FormField
+                                                control={createForm.control}
+                                                name="progress"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="flex items-center justify-between text-muted-foreground">
+                                                            <span>Starting progress</span>
+                                                            <span className="rounded bg-primary/10 px-2 py-0.5 text-sm font-mono">
+                                                                {field.value ?? 0}%
+                                                            </span>
+                                                        </FormLabel>
+                                                        <FormControl>
+                                                            <Input
+                                                                type="range"
+                                                                min="0"
+                                                                max="100"
+                                                                step="5"
+                                                                value={field.value ?? 0}
+                                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                                className="w-full"
+                                                                data-testid="tasks-create-progress-slider"
+                                                            />
+                                                        </FormControl>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Use this for simple legacy/manual tasks where one percentage is enough.
+                                                        </p>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        ) : (
+                                            <div className="rounded-md border border-dashed border-border/70 bg-background/80 p-3 text-sm text-muted-foreground" data-testid="tasks-create-weighted-hint">
+                                                This task will start at 0%. After creation, open Edit task to add weighted components and let backend calculate actual progress.
+                                            </div>
                                         )}
-                                    />
+                                    </div>
 
                                     <div className="flex justify-end">
-                                        <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                                        <Button type="button" variant="ghost" onClick={() => handleCreateDialogOpenChange(false)}>Cancel</Button>
                                         <Button
                                             type="submit"
                                             disabled={createForm.formState.isSubmitting}
@@ -2411,6 +2703,18 @@ export function TasksPage() {
                                                 />
                                             </div>
                                             <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Health</Label>
+                                                <Combobox
+                                                    value={healthStatusFilter}
+                                                    onChange={setHealthStatusFilter}
+                                                    options={healthStatusFilterOptions}
+                                                    placeholder="Health"
+                                                    searchPlaceholder="Search health..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-filter-health-status-combobox"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
                                                 <Label className="text-xs text-muted-foreground">Start from</Label>
                                                 <Input
                                                     type="date"
@@ -2461,6 +2765,7 @@ export function TasksPage() {
                                                 className="h-10 w-full sm:w-auto"
                                                 onClick={() => {
                                                     setAssigneeFilter("all");
+                                                    setHealthStatusFilter("all");
                                                     setScheduleStatusFilter("all");
                                                     setStartFromFilter("");
                                                     setStartToFilter("");
@@ -2484,7 +2789,7 @@ export function TasksPage() {
                                 <Badge variant="outline">Filters: {activeAdvancedFilterCount}</Badge>
                             ) : (
                                 <span className="text-[11px] text-muted-foreground">
-                                    Advanced contains view switch plus schedule, date, and assignee filters.
+                                    Advanced contains view switch plus health, schedule, date, and assignee filters.
                                 </span>
                             )}
                         </div>
@@ -2549,6 +2854,11 @@ export function TasksPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-xs text-muted-foreground">Progress</Label>
+                                                {selectedWeightedTaskCount > 0 ? (
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        Weighted tasks use component-based progress. Direct progress changes will skip {selectedWeightedTaskCount} selected task{selectedWeightedTaskCount === 1 ? "" : "s"}.
+                                                    </p>
+                                                ) : null}
                                                 <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
@@ -2564,6 +2874,7 @@ export function TasksPage() {
                                                         className="h-10 w-24"
                                                         data-testid="tasks-bulk-progress-input"
                                                         aria-label="Bulk progress value"
+                                                        disabled={isBulkBusy || !canBulkEditProgress}
                                                     />
                                                     <Button
                                                         type="button"
@@ -2573,7 +2884,7 @@ export function TasksPage() {
                                                             setBulkProgress((current) => clampProgress(current - 10));
                                                             setBulkProgressTouched(true);
                                                         }}
-                                                        disabled={isBulkBusy || !bulkProgressTouched}
+                                                        disabled={isBulkBusy || !bulkProgressTouched || !canBulkEditProgress}
                                                     >
                                                         -10
                                                     </Button>
@@ -2585,7 +2896,7 @@ export function TasksPage() {
                                                             setBulkProgress((current) => clampProgress(current + 10));
                                                             setBulkProgressTouched(true);
                                                         }}
-                                                        disabled={isBulkBusy}
+                                                        disabled={isBulkBusy || !canBulkEditProgress}
                                                     >
                                                         +10
                                                     </Button>
@@ -2707,7 +3018,7 @@ export function TasksPage() {
                                         description: normalizedDescription,
                                         startDate,
                                         endDate: finalEndDate,
-                                        progress: parsed.data.progress,
+                                        ...(isWeightedProgressTask(editing) ? {} : { progress: parsed.data.progress }),
                                         durationDays: parsed.data.plan
                                     }
                                 })
@@ -2915,28 +3226,182 @@ export function TasksPage() {
                                 </p>
                             </div>
 
-                            {/* Progress - Optional */}
-                            <FormField control={editForm.control} name="progress" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center justify-between text-muted-foreground">
-                                        <span>Progress (Optional)</span>
-                                        <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
-                                            {field.value ?? 0}%
-                                        </span>
-                                    </FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            step="5"
-                                            value={field.value ?? 0}
-                                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                            className="w-full"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )} />
+                            {isEditingWeightedTask ? (
+                                <div className="space-y-4 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-weighted-progress-section">
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                        <div className="space-y-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-sm font-semibold">Weighted progress components</p>
+                                                <Badge variant="outline">{getProgressMethodLabel(editing?.progressMethod)}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                This task uses backend-managed weighted components. Direct progress slider updates are disabled.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            <Badge variant="outline">Actual: {formatTaskPercent(editingTaskScurve?.actual ?? null)}</Badge>
+                                            <Badge variant="outline">Expected: {formatTaskPercent(editingTaskScurve?.expected ?? null)}</Badge>
+                                            <Badge variant="outline">Variance: {formatTaskVariance(editingTaskScurve?.variance ?? null)}</Badge>
+                                            <Badge variant={getTaskHealthVariant(editingTaskScurve?.health ?? "needs_plan")}>
+                                                {getTaskHealthLabel(editingTaskScurve?.health ?? "needs_plan")}
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    {taskProgressComponentsQuery.isLoading ? (
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-16 w-full" />
+                                            <Skeleton className="h-16 w-full" />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {progressComponentDrafts.map((draft, index) => (
+                                                <div
+                                                    key={draft.id ?? `component-${index}`}
+                                                    className="space-y-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                                                    data-testid="tasks-progress-component-row"
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-medium">Component {index + 1}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Weight drives actual progress. Completion is the state of this component itself.
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => removeProgressComponentDraft(index)}
+                                                            disabled={isProgressComponentsSaving}
+                                                            data-testid="tasks-progress-component-remove-button"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Name</Label>
+                                                            <Input
+                                                                value={draft.name}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "name", event.target.value)}
+                                                                placeholder="Requirements signed off"
+                                                                data-testid="tasks-progress-component-name-input"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Type</Label>
+                                                            <Input
+                                                                value={draft.componentType}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "componentType", event.target.value)}
+                                                                placeholder="milestone"
+                                                                data-testid="tasks-progress-component-type-input"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Weight (%)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.1"
+                                                                value={draft.weight}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "weight", event.target.value)}
+                                                                data-testid="tasks-progress-component-weight-input"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Completion (%)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="1"
+                                                                value={draft.completionPct}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "completionPct", event.target.value)}
+                                                                data-testid="tasks-progress-component-completion-input"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Planned at</Label>
+                                                            <Input
+                                                                type="datetime-local"
+                                                                value={draft.plannedAt}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "plannedAt", event.target.value)}
+                                                                data-testid="tasks-progress-component-planned-at-input"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-muted-foreground">Completed at</Label>
+                                                            <Input
+                                                                type="datetime-local"
+                                                                value={draft.completedAt}
+                                                                onChange={(event) => updateProgressComponentDraft(index, "completedAt", event.target.value)}
+                                                                data-testid="tasks-progress-component-completed-at-input"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="space-y-1">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Total weight: <span className={cn(Math.abs(totalProgressComponentWeight - 100) < 0.01 ? "text-success" : "text-warning")}>{totalProgressComponentWeight.toFixed(1)}%</span>
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Keep weights near 100% so actual progress remains intuitive.
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={addProgressComponentDraft}
+                                                        disabled={isProgressComponentsSaving}
+                                                        data-testid="tasks-progress-component-add-button"
+                                                    >
+                                                        Add component
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            void handleSaveProgressComponents();
+                                                        }}
+                                                        disabled={isProgressComponentsSaving}
+                                                        data-testid="tasks-progress-components-save-button"
+                                                    >
+                                                        {isProgressComponentsSaving ? "Saving..." : "Save components"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <FormField control={editForm.control} name="progress" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center justify-between text-muted-foreground">
+                                            <span>Progress (Legacy manual)</span>
+                                            <span className="text-sm font-mono bg-primary/10 px-2 py-0.5 rounded">
+                                                {field.value ?? 0}%
+                                            </span>
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="5"
+                                                value={field.value ?? 0}
+                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                className="w-full"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
+                            )}
 
                             <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-work-log-section">
                                 <div className="space-y-1">

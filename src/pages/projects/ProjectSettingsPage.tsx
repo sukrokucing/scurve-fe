@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CircleDollarSign, Loader2, Settings2, ShieldAlert, Users } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, Loader2, Settings2, ShieldAlert, TrendingUp, Users } from "lucide-react";
 
 import { type ApiProjectMember, type ApiProjectResourceRoleRate } from "@/api/openapiClient";
 import { useRolesWithPermissionsQuery } from "@/api/queries/rbac";
@@ -14,9 +14,11 @@ import {
     useProjectById,
     useProjectMembersQuery,
     useProjectResourceRoleRatesQuery,
+    useProjectTaskHealthRulesQuery,
     useRemoveProjectMemberMutation,
     useResourceRolesQuery,
     useUpdateProjectMutation,
+    useUpdateTaskHealthRulesMutation,
     useUpsertProjectResourceRoleRateMutation,
 } from "@/api/queries/projects";
 import { Badge } from "@/components/ui/badge";
@@ -40,10 +42,16 @@ type AccessRoleWithPermissions = {
     permissions: string[];
 };
 
-type ProjectSettingsTab = "members" | "resource-rates" | "general";
+type ProjectSettingsTab = "members" | "resource-rates" | "task-health" | "general";
 type AutoHealStatus = {
     state: "idle" | "running" | "success" | "failed" | "blocked";
     message?: string;
+};
+type TaskHealthRuleDraft = {
+    healthStatus: components["schemas"]["TaskHealthStatus"];
+    varianceFrom: string;
+    varianceTo: string;
+    priority: number;
 };
 
 const memberColumnHelper = createColumnHelper<ApiProjectMember>();
@@ -52,6 +60,7 @@ const resourceRateColumnHelper = createColumnHelper<ApiProjectResourceRoleRate>(
 const PROJECT_SETTINGS_TABS: Array<{ value: ProjectSettingsTab; label: string }> = [
     { value: "members", label: "Members" },
     { value: "resource-rates", label: "Resource Rates" },
+    { value: "task-health", label: "Task Health" },
     { value: "general", label: "General" },
 ];
 
@@ -110,8 +119,38 @@ function isProjectAdminScope(scope: components["schemas"]["MyProjectScopeSummary
 }
 
 function resolveTab(value: string | null): ProjectSettingsTab {
-    if (value === "members" || value === "resource-rates" || value === "general") return value;
+    if (value === "members" || value === "resource-rates" || value === "task-health" || value === "general") return value;
     return "members";
+}
+
+function formatTaskHealthStatusLabel(value: components["schemas"]["TaskHealthStatus"]) {
+    switch (value) {
+        case "ahead":
+            return "Ahead";
+        case "on_track":
+            return "On Track";
+        case "at_risk":
+            return "At Risk";
+        case "critical":
+            return "Critical";
+        case "needs_plan":
+        default:
+            return "Needs Plan";
+    }
+}
+
+function toVarianceInputValue(value?: number | null) {
+    return typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+}
+
+function createDefaultTaskHealthRuleDrafts(): TaskHealthRuleDraft[] {
+    return [
+        { healthStatus: "ahead", varianceFrom: "10", varianceTo: "", priority: 1 },
+        { healthStatus: "on_track", varianceFrom: "-10", varianceTo: "10", priority: 2 },
+        { healthStatus: "at_risk", varianceFrom: "-25", varianceTo: "-10", priority: 3 },
+        { healthStatus: "critical", varianceFrom: "", varianceTo: "-25", priority: 4 },
+        { healthStatus: "needs_plan", varianceFrom: "", varianceTo: "", priority: 5 },
+    ];
 }
 
 function getAutoHealAccessRoleId(roles: AccessRoleWithPermissions[]) {
@@ -160,6 +199,7 @@ export function ProjectSettingsPage() {
     const [generalName, setGeneralName] = useState("");
     const [generalDescription, setGeneralDescription] = useState("");
     const [generalThemeColor, setGeneralThemeColor] = useState(DEFAULT_PROJECT_THEME_COLOR);
+    const [taskHealthRuleDrafts, setTaskHealthRuleDrafts] = useState<TaskHealthRuleDraft[]>([]);
 
     const [autoHealStatus, setAutoHealStatus] = useState<AutoHealStatus>({ state: "idle" });
     const [autoHealAttempted, setAutoHealAttempted] = useState(false);
@@ -181,6 +221,10 @@ export function ProjectSettingsPage() {
         data: projectResourceRoleRates = [],
         isLoading: isRatesLoading,
     } = useProjectResourceRoleRatesQuery(projectId, { enabled: Boolean(projectId) });
+    const {
+        data: taskHealthRules,
+        isLoading: isTaskHealthRulesLoading,
+    } = useProjectTaskHealthRulesQuery(projectId, { enabled: Boolean(projectId) });
 
     const { data: usersLookup, isLoading: isUsersLoading } = useUsersLookupQuery({
         enabled: Boolean(projectId),
@@ -264,6 +308,7 @@ export function ProjectSettingsPage() {
     const upsertRateMutation = useUpsertProjectResourceRoleRateMutation(projectId);
     const clearRateMutation = useDeleteProjectResourceRoleRateMutation(projectId);
     const updateProjectMutation = useUpdateProjectMutation(projectId);
+    const updateTaskHealthRulesMutation = useUpdateTaskHealthRulesMutation(projectId);
 
     useEffect(() => {
         if (!project) return;
@@ -271,6 +316,20 @@ export function ProjectSettingsPage() {
         setGeneralDescription(project.description ?? "");
         setGeneralThemeColor(resolveProjectThemeColor(project.theme_color));
     }, [project]);
+
+    useEffect(() => {
+        const nextDrafts = taskHealthRules?.rules?.length
+            ? [...taskHealthRules.rules]
+                .sort((a, b) => a.priority - b.priority)
+                .map((rule) => ({
+                    healthStatus: rule.health_status,
+                    varianceFrom: toVarianceInputValue(rule.variance_from),
+                    varianceTo: toVarianceInputValue(rule.variance_to),
+                    priority: rule.priority,
+                }))
+            : createDefaultTaskHealthRuleDrafts();
+        setTaskHealthRuleDrafts(nextDrafts);
+    }, [taskHealthRules]);
 
     useEffect(() => {
         if (memberAccessRoleId) return;
@@ -474,6 +533,74 @@ export function ProjectSettingsPage() {
         });
     };
 
+    const updateTaskHealthRuleDraft = (
+        index: number,
+        field: "varianceFrom" | "varianceTo",
+        value: string,
+    ) => {
+        setTaskHealthRuleDrafts((current) => current.map((draft, draftIndex) => (
+            draftIndex === index ? { ...draft, [field]: value } : draft
+        )));
+    };
+
+    const onResetTaskHealthRules = () => {
+        const nextDrafts = taskHealthRules?.rules?.length
+            ? [...taskHealthRules.rules]
+                .sort((a, b) => a.priority - b.priority)
+                .map((rule) => ({
+                    healthStatus: rule.health_status,
+                    varianceFrom: toVarianceInputValue(rule.variance_from),
+                    varianceTo: toVarianceInputValue(rule.variance_to),
+                    priority: rule.priority,
+                }))
+            : createDefaultTaskHealthRuleDrafts();
+        setTaskHealthRuleDrafts(nextDrafts);
+    };
+
+    const onSaveTaskHealthRules = () => {
+        if (!canManageSettings) {
+            toast.error("You do not have permission to update task health rules.");
+            return;
+        }
+
+        try {
+            const rules = taskHealthRuleDrafts.map((draft) => {
+                const varianceFrom = draft.varianceFrom.trim();
+                const varianceTo = draft.varianceTo.trim();
+                const parsedFrom = varianceFrom === "" ? null : Number.parseFloat(varianceFrom);
+                const parsedTo = varianceTo === "" ? null : Number.parseFloat(varianceTo);
+
+                if ((varianceFrom !== "" && !Number.isFinite(parsedFrom)) || (varianceTo !== "" && !Number.isFinite(parsedTo))) {
+                    throw new Error(`Invalid variance threshold for ${formatTaskHealthStatusLabel(draft.healthStatus)}.`);
+                }
+                if (parsedFrom !== null && parsedTo !== null && parsedFrom > parsedTo) {
+                    throw new Error(`Variance "from" cannot be greater than "to" for ${formatTaskHealthStatusLabel(draft.healthStatus)}.`);
+                }
+
+                return {
+                    health_status: draft.healthStatus,
+                    variance_from: parsedFrom,
+                    variance_to: parsedTo,
+                };
+            });
+
+            updateTaskHealthRulesMutation.mutate(
+                { rules },
+                {
+                    onSuccess: () => {
+                        toast.success("Task health rules updated.");
+                    },
+                    onError: (error) => {
+                        toast.error(extractErrorMessage(error, "Failed to update task health rules"));
+                    },
+                },
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Invalid task health rule input.";
+            toast.error(message);
+        }
+    };
+
     if (isProjectLoading) {
         return (
             <div className="space-y-4">
@@ -618,6 +745,19 @@ export function ProjectSettingsPage() {
                                 upsertRatePending={upsertRateMutation.isPending}
                                 onResetRate={onResetRate}
                                 clearRatePending={clearRateMutation.isPending}
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="task-health">
+                            <TaskHealthTab
+                                canManageSettings={canManageSettings}
+                                taskHealthRules={taskHealthRules}
+                                taskHealthRuleDrafts={taskHealthRuleDrafts}
+                                isTaskHealthRulesLoading={isTaskHealthRulesLoading}
+                                onRuleChange={updateTaskHealthRuleDraft}
+                                onResetRules={onResetTaskHealthRules}
+                                onSaveRules={onSaveTaskHealthRules}
+                                updateTaskHealthRulesPending={updateTaskHealthRulesMutation.isPending}
                             />
                         </TabsContent>
 
@@ -1014,6 +1154,141 @@ function ResourceRatesTab({
                     getRowProps={(row) => ({ "data-testid": row.original.resource_role_id ? "project-settings-rate-row" : undefined })}
                 />
             </div>
+        </section>
+    );
+}
+
+type TaskHealthTabProps = {
+    canManageSettings: boolean;
+    taskHealthRules: components["schemas"]["TaskHealthRuleSetResponse"] | null | undefined;
+    taskHealthRuleDrafts: TaskHealthRuleDraft[];
+    isTaskHealthRulesLoading: boolean;
+    onRuleChange: (index: number, field: "varianceFrom" | "varianceTo", value: string) => void;
+    onResetRules: () => void;
+    onSaveRules: () => void;
+    updateTaskHealthRulesPending: boolean;
+};
+
+function TaskHealthTab({
+    canManageSettings,
+    taskHealthRules,
+    taskHealthRuleDrafts,
+    isTaskHealthRulesLoading,
+    onRuleChange,
+    onResetRules,
+    onSaveRules,
+    updateTaskHealthRulesPending,
+}: TaskHealthTabProps) {
+    return (
+        <section className="space-y-4" data-testid="project-settings-task-health-section">
+            <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-lg font-medium">Task Health Rules</h2>
+            </div>
+
+            <Card className="border-border/80">
+                <CardHeader className="space-y-2">
+                    <CardTitle className="text-base">Variance Thresholds</CardTitle>
+                    <CardDescription>
+                        Backend uses these ranges to classify task health. Leave a boundary blank to make it open-ended.
+                    </CardDescription>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline">Scope: {taskHealthRules?.scope ?? "project"}</Badge>
+                        {taskHealthRules?.updated_at ? (
+                            <Badge variant="outline">
+                                Updated: {new Date(taskHealthRules.updated_at).toLocaleString()}
+                            </Badge>
+                        ) : null}
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {isTaskHealthRulesLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-14 w-full" />
+                            <Skeleton className="h-14 w-full" />
+                            <Skeleton className="h-14 w-full" />
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid gap-3">
+                                {taskHealthRuleDrafts.map((rule, index) => (
+                                    <div
+                                        key={rule.healthStatus}
+                                        className="grid gap-3 rounded-lg border border-border/70 bg-background/70 p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                                        data-testid="project-settings-task-health-rule-row"
+                                    >
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline">{formatTaskHealthStatusLabel(rule.healthStatus)}</Badge>
+                                                <span className="text-xs text-muted-foreground">Priority {rule.priority}</span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Example: values between these bounds will be marked as {formatTaskHealthStatusLabel(rule.healthStatus).toLowerCase()}.
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-muted-foreground">Variance from (%)</label>
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                value={rule.varianceFrom}
+                                                disabled={!canManageSettings}
+                                                onChange={(event) => onRuleChange(index, "varianceFrom", event.target.value)}
+                                                placeholder="Open"
+                                                data-testid="project-settings-task-health-from-input"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-muted-foreground">Variance to (%)</label>
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                value={rule.varianceTo}
+                                                disabled={!canManageSettings}
+                                                onChange={(event) => onRuleChange(index, "varianceTo", event.target.value)}
+                                                placeholder="Open"
+                                                data-testid="project-settings-task-health-to-input"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-xs text-muted-foreground">
+                                    Changes apply to backend task health classification and refresh task/dashboard queries after save.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={onResetRules}
+                                        disabled={isTaskHealthRulesLoading || updateTaskHealthRulesPending}
+                                        data-testid="project-settings-task-health-reset-button"
+                                    >
+                                        Reset
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={onSaveRules}
+                                        disabled={!canManageSettings || updateTaskHealthRulesPending || isTaskHealthRulesLoading}
+                                        data-testid="project-settings-task-health-save-button"
+                                    >
+                                        {updateTaskHealthRulesPending ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            "Save Rules"
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
         </section>
     );
 }

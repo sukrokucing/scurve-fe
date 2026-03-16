@@ -240,10 +240,13 @@ export const ProjectDashboard = () => {
         if (projectTasks.length === 0) return null;
 
         const totalProgress = projectTasks.reduce((sum, task) => {
+            if (typeof task.actualProgressPct === "number" && Number.isFinite(task.actualProgressPct)) {
+                return sum + task.actualProgressPct;
+            }
             if (typeof task.progress === "number" && Number.isFinite(task.progress)) {
                 return sum + task.progress;
             }
-            return sum + (task.status === "done" ? 100 : 0);
+            return sum + ((task.executionStatus === "completed" || task.status === "done") ? 100 : 0);
         }, 0);
 
         return totalProgress / projectTasks.length;
@@ -252,9 +255,9 @@ export const ProjectDashboard = () => {
     const taskCompletionSummary = useMemo(() => {
         const statusCounts = dashboard?.task_status_counts;
         const totalTasks = typeof statusCounts?.total === "number" ? statusCounts.total : projectTasks.length;
-        const completedTasks = projectTasks.filter((task) => task.status === "done").length;
+        const completedTasks = projectTasks.filter((task) => task.executionStatus === "completed" || task.status === "done").length;
         const completedWithoutActualTimestamp = projectTasks.filter(
-            (task) => task.status === "done" && !task.completedAt,
+            (task) => (task.executionStatus === "completed" || task.status === "done") && !task.completedAt,
         ).length;
 
         const scheduleSummary: ScheduleSummaryItem[] = [

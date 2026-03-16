@@ -25,11 +25,29 @@ export type TaskScheduleStatus =
     | "on_time"
     | "not_specified";
 
+export type TaskExecutionStatus =
+    | "not_started"
+    | "in_progress"
+    | "blocked"
+    | "completed";
+
+export type TaskHealthStatus =
+    | "ahead"
+    | "on_track"
+    | "at_risk"
+    | "critical"
+    | "needs_plan";
+
+export type TaskProgressMethod =
+    | "manual_percent_legacy"
+    | "weighted_components";
+
 export interface Task {
     id: Identifier;
     name: string;
     description?: string;
     status: TaskStatus;
+    executionStatus?: TaskExecutionStatus;
     projectId: Identifier;
     assigneeId?: Identifier;
     startDate?: string | null;
@@ -38,6 +56,12 @@ export interface Task {
     durationDays?: number | null;
     parentId?: Identifier | null;
     progress?: number;
+    actualProgressPct?: number | null;
+    expectedProgressPct?: number | null;
+    variancePct?: number | null;
+    healthStatus?: TaskHealthStatus;
+    progressMethod?: TaskProgressMethod;
+    taskWeight?: number | null;
     completedAt?: string | null;
     completedAtIsBackfilled?: boolean;
     scheduleStatus?: TaskScheduleStatus;

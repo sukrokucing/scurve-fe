@@ -285,6 +285,10 @@ export const RegisterRequestSchema = z.object({
     password: z.string(), // example: "S3cureP@ssw0rd"
   });
 
+export const ReplaceTaskProgressComponentsRequestSchema = z.object({
+    components: z.array(z.lazy(() => TaskProgressComponentInputSchema)),
+  });
+
 export const ResetPasswordRequestSchema = z.object({
     new_password: z.string(), // example: "NewSecureP@ss456"
     token: z.string(), // example: "abc123token"
@@ -365,7 +369,13 @@ export const SCurveMetricSchema = z.string();
 export const SCurveStageSchema = z.string();
 
 export const TaskSchema = z.object({
+    actual_progress_pct: z.number().optional(), // example: 45
+    actual_progress_source: z.string().nullable().optional(), // example: "tasks.progress"
     assignee: z.string().nullable().optional(),
+    baseline_end_at: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
+    baseline_start_at: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
+    blocked_flag: z.boolean(), // example: false
+    blocked_reason: z.string().nullable().optional(), // example: "Waiting for dependency sign-off"
     completed_at: z.string().datetime().nullable().optional(), // example: "2025-10-12T14:30:00Z"
     completed_at_is_backfilled: z.boolean(), // example: false
     created_at: z.string().datetime(),
@@ -374,15 +384,22 @@ export const TaskSchema = z.object({
     due_date: z.string().datetime().nullable().optional(),
     duration_days: z.number().optional(),
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
+    execution_status: z.lazy(() => TaskExecutionStatusSchema),
+    expected_progress_pct: z.number().optional(), // example: 40
+    expected_progress_source: z.string().nullable().optional(), // example: "tasks.baseline_linear"
+    health_status: z.lazy(() => TaskHealthStatusSchema),
     id: z.string(),
     parent_id: z.string().nullable().optional(),
-    progress: z.number(),
+    progress: z.number(), // example: 45
+    progress_method: z.lazy(() => TaskProgressMethodSchema),
     project_id: z.string(),
     schedule_status: z.lazy(() => TaskScheduleStatusSchema),
     start_date: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
-    status: z.string(),
+    status: z.string(), // example: "pending"
+    task_weight: z.number(), // example: 1
     title: z.string(),
     updated_at: z.string().datetime(),
+    variance_pct: z.number().optional(), // example: 5
   });
 
 export const TaskActivityEntrySchema = z.object({
@@ -427,13 +444,19 @@ export const TaskBatchUpdateRequestSchema = z.object({
 
 export const TaskCreateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
+    baseline_end_at: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
+    baseline_start_at: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
+    blocked_flag: z.boolean().optional(), // example: false
+    blocked_reason: z.string().nullable().optional(), // example: "Waiting for stakeholder review"
     description: z.string().nullable().optional(), // example: "[Quick Add] Define launch checklist"
     due_date: z.string().datetime().nullable().optional(), // example: "2025-10-10T10:00:00Z"
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
     parent_id: z.string().nullable().optional(),
     progress: z.number().optional(), // example: 0
+    progress_method: z.any().optional(),
     start_date: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
     status: z.string().nullable().optional(), // example: "pending"
+    task_weight: z.number().optional(), // example: 1
     title: z.string(), // example: "Define launch checklist"
   });
 
@@ -444,6 +467,58 @@ export const TaskDependencySchema = z.object({
     target_task_id: z.string(),
     type_: z.string(),
   });
+
+export const TaskExecutionStatusSchema = z.string();
+
+export const TaskHealthRuleSchema = z.object({
+    health_status: z.lazy(() => TaskHealthStatusSchema),
+    priority: z.number(), // example: 1
+    variance_from: z.number().optional(), // example: -25
+    variance_to: z.number().optional(), // example: -10
+  });
+
+export const TaskHealthRuleInputSchema = z.object({
+    health_status: z.lazy(() => TaskHealthStatusSchema),
+    variance_from: z.number().optional(), // example: -25
+    variance_to: z.number().optional(), // example: -10
+  });
+
+export const TaskHealthRuleSetResponseSchema = z.object({
+    project_id: z.string().nullable().optional(),
+    rules: z.array(z.lazy(() => TaskHealthRuleSchema)),
+    scope: z.string(), // example: "project"
+    updated_at: z.string().datetime(),
+  });
+
+export const TaskHealthStatusSchema = z.string();
+
+export const TaskProgressComponentSchema = z.object({
+    completed_at: z.string().datetime().nullable().optional(), // example: "2025-10-04T14:00:00Z"
+    completion_pct: z.number(), // example: 100
+    component_type: z.string(), // example: "milestone"
+    created_at: z.string().datetime(),
+    deleted_at: z.string().datetime().nullable().optional(),
+    id: z.string(),
+    name: z.string(), // example: "Requirements signed off"
+    planned_at: z.string().datetime().nullable().optional(), // example: "2025-10-03T09:00:00Z"
+    sort_order: z.number(), // example: 1
+    task_id: z.string(),
+    updated_at: z.string().datetime(),
+    weight: z.number(), // example: 40
+  });
+
+export const TaskProgressComponentInputSchema = z.object({
+    completed_at: z.string().datetime().nullable().optional(), // example: "2025-10-04T14:00:00Z"
+    completion_pct: z.number(), // example: 100
+    component_type: z.string(), // example: "milestone"
+    id: z.string().nullable().optional(),
+    name: z.string(), // example: "Requirements signed off"
+    planned_at: z.string().datetime().nullable().optional(), // example: "2025-10-03T09:00:00Z"
+    sort_order: z.number().optional(), // example: 1
+    weight: z.number(), // example: 40
+  });
+
+export const TaskProgressMethodSchema = z.string();
 
 export const TaskScheduleStatusSchema = z.string();
 
@@ -461,13 +536,19 @@ export const TaskStatusCountsSchema = z.object({
 
 export const TaskUpdateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
+    baseline_end_at: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
+    baseline_start_at: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
+    blocked_flag: z.boolean().optional(),
+    blocked_reason: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
     due_date: z.string().datetime().nullable().optional(), // example: "2025-11-01T10:00:00Z"
     end_date: z.string().datetime().nullable().optional(), // example: "2025-10-15T17:00:00Z"
     parent_id: z.string().nullable().optional(),
     progress: z.number().optional(),
+    progress_method: z.any().optional(),
     start_date: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
     status: z.string().nullable().optional(),
+    task_weight: z.number().optional(),
     title: z.string().nullable().optional(),
   });
 
@@ -501,6 +582,10 @@ export const TelemetryEventRequestSchema = z.object({
 
 export const TelemetryIngestResponseSchema = z.object({
     accepted: z.number(), // example: 12
+  });
+
+export const UpdateTaskHealthRulesRequestSchema = z.object({
+    rules: z.array(z.lazy(() => TaskHealthRuleInputSchema)),
   });
 
 export const UpdateUserRequestSchema = z.object({
@@ -617,6 +702,7 @@ export const components = { schemas: {
   ProjectResourceRoleRateUpsertRequest: ProjectResourceRoleRateUpsertRequestSchema,
   ProjectUpdateRequest: ProjectUpdateRequestSchema,
   RegisterRequest: RegisterRequestSchema,
+  ReplaceTaskProgressComponentsRequest: ReplaceTaskProgressComponentsRequestSchema,
   ResetPasswordRequest: ResetPasswordRequestSchema,
   ResourceRole: ResourceRoleSchema,
   ResourceRoleCreateRequest: ResourceRoleCreateRequestSchema,
@@ -639,6 +725,14 @@ export const components = { schemas: {
   TaskBatchUpdateRequest: TaskBatchUpdateRequestSchema,
   TaskCreateRequest: TaskCreateRequestSchema,
   TaskDependency: TaskDependencySchema,
+  TaskExecutionStatus: TaskExecutionStatusSchema,
+  TaskHealthRule: TaskHealthRuleSchema,
+  TaskHealthRuleInput: TaskHealthRuleInputSchema,
+  TaskHealthRuleSetResponse: TaskHealthRuleSetResponseSchema,
+  TaskHealthStatus: TaskHealthStatusSchema,
+  TaskProgressComponent: TaskProgressComponentSchema,
+  TaskProgressComponentInput: TaskProgressComponentInputSchema,
+  TaskProgressMethod: TaskProgressMethodSchema,
   TaskScheduleStatus: TaskScheduleStatusSchema,
   TaskSortBy: TaskSortBySchema,
   TaskSortDir: TaskSortDirSchema,
@@ -649,6 +743,7 @@ export const components = { schemas: {
   TelemetryEventName: TelemetryEventNameSchema,
   TelemetryEventRequest: TelemetryEventRequestSchema,
   TelemetryIngestResponse: TelemetryIngestResponseSchema,
+  UpdateTaskHealthRulesRequest: UpdateTaskHealthRulesRequestSchema,
   UpdateUserRequest: UpdateUserRequestSchema,
   User: UserSchema,
   UserPermission: UserPermissionSchema,
