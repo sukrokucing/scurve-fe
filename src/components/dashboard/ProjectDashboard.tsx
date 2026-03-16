@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-    LineChart,
     Line,
+    LineChart,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -11,12 +11,17 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { format } from "date-fns";
-import { AlertCircle, Calendar, CheckCircle2, Loader2, TrendingUp } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle2, Loader2, Target, TrendingUp, Users2 } from "lucide-react";
 
-import { useProjectDashboard, useProjectSCurveHealth } from "@/api/queries/projects";
+import {
+    useProjectDashboard,
+    useProjectSCurveHealth,
+} from "@/api/queries/projects";
+import { useTasksByProject } from "@/api/queries/tasks";
 import type { ApiSCurveMetric } from "@/api/openapiClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import type { Task } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 const METRIC_OPTIONS = [
@@ -24,6 +29,44 @@ const METRIC_OPTIONS = [
     { value: "hours", label: "Hours" },
     { value: "cost", label: "Cost" },
 ] as const;
+
+type ScheduleBucketId = "finishedEarly" | "overdue" | "onTime" | "notSpecified";
+
+type ScheduleSummaryItem = {
+    id: ScheduleBucketId;
+    label: string;
+    description: string;
+    value: number;
+    toneClassName: string;
+    barClassName: string;
+};
+
+function getMetricCopy(metric: ApiSCurveMetric) {
+    if (metric === "hours") {
+        return {
+            actualDescription: "Logged effort accumulated so far",
+            plannedDescription: "Planned effort at the current elapsed time",
+            varianceDescription: "Actual hours minus planned hours",
+            chartDescription: "Planned vs actual effort over time for this project.",
+        };
+    }
+
+    if (metric === "cost") {
+        return {
+            actualDescription: "Tracked spend accumulated so far",
+            plannedDescription: "Planned spend at the current elapsed time",
+            varianceDescription: "Actual cost minus planned cost",
+            chartDescription: "Planned vs actual cost over time for this project.",
+        };
+    }
+
+    return {
+        actualDescription: "Current cumulative actual value",
+        plannedDescription: "Baseline target at current elapsed time",
+        varianceDescription: "Actual minus planned",
+        chartDescription: "Planned vs actual progress over time for this project.",
+    };
+}
 
 function toMetricValue(value: number | null | undefined, fallback: number) {
     if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -34,6 +77,79 @@ function toMetricValue(value: number | null | undefined, fallback: number) {
 function formatPercentage(value: number | null) {
     if (value === null) return "N/A";
     return `${value.toFixed(1)}%`;
+}
+
+function formatMetricValue(metric: ApiSCurveMetric, value: number | null, unit?: string | null) {
+    if (value === null) return "N/A";
+
+    if (metric === "progress") {
+        return formatPercentage(value);
+    }
+
+    if (metric === "hours") {
+        const hourUnit = unit?.trim() || "hrs";
+        return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${hourUnit}`;
+    }
+
+    const normalizedUnit = unit?.trim().toUpperCase();
+    if (normalizedUnit && /^[A-Z]{3}$/.test(normalizedUnit)) {
+        try {
+            return new Intl.NumberFormat(undefined, {
+                style: "currency",
+                currency: normalizedUnit,
+                maximumFractionDigits: 2,
+            }).format(value);
+        } catch {
+            return `${normalizedUnit} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        }
+    }
+
+    if (unit?.trim()) {
+        return `${unit.trim()} ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    }
+
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function formatMetricDelta(metric: ApiSCurveMetric, value: number | null, unit?: string | null) {
+    if (value === null) return "N/A";
+
+    if (metric === "progress") {
+        return `${value > 0 ? "+" : ""}${formatPercentage(value)}`;
+    }
+
+    const absoluteValue = Math.abs(value);
+    const formatted = formatMetricValue(metric, absoluteValue, unit);
+    if (formatted === "N/A") return formatted;
+    return `${value > 0 ? "+" : value < 0 ? "-" : ""}${formatted}`;
+}
+
+function formatMetricAxisValue(metric: ApiSCurveMetric, value: number, unit?: string | null) {
+    if (!Number.isFinite(value)) return "";
+
+    if (metric === "progress") {
+        return `${Math.round(value)}%`;
+    }
+
+    if (metric === "hours") {
+        return `${Math.round(value)}h`;
+    }
+
+    const normalizedUnit = unit?.trim().toUpperCase();
+    if (normalizedUnit && /^[A-Z]{3}$/.test(normalizedUnit)) {
+        try {
+            return new Intl.NumberFormat(undefined, {
+                style: "currency",
+                currency: normalizedUnit,
+                notation: "compact",
+                maximumFractionDigits: 1,
+            }).format(value);
+        } catch {
+            return `${normalizedUnit} ${Math.round(value)}`;
+        }
+    }
+
+    return value.toLocaleString(undefined, { notation: "compact", maximumFractionDigits: 1 });
 }
 
 function formatStageLabel(stage?: string | null) {
@@ -72,6 +188,13 @@ export const ProjectDashboard = () => {
     const [metric, setMetric] = useState<ApiSCurveMetric>("progress");
     const { data: dashboard, isLoading, error } = useProjectDashboard(id || "", metric);
     const { data: health, isLoading: isHealthLoading } = useProjectSCurveHealth(id || "", metric);
+    const { data: projectTasksData, isLoading: isTasksLoading } = useTasksByProject(id || "", false, {
+        enabled: Boolean(id),
+    });
+    const projectTasks = useMemo(() => {
+        const rawTasks = projectTasksData as Task[] | undefined;
+        return Array.isArray(rawTasks) ? rawTasks : [];
+    }, [projectTasksData]);
 
     const chartData = useMemo(() => {
         if (!dashboard) return [];
@@ -109,6 +232,110 @@ export const ProjectDashboard = () => {
 
         return Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
     }, [dashboard]);
+
+    const overallProgress = useMemo(() => {
+        const progressFromDashboard = toMetricValue(dashboard?.overall_progress_pct, Number.NaN);
+
+        if (progressFromDashboard !== null) return progressFromDashboard;
+        if (projectTasks.length === 0) return null;
+
+        const totalProgress = projectTasks.reduce((sum, task) => {
+            if (typeof task.progress === "number" && Number.isFinite(task.progress)) {
+                return sum + task.progress;
+            }
+            return sum + (task.status === "done" ? 100 : 0);
+        }, 0);
+
+        return totalProgress / projectTasks.length;
+    }, [dashboard?.overall_progress_pct, projectTasks]);
+
+    const taskCompletionSummary = useMemo(() => {
+        const statusCounts = dashboard?.task_status_counts;
+        const totalTasks = typeof statusCounts?.total === "number" ? statusCounts.total : projectTasks.length;
+        const completedTasks = projectTasks.filter((task) => task.status === "done").length;
+        const completedWithoutActualTimestamp = projectTasks.filter(
+            (task) => task.status === "done" && !task.completedAt,
+        ).length;
+
+        const scheduleSummary: ScheduleSummaryItem[] = [
+            {
+                id: "finishedEarly",
+                label: "Finished early",
+                description: "Backend-computed early completions.",
+                value: Number(statusCounts?.finished_early ?? 0),
+                toneClassName: "text-emerald-600 dark:text-emerald-400",
+                barClassName: "bg-emerald-500",
+            },
+            {
+                id: "overdue",
+                label: "Overdue",
+                description: "Backend-computed overdue tasks.",
+                value: Number(statusCounts?.overdue ?? 0),
+                toneClassName: "text-destructive",
+                barClassName: "bg-destructive",
+            },
+            {
+                id: "onTime",
+                label: "On time",
+                description: "Backend-computed on-time tasks.",
+                value: Number(statusCounts?.on_time ?? 0),
+                toneClassName: "text-sky-600 dark:text-sky-400",
+                barClassName: "bg-sky-500",
+            },
+            {
+                id: "notSpecified",
+                label: "Not specified",
+                description: "Tasks still missing schedule details.",
+                value: Number(statusCounts?.not_specified ?? 0),
+                toneClassName: "text-muted-foreground",
+                barClassName: "bg-muted-foreground/60",
+            },
+        ];
+
+        return {
+            totalTasks,
+            completedTasks,
+            openTasks: Math.max(totalTasks - completedTasks, 0),
+            completedWithoutActualTimestamp,
+            scheduleSummary,
+        };
+    }, [dashboard?.task_status_counts, projectTasks]);
+
+    const workloadDistribution = useMemo(() => {
+        const summaryRows = Array.isArray(dashboard?.workload_distribution) ? dashboard.workload_distribution : [];
+        const memberRows: Array<{ id: string; label: string; count: number; sublabel?: string }> = summaryRows
+            .map((row) => ({
+                id: row.user_id,
+                label: row.user_name,
+                count: row.task_count,
+            }))
+            .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+        const assignedTaskTotal = summaryRows.reduce((sum, row) => sum + row.task_count, 0);
+        const unassignedCount = Math.max((dashboard?.task_status_counts.total ?? projectTasks.length) - assignedTaskTotal, 0);
+
+        if (unassignedCount > 0) {
+            memberRows.push({
+                id: "__unassigned__",
+                label: "Unassigned",
+                sublabel: "Tasks without an owner",
+                count: unassignedCount,
+            });
+        }
+
+        const maxCount = memberRows.reduce((max, row) => Math.max(max, row.count), 0);
+        const topOwner = memberRows
+            .filter((row) => row.id !== "__unassigned__")
+            .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))[0] ?? null;
+
+        return {
+            rows: memberRows,
+            maxCount,
+            assignedMemberCount: memberRows.filter((row) => row.id !== "__unassigned__" && row.count > 0).length,
+            unassignedCount,
+            topOwner,
+        };
+    }, [dashboard?.task_status_counts.total, dashboard?.workload_distribution, projectTasks.length]);
 
     if (isLoading) {
         return (
@@ -148,16 +375,17 @@ export const ProjectDashboard = () => {
         ? latestPlanPoint.plan ?? 0
         : 0;
     const dashboardVariance = dashboardActual - dashboardPlan;
+    const isProgressMetric = metric === "progress";
 
-    const currentActual = metric === "progress"
+    const currentActual = isProgressMetric
         ? toMetricValue(health?.actual_pct, dashboardActual)
-        : toMetricValue(health?.actual_pct, Number.NaN);
-    const currentPlan = metric === "progress"
+        : toMetricValue(dashboardActual, Number.NaN);
+    const currentPlan = isProgressMetric
         ? toMetricValue(health?.planned_pct, dashboardPlan)
-        : toMetricValue(health?.planned_pct, Number.NaN);
-    const variance = metric === "progress"
+        : toMetricValue(dashboardPlan, Number.NaN);
+    const variance = isProgressMetric
         ? toMetricValue(health?.variance_pct, dashboardVariance)
-        : toMetricValue(health?.variance_pct, Number.NaN);
+        : toMetricValue(dashboardVariance, Number.NaN);
     const stageLabel = formatStageLabel(health?.stage);
     const ruleStatusLabel = formatRuleStatus(
         health?.rule_50_70_status,
@@ -174,8 +402,10 @@ export const ProjectDashboard = () => {
         || health.rule_50_70_status === "insufficient_metric_data"
         || health.rule_50_70_status === "pre_window"
         || typeof health.rule_50_70_pass !== "boolean";
-    const isProgressMetric = metric === "progress";
     const chartUnit = dashboard.unit ?? (isProgressMetric ? "%" : "");
+    const metricCopy = getMetricCopy(metric);
+    const dueDateCoverage = Math.round(dashboard.due_date_coverage_pct);
+    const assignmentCoverage = Math.round(dashboard.assignment_coverage_pct);
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -197,6 +427,191 @@ export const ProjectDashboard = () => {
                 </div>
             </div>
 
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.1fr)]">
+                <Card className="overflow-hidden border-border/70">
+                    <CardHeader className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Overall progress</CardTitle>
+                                <CardDescription>Persistent completion signal for the project.</CardDescription>
+                            </div>
+                            <Target className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-end justify-between gap-4">
+                            <div>
+                                <div className="text-4xl font-semibold tracking-tight" data-testid="project-dashboard-overall-progress-value">
+                                    {formatPercentage(overallProgress)}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {taskCompletionSummary.totalTasks > 0
+                                        ? `${taskCompletionSummary.completedTasks}/${taskCompletionSummary.totalTasks} tasks completed`
+                                        : "No tasks available yet"}
+                                </p>
+                            </div>
+                            <div className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
+                                {overallProgress !== null ? "Progress tracked" : "Awaiting progress data"}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-2.5 overflow-hidden rounded-full bg-muted/70">
+                                <div
+                                    className="h-full rounded-full bg-primary transition-[width]"
+                                    style={{ width: `${Math.max(0, Math.min(100, overallProgress ?? 0))}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Uses progress S-curve health when available, then falls back to average task progress.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Completed</p>
+                                <p className="mt-1 text-lg font-semibold">{taskCompletionSummary.completedTasks}</p>
+                            </div>
+                            <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Open</p>
+                                <p className="mt-1 text-lg font-semibold">{taskCompletionSummary.openTasks}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/70">
+                    <CardHeader>
+                        <CardTitle>Schedule status</CardTitle>
+                        <CardDescription>
+                            Backend-managed schedule health across all tasks. Due date coverage: {dueDateCoverage}%.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {taskCompletionSummary.completedWithoutActualTimestamp > 0 ? (
+                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                                {taskCompletionSummary.completedWithoutActualTimestamp} completed task(s) are still missing `completed_at`.
+                                Those are likely legacy rows; backend may have backfilled timing from history.
+                            </div>
+                        ) : null}
+                        {isTasksLoading ? (
+                            <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
+                                Loading task distribution...
+                            </div>
+                        ) : (
+                            taskCompletionSummary.scheduleSummary.map((item) => {
+                                const share = taskCompletionSummary.totalTasks > 0
+                                    ? (item.value / taskCompletionSummary.totalTasks) * 100
+                                    : 0;
+
+                                return (
+                                    <div key={item.id} className="space-y-2">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium">{item.label}</p>
+                                                <p className="text-xs text-muted-foreground">{item.description}</p>
+                                            </div>
+                                            <div
+                                                className={cn("text-2xl font-semibold", item.toneClassName)}
+                                                data-testid={`project-dashboard-status-${item.id}`}
+                                            >
+                                                {item.value}
+                                            </div>
+                                        </div>
+                                        <div className="h-2 overflow-hidden rounded-full bg-muted/70">
+                                            <div
+                                                className={cn("h-full rounded-full transition-[width]", item.barClassName)}
+                                                style={{ width: `${share}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/70">
+                    <CardHeader>
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Workload distribution</CardTitle>
+                                <CardDescription>Task count for each project member.</CardDescription>
+                            </div>
+                            <Users2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/15 p-3 text-sm">
+                            <div>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Assigned teammates</p>
+                                <p className="mt-1 text-lg font-semibold">{workloadDistribution.assignedMemberCount}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Unassigned tasks</p>
+                                <p className="mt-1 text-lg font-semibold">{workloadDistribution.unassignedCount}</p>
+                            </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Assignment coverage</p>
+                                <p className="mt-1 text-lg font-semibold">{assignmentCoverage}%</p>
+                                <p className="text-xs text-muted-foreground">Tasks with an explicit owner</p>
+                            </div>
+                            <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">Top load</p>
+                                <p className="mt-1 truncate text-lg font-semibold">
+                                    {workloadDistribution.topOwner ? workloadDistribution.topOwner.label : "No assignee yet"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {workloadDistribution.topOwner
+                                        ? `${workloadDistribution.topOwner.count} task(s) currently assigned`
+                                        : "Distribute work after assigning owners"}
+                                </p>
+                            </div>
+                        </div>
+                        {isTasksLoading ? (
+                            <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
+                                Loading member workload...
+                            </div>
+                        ) : workloadDistribution.rows.length > 0 ? (
+                            <div className="max-h-[260px] space-y-3 overflow-y-auto pr-1" data-testid="project-dashboard-workload-list">
+                                {workloadDistribution.rows.map((row) => {
+                                    const width = workloadDistribution.maxCount > 0
+                                        ? (row.count / workloadDistribution.maxCount) * 100
+                                        : 0;
+
+                                    return (
+                                        <div key={row.id} className="space-y-1.5">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium">{row.label}</p>
+                                                    {row.sublabel ? (
+                                                        <p className="truncate text-xs text-muted-foreground">{row.sublabel}</p>
+                                                    ) : null}
+                                                </div>
+                                                <p className="shrink-0 text-sm font-semibold">{row.count}</p>
+                                            </div>
+                                            <div className="h-2 overflow-hidden rounded-full bg-muted/70">
+                                                <div
+                                                    className={cn(
+                                                        "h-full rounded-full transition-[width]",
+                                                        row.id === "__unassigned__" ? "bg-amber-500" : "bg-primary/80",
+                                                    )}
+                                                    style={{ width: `${width}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
+                                No member workload data yet.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -204,8 +619,10 @@ export const ProjectDashboard = () => {
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold" data-testid="project-dashboard-actual-value">{formatPercentage(currentActual)}</div>
-                        <p className="text-xs text-muted-foreground">Current cumulative actual value</p>
+                        <div className="text-2xl font-bold" data-testid="project-dashboard-actual-value">
+                            {formatMetricValue(metric, currentActual, chartUnit)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{metricCopy.actualDescription}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -214,8 +631,10 @@ export const ProjectDashboard = () => {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold" data-testid="project-dashboard-planned-value">{formatPercentage(currentPlan)}</div>
-                        <p className="text-xs text-muted-foreground">Baseline target at current elapsed time</p>
+                        <div className="text-2xl font-bold" data-testid="project-dashboard-planned-value">
+                            {formatMetricValue(metric, currentPlan, chartUnit)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{metricCopy.plannedDescription}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -238,11 +657,9 @@ export const ProjectDashboard = () => {
                                     ? "text-emerald-500"
                                     : "text-destructive",
                         )} data-testid="project-dashboard-variance-value">
-                            {variance === null
-                                ? "N/A"
-                                : `${variance > 0 ? "+" : ""}${formatPercentage(variance)}`}
+                            {formatMetricDelta(metric, variance, chartUnit)}
                         </div>
-                        <p className="text-xs text-muted-foreground">Actual minus planned</p>
+                        <p className="text-xs text-muted-foreground">{metricCopy.varianceDescription}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -270,13 +687,13 @@ export const ProjectDashboard = () => {
                 </Card>
             </div>
 
-            <Card className="col-span-4">
-                <CardHeader>
-                    <CardTitle>S-Curve Performance</CardTitle>
-                    <CardDescription>
-                        Planned vs actual {metric} over time for this project.
-                    </CardDescription>
-                </CardHeader>
+                <Card className="col-span-4">
+                    <CardHeader>
+                        <CardTitle>S-Curve Performance</CardTitle>
+                        <CardDescription>
+                            {metricCopy.chartDescription}
+                        </CardDescription>
+                    </CardHeader>
                 <CardContent className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
@@ -294,8 +711,8 @@ export const ProjectDashboard = () => {
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                unit={isProgressMetric ? "%" : undefined}
                                 domain={isProgressMetric ? [0, 100] : ["auto", "auto"]}
+                                tickFormatter={(value) => formatMetricAxisValue(metric, Number(value), chartUnit)}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -304,8 +721,8 @@ export const ProjectDashboard = () => {
                                     borderRadius: "8px",
                                 }}
                                 labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
-                                formatter={(value: number) => [
-                                    `${value}${isProgressMetric ? "%" : chartUnit ? ` ${chartUnit}` : ""}`,
+                                formatter={(value: number | string) => [
+                                    formatMetricValue(metric, typeof value === "number" ? value : Number(value), chartUnit),
                                     "",
                                 ]}
                                 labelFormatter={(label) => format(new Date(label), "MMMM d, yyyy")}

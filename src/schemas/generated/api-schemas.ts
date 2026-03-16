@@ -50,16 +50,21 @@ export const DashboardMetricPointSchema = z.object({
 export const DashboardResponseSchema = z.object({
     actual: z.array(z.lazy(() => ActualPointSchema)),
     actual_source: z.string().nullable().optional(),
+    assignment_coverage_pct: z.number(),
     currency: z.string().nullable().optional(),
     data_status: z.lazy(() => SCurveDataStatusSchema),
+    due_date_coverage_pct: z.number(),
     metric: z.lazy(() => SCurveMetricSchema),
     metric_actual: z.array(z.lazy(() => DashboardMetricPointSchema)),
     metric_plan: z.array(z.lazy(() => DashboardMetricPointSchema)),
     metric_supported: z.boolean(),
+    overall_progress_pct: z.number(),
     plan: z.array(z.lazy(() => ProjectPlanPointSchema)),
     planned_source: z.string().nullable().optional(),
     project: z.lazy(() => ProjectSchema),
+    task_status_counts: z.lazy(() => TaskStatusCountsSchema),
     unit: z.string().nullable().optional(),
+    workload_distribution: z.array(z.lazy(() => WorkloadDistributionItemSchema)),
   });
 
 export const DeletedResponseSchema = z.object({
@@ -361,6 +366,8 @@ export const SCurveStageSchema = z.string();
 
 export const TaskSchema = z.object({
     assignee: z.string().nullable().optional(),
+    completed_at: z.string().datetime().nullable().optional(), // example: "2025-10-12T14:30:00Z"
+    completed_at_is_backfilled: z.boolean(), // example: false
     created_at: z.string().datetime(),
     deleted_at: z.string().datetime().nullable().optional(),
     description: z.string(), // example: "[Quick Add] Define launch checklist"
@@ -371,6 +378,7 @@ export const TaskSchema = z.object({
     parent_id: z.string().nullable().optional(),
     progress: z.number(),
     project_id: z.string(),
+    schedule_status: z.lazy(() => TaskScheduleStatusSchema),
     start_date: z.string().datetime().nullable().optional(), // example: "2025-10-01T09:00:00Z"
     status: z.string(),
     title: z.string(),
@@ -437,9 +445,19 @@ export const TaskDependencySchema = z.object({
     type_: z.string(),
   });
 
+export const TaskScheduleStatusSchema = z.string();
+
 export const TaskSortBySchema = z.string();
 
 export const TaskSortDirSchema = z.string();
+
+export const TaskStatusCountsSchema = z.object({
+    finished_early: z.number(),
+    not_specified: z.number(),
+    on_time: z.number(),
+    overdue: z.number(),
+    total: z.number(),
+  });
 
 export const TaskUpdateRequestSchema = z.object({
     assignee: z.string().nullable().optional(),
@@ -555,6 +573,12 @@ export const WorkLogUpdateRequestSchema = z.object({
     work_date: z.string().nullable().optional(), // example: "2026-03-10"
   });
 
+export const WorkloadDistributionItemSchema = z.object({
+    task_count: z.number(),
+    user_id: z.string(),
+    user_name: z.string(),
+  });
+
 export const components = { schemas: {
   ActualPoint: ActualPointSchema,
   AssignPermissionToRoleRequest: AssignPermissionToRoleRequestSchema,
@@ -615,8 +639,10 @@ export const components = { schemas: {
   TaskBatchUpdateRequest: TaskBatchUpdateRequestSchema,
   TaskCreateRequest: TaskCreateRequestSchema,
   TaskDependency: TaskDependencySchema,
+  TaskScheduleStatus: TaskScheduleStatusSchema,
   TaskSortBy: TaskSortBySchema,
   TaskSortDir: TaskSortDirSchema,
+  TaskStatusCounts: TaskStatusCountsSchema,
   TaskUpdateRequest: TaskUpdateRequestSchema,
   TelemetryBatchRequest: TelemetryBatchRequestSchema,
   TelemetryErrorResponse: TelemetryErrorResponseSchema,
@@ -631,4 +657,5 @@ export const components = { schemas: {
   WorkLogCreateRequest: WorkLogCreateRequestSchema,
   WorkLogSource: WorkLogSourceSchema,
   WorkLogUpdateRequest: WorkLogUpdateRequestSchema,
+  WorkloadDistributionItem: WorkloadDistributionItemSchema,
 } } as const;

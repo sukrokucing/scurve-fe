@@ -296,6 +296,59 @@ If UX guidance conflicts with repo contracts, keep repo contracts authoritative:
 
 ---
 
+## Meta-Cognitive Reasoning Protocol
+
+Use this protocol only for **complex, ambiguous, or high-impact work**, such as:
+- multi-file refactors
+- architecture decisions
+- non-trivial CRUD flows
+- state synchronization issues
+- query invalidation strategy
+- dense UI/UX redesigns
+- debugging with multiple plausible root causes
+
+For these tasks:
+
+1. **Decompose**
+   - Break the task into smaller sub-problems (data flow, UI structure, server state, validation, accessibility, edge cases).
+
+2. **Solve**
+   - Address each sub-problem explicitly.
+   - Assign a confidence level from `0.0` to `1.0` for important decisions only when uncertainty is meaningful.
+
+3. **Verify**
+   - Check:
+     - logic consistency
+     - agreement with this skill's architecture rules
+     - factual and library-version correctness
+     - completeness of edge cases
+     - bias toward an overcomplicated or preferred pattern
+
+4. **Synthesize**
+   - Combine the sub-results into a final recommendation or implementation plan.
+   - Prefer the path with the strongest support from repo rules and the highest-confidence reasoning.
+
+5. **Reflect**
+   - If overall confidence is below `0.8`, identify the weakest assumption and revise the plan once before finalizing.
+
+### Output Style
+
+- For simple tasks, answer directly without showing the protocol.
+- For complex tasks, provide:
+  - clear answer
+  - confidence level
+  - key caveats
+- Keep this concise unless the user explicitly asks for detailed reasoning.
+
+### Guardrail
+
+Do not let this protocol override repository contracts. If reasoning and repo rules conflict, follow:
+1. this `SKILL.md`
+2. referenced repo conventions
+3. upstream library guidance
+
+---
+
 ## Hooks — When to Use react-use
 
 Prefer React built-ins (`useState`, `useEffect`, `useCallback`, `useMemo`, etc.) first.

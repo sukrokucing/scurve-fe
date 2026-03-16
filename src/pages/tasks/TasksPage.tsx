@@ -30,7 +30,7 @@ import { useUsersLookupQuery } from "@/api/queries/users";
 import type { ApiWorkLog } from "@/api/openapiClient";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
-import type { Task, TaskStatus } from "@/types/domain";
+import type { Task, TaskScheduleStatus, TaskStatus } from "@/types/domain";
 import type { components } from "@/types/api";
 import { toast } from "sonner";
 
@@ -78,6 +78,14 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
+import {
+    formatTaskPercent,
+    formatTaskVariance,
+    getTaskHealthLabel,
+    getTaskHealthVariant,
+    getTaskScurveSnapshot,
+    getTaskStatusLabel,
+} from "@/lib/taskScurve";
 import {
     abandonTimeToTaskSession,
     clearTimeToTaskRecords,
@@ -203,6 +211,57 @@ function getStatusVariant(status: string): "success" | "info" | "error" | "secon
     }
 }
 
+function getTaskScurveTitle(task: Task) {
+    const snapshot = getTaskScurveSnapshot(task);
+
+    if (snapshot.expected === null) {
+        return "Needs a planned start and end date or duration before expected progress can be calculated.";
+    }
+
+    return `Expected ${formatTaskPercent(snapshot.expected)} · Actual ${formatTaskPercent(snapshot.actual)} · Variance ${formatTaskVariance(snapshot.variance)}`;
+}
+
+function getScheduleStatusVariant(status?: TaskScheduleStatus): "success" | "warning" | "info" | "outline" {
+    switch (status) {
+        case "finished_early":
+            return "success";
+        case "overdue":
+            return "warning";
+        case "on_time":
+            return "info";
+        case "not_specified":
+        default:
+            return "outline";
+    }
+}
+
+function getScheduleStatusLabel(status?: TaskScheduleStatus): string {
+    switch (status) {
+        case "finished_early":
+            return "Finished early";
+        case "overdue":
+            return "Overdue";
+        case "on_time":
+            return "On time";
+        case "not_specified":
+            return "Not specified";
+        default:
+            return "Unknown";
+    }
+}
+
+function matchesScheduleStatusFilter(status: TaskScheduleStatus | undefined, filterValue: string) {
+    if (filterValue === "all") return true;
+    const normalizedFilterValues = filterValue
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    if (normalizedFilterValues.length === 0) return true;
+    if (!status) return false;
+    return normalizedFilterValues.includes(status);
+}
+
 function clampProgress(value: number): number {
     return Math.min(100, Math.max(0, Math.round(value)));
 }
@@ -267,6 +326,7 @@ export function TasksPage() {
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [scheduleStatusFilter, setScheduleStatusFilter] = useState<string>("all");
     const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
     const [startFromFilter, setStartFromFilter] = useState("");
     const [startToFilter, setStartToFilter] = useState("");
@@ -286,6 +346,7 @@ export function TasksPage() {
         () => ({
             q: normalizedSearchQuery || undefined,
             status: apiStatusFilter,
+            schedule_status: scheduleStatusFilter === "all" ? undefined : scheduleStatusFilter,
             assignee_id: apiAssigneeFilter,
             start_from: startFromFilter || undefined,
             start_to: startToFilter || undefined,
@@ -304,6 +365,7 @@ export function TasksPage() {
             normalizedSearchQuery,
             page,
             pageSize,
+            scheduleStatusFilter,
             startFromFilter,
             startToFilter,
         ],
@@ -415,10 +477,11 @@ export function TasksPage() {
         return allTasks.filter((task) => {
             const matchesSearch = task.name.toLowerCase().includes(normalizedSearchQueryLower);
             const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+            const matchesScheduleStatus = matchesScheduleStatusFilter(task.scheduleStatus, scheduleStatusFilter);
             const matchesAssignee = assigneeFilter === "all" || task.assigneeId === assigneeFilter;
             const matchesStartDate = isWithinDateRange(task.startDate, startFromFilter || undefined, startToFilter || undefined);
             const matchesDueDate = isWithinDateRange(task.dueDate, dueFromFilter || undefined, dueToFilter || undefined);
-            return matchesSearch && matchesStatus && matchesAssignee && matchesStartDate && matchesDueDate;
+            return matchesSearch && matchesStatus && matchesScheduleStatus && matchesAssignee && matchesStartDate && matchesDueDate;
         });
     }, [
         allTasks,
@@ -427,6 +490,7 @@ export function TasksPage() {
         dueToFilter,
         listTasks,
         normalizedSearchQueryLower,
+        scheduleStatusFilter,
         startFromFilter,
         startToFilter,
         statusFilter,
@@ -442,6 +506,7 @@ export function TasksPage() {
     const totalFilteredCount = view === "list" ? listTotalCount : filteredTasks.length;
     const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
     const hasAdvancedFilters = assigneeFilter !== "all"
+        || scheduleStatusFilter !== "all"
         || startFromFilter !== ""
         || startToFilter !== ""
         || dueFromFilter !== ""
@@ -449,12 +514,13 @@ export function TasksPage() {
     const activeAdvancedFilterCount = useMemo(() => {
         let count = 0;
         if (assigneeFilter !== "all") count += 1;
+        if (scheduleStatusFilter !== "all") count += 1;
         if (startFromFilter) count += 1;
         if (startToFilter) count += 1;
         if (dueFromFilter) count += 1;
         if (dueToFilter) count += 1;
         return count;
-    }, [assigneeFilter, dueFromFilter, dueToFilter, startFromFilter, startToFilter]);
+    }, [assigneeFilter, dueFromFilter, dueToFilter, scheduleStatusFilter, startFromFilter, startToFilter]);
     const currentViewLabel = useMemo(() => {
         if (view === "kanban") return "Board";
         if (view === "gantt") return "Gantt";
@@ -526,6 +592,16 @@ export function TasksPage() {
         ],
         [assignableUsers]
     );
+    const scheduleStatusFilterOptions = useMemo(
+        () => [
+            { value: "all", label: "All Schedule Status" },
+            { value: "finished_early", label: "Finished Early" },
+            { value: "overdue", label: "Overdue" },
+            { value: "on_time", label: "On Time" },
+            { value: "not_specified", label: "Not Specified" },
+        ],
+        [],
+    );
     const allowedResourceRoleIds = useMemo(() => {
         const scopes = Array.isArray(myProjectScopes) ? myProjectScopes : [];
         const selectedScope = scopes.find((scope) => scope.project_id === selectedProject);
@@ -589,6 +665,7 @@ export function TasksPage() {
         dueToFilter,
         normalizedSearchQuery,
         selectedProject,
+        scheduleStatusFilter,
         startFromFilter,
         startToFilter,
         statusFilter,
@@ -1269,9 +1346,28 @@ export function TasksPage() {
             header: "Status",
             cell: (info) => (
                 <Badge variant={getStatusVariant(info.getValue())}>
-                    {info.getValue()}
+                    {getTaskStatusLabel(info.getValue())}
                 </Badge>
             ),
+        }),
+        taskListColumnHelper.display({
+            id: "scheduleStatus",
+            header: "Schedule",
+            cell: (info) => {
+                const task = info.row.original;
+                return (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
+                            {getScheduleStatusLabel(task.scheduleStatus)}
+                        </Badge>
+                        {task.completedAtIsBackfilled ? (
+                            <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
+                                Backfilled
+                            </Badge>
+                        ) : null}
+                    </div>
+                );
+            },
         }),
         taskListColumnHelper.display({
             id: "assignee",
@@ -1282,6 +1378,67 @@ export function TasksPage() {
             id: "plan",
             header: "Plan",
             cell: (info) => info.row.original.durationDays ? `${info.row.original.durationDays}d` : "—",
+        }),
+        taskListColumnHelper.display({
+            id: "expected",
+            header: () => <span title="Expected progress based on elapsed plan time">Expected</span>,
+            cell: (info) => {
+                const snapshot = getTaskScurveSnapshot(info.row.original);
+                return (
+                    <span className="font-medium text-foreground/90" title={getTaskScurveTitle(info.row.original)}>
+                        {formatTaskPercent(snapshot.expected)}
+                    </span>
+                );
+            },
+        }),
+        taskListColumnHelper.display({
+            id: "actual",
+            header: () => <span title="Actual recorded progress for the task">Actual</span>,
+            cell: (info) => {
+                const snapshot = getTaskScurveSnapshot(info.row.original);
+                return (
+                    <span className="font-medium text-foreground/90" title={getTaskScurveTitle(info.row.original)}>
+                        {formatTaskPercent(snapshot.actual)}
+                    </span>
+                );
+            },
+        }),
+        taskListColumnHelper.display({
+            id: "variance",
+            header: () => <span title="Actual minus expected progress">Variance</span>,
+            cell: (info) => {
+                const snapshot = getTaskScurveSnapshot(info.row.original);
+                return (
+                    <span
+                        className={cn(
+                            "font-medium",
+                            snapshot.variance === null
+                                ? "text-muted-foreground"
+                                : snapshot.variance >= 0
+                                    ? "text-success"
+                                    : "text-warning",
+                        )}
+                        title={getTaskScurveTitle(info.row.original)}
+                    >
+                        {formatTaskVariance(snapshot.variance)}
+                    </span>
+                );
+            },
+        }),
+        taskListColumnHelper.display({
+            id: "health",
+            header: () => <span title="Human-readable interpretation of schedule variance">Health</span>,
+            cell: (info) => {
+                const snapshot = getTaskScurveSnapshot(info.row.original);
+                return (
+                    <Badge
+                        variant={getTaskHealthVariant(snapshot.health)}
+                        title={getTaskScurveTitle(info.row.original)}
+                    >
+                        {getTaskHealthLabel(snapshot.health)}
+                    </Badge>
+                );
+            },
         }),
         taskListColumnHelper.display({
             id: "actions",
@@ -1331,6 +1488,7 @@ export function TasksPage() {
         getRowId: (row) => row.id,
     });
     const listRows = listTable.getRowModel().rows;
+    const listColumnCount = listTable.getVisibleLeafColumns().length || 1;
     const rowVirtualizer = useVirtualizer({
         count: listRows.length,
         getScrollElement: () => parentRef.current,
@@ -1481,9 +1639,11 @@ export function TasksPage() {
         return (
             <div className="space-y-3">
                 <div className="md:hidden space-y-3">
-                    {pagedTasks.map((task, index) => (
-                        <Card key={task.id} className="border-border/70" data-testid="tasks-mobile-card">
-                            <CardContent className="p-4 space-y-3">
+                    {pagedTasks.map((task, index) => {
+                        const taskSnapshot = getTaskScurveSnapshot(task);
+                        return (
+                            <Card key={task.id} className="border-border/70" data-testid="tasks-mobile-card">
+                                <CardContent className="p-4 space-y-3">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-start gap-2 min-w-0">
                                         <TaskSelectionCheckbox
@@ -1502,8 +1662,19 @@ export function TasksPage() {
                                         </div>
                                     </div>
                                     <Badge variant={getStatusVariant(task.status)}>
-                                        {task.status}
+                                        {getTaskStatusLabel(task.status)}
                                     </Badge>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
+                                        {getScheduleStatusLabel(task.scheduleStatus)}
+                                    </Badge>
+                                    {task.completedAtIsBackfilled ? (
+                                        <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
+                                            Backfilled
+                                        </Badge>
+                                    ) : null}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-y-1 text-xs">
@@ -1511,6 +1682,22 @@ export function TasksPage() {
                                     <span className="text-right">{getAssigneeLabel(task.assigneeId)}</span>
                                     <span className="text-muted-foreground">Plan</span>
                                     <span className="text-right">{task.durationDays ? `${task.durationDays}d` : "—"}</span>
+                                    <span className="text-muted-foreground">Expected</span>
+                                    <span className="text-right">{formatTaskPercent(taskSnapshot.expected)}</span>
+                                    <span className="text-muted-foreground">Actual</span>
+                                    <span className="text-right">{formatTaskPercent(taskSnapshot.actual)}</span>
+                                    <span className="text-muted-foreground">Variance</span>
+                                    <span className="text-right">{formatTaskVariance(taskSnapshot.variance)}</span>
+                                    <span className="text-muted-foreground">Health</span>
+                                    <span className="flex justify-end">
+                                        <Badge
+                                            variant={getTaskHealthVariant(taskSnapshot.health)}
+                                            className="px-2 py-0"
+                                            title={getTaskScurveTitle(task)}
+                                        >
+                                            {getTaskHealthLabel(taskSnapshot.health)}
+                                        </Badge>
+                                    </span>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -1536,9 +1723,10 @@ export function TasksPage() {
                                         Delete
                                     </Button>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
 
                 <div
@@ -1566,7 +1754,7 @@ export function TasksPage() {
                         <TableBody>
                             {virtualRows.length === 0 && (
                                 <TableRow key="no-tasks">
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={listColumnCount} className="h-24 text-center">
                                         No tasks found.
                                     </TableCell>
                                 </TableRow>
@@ -1574,7 +1762,7 @@ export function TasksPage() {
 
                             {firstVirtualRow ? (
                                 <TableRow key={`spacer-start-${firstVirtualRow.index}`} style={{ height: `${firstVirtualRow.start}px` }}>
-                                    <TableCell colSpan={6} style={{ padding: 0 }} />
+                                    <TableCell colSpan={listColumnCount} style={{ padding: 0 }} />
                                 </TableRow>
                             ) : null}
 
@@ -1600,7 +1788,7 @@ export function TasksPage() {
 
                             {lastVirtualRow ? (
                                 <TableRow key={`spacer-end-${lastVirtualRow.index}`} style={{ height: `${rowVirtualizer.getTotalSize() - lastVirtualRow.end}px` }}>
-                                    <TableCell colSpan={6} style={{ padding: 0 }} />
+                                    <TableCell colSpan={listColumnCount} style={{ padding: 0 }} />
                                 </TableRow>
                             ) : null}
                         </TableBody>
@@ -2211,6 +2399,18 @@ export function TasksPage() {
                                                 />
                                             </div>
                                             <div className="space-y-1">
+                                                <Label className="text-xs text-muted-foreground">Schedule status</Label>
+                                                <Combobox
+                                                    value={scheduleStatusFilter}
+                                                    onChange={setScheduleStatusFilter}
+                                                    options={scheduleStatusFilterOptions}
+                                                    placeholder="Schedule status"
+                                                    searchPlaceholder="Search schedule status..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-filter-schedule-status-combobox"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
                                                 <Label className="text-xs text-muted-foreground">Start from</Label>
                                                 <Input
                                                     type="date"
@@ -2261,6 +2461,7 @@ export function TasksPage() {
                                                 className="h-10 w-full sm:w-auto"
                                                 onClick={() => {
                                                     setAssigneeFilter("all");
+                                                    setScheduleStatusFilter("all");
                                                     setStartFromFilter("");
                                                     setStartToFilter("");
                                                     setDueFromFilter("");
@@ -2283,7 +2484,7 @@ export function TasksPage() {
                                 <Badge variant="outline">Filters: {activeAdvancedFilterCount}</Badge>
                             ) : (
                                 <span className="text-[11px] text-muted-foreground">
-                                    Advanced contains view switch and date/assignee filters.
+                                    Advanced contains view switch plus schedule, date, and assignee filters.
                                 </span>
                             )}
                         </div>

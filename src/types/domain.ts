@@ -19,6 +19,12 @@ export type TaskStatus =
     | "blocked"
     | "done";
 
+export type TaskScheduleStatus =
+    | "finished_early"
+    | "overdue"
+    | "on_time"
+    | "not_specified";
+
 export interface Task {
     id: Identifier;
     name: string;
@@ -32,6 +38,9 @@ export interface Task {
     durationDays?: number | null;
     parentId?: Identifier | null;
     progress?: number;
+    completedAt?: string | null;
+    completedAtIsBackfilled?: boolean;
+    scheduleStatus?: TaskScheduleStatus;
     createdAt: string;
 }
 

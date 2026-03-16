@@ -171,12 +171,20 @@
             "nullable": true,
             "type": "string"
           },
+          "assignment_coverage_pct": {
+            "format": "double",
+            "type": "number"
+          },
           "currency": {
             "nullable": true,
             "type": "string"
           },
           "data_status": {
             "$ref": "#/components/schemas/SCurveDataStatus"
+          },
+          "due_date_coverage_pct": {
+            "format": "double",
+            "type": "number"
           },
           "metric": {
             "$ref": "#/components/schemas/SCurveMetric"
@@ -196,6 +204,10 @@
           "metric_supported": {
             "type": "boolean"
           },
+          "overall_progress_pct": {
+            "format": "double",
+            "type": "number"
+          },
           "plan": {
             "items": {
               "$ref": "#/components/schemas/ProjectPlanPoint"
@@ -209,15 +221,29 @@
           "project": {
             "$ref": "#/components/schemas/Project"
           },
+          "task_status_counts": {
+            "$ref": "#/components/schemas/TaskStatusCounts"
+          },
           "unit": {
             "nullable": true,
             "type": "string"
+          },
+          "workload_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/WorkloadDistributionItem"
+            },
+            "type": "array"
           }
         },
         "required": [
           "project",
           "plan",
           "actual",
+          "overall_progress_pct",
+          "task_status_counts",
+          "workload_distribution",
+          "assignment_coverage_pct",
+          "due_date_coverage_pct",
           "metric",
           "metric_supported",
           "data_status",
@@ -1362,6 +1388,16 @@
             "nullable": true,
             "type": "string"
           },
+          "completed_at": {
+            "example": "2025-10-12T14:30:00Z",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "completed_at_is_backfilled": {
+            "example": false,
+            "type": "boolean"
+          },
           "created_at": {
             "format": "date-time",
             "type": "string"
@@ -1408,6 +1444,9 @@
             "format": "uuid",
             "type": "string"
           },
+          "schedule_status": {
+            "$ref": "#/components/schemas/TaskScheduleStatus"
+          },
           "start_date": {
             "example": "2025-10-01T09:00:00Z",
             "format": "date-time",
@@ -1432,6 +1471,8 @@
           "description",
           "status",
           "progress",
+          "completed_at_is_backfilled",
+          "schedule_status",
           "created_at",
           "updated_at"
         ],
@@ -1667,6 +1708,15 @@
         ],
         "type": "object"
       },
+      "TaskScheduleStatus": {
+        "enum": [
+          "finished_early",
+          "overdue",
+          "on_time",
+          "not_specified"
+        ],
+        "type": "string"
+      },
       "TaskSortBy": {
         "enum": [
           "start_date",
@@ -1685,6 +1735,38 @@
           "desc"
         ],
         "type": "string"
+      },
+      "TaskStatusCounts": {
+        "properties": {
+          "finished_early": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "not_specified": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "on_time": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "overdue": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "finished_early",
+          "overdue",
+          "on_time",
+          "not_specified"
+        ],
+        "type": "object"
       },
       "TaskUpdateRequest": {
         "properties": {
@@ -2127,6 +2209,27 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "WorkloadDistributionItem": {
+        "properties": {
+          "task_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "user_name",
+          "task_count"
+        ],
         "type": "object"
       }
     },
@@ -3650,6 +3753,16 @@
             "description": "Filter by task status. Supports comma-separated values (e.g. todo,done).",
             "in": "query",
             "name": "status",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by backend-computed schedule status. Supports comma-separated values: finished_early, overdue, on_time, not_specified.",
+            "in": "query",
+            "name": "schedule_status",
             "required": false,
             "schema": {
               "nullable": true,

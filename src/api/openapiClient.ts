@@ -42,6 +42,7 @@ type TaskListSortDirection = "asc" | "desc";
 type TaskListQueryParams = {
     q?: string;
     status?: string;
+    schedule_status?: string;
     assignee_id?: string;
     start_from?: string;
     start_to?: string;
@@ -88,6 +89,9 @@ function mapApiTaskToDomain(t: ApiTask): DomainTask {
         durationDays: t.duration_days ?? undefined,
         parentId: t.parent_id ?? undefined,
         progress: t.progress ?? 0,
+        completedAt: t.completed_at ?? undefined,
+        completedAtIsBackfilled: t.completed_at_is_backfilled,
+        scheduleStatus: t.schedule_status ?? undefined,
         createdAt: t.created_at,
     };
 }

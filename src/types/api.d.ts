@@ -1116,16 +1116,24 @@ export interface components {
         DashboardResponse: {
             actual: components["schemas"]["ActualPoint"][];
             actual_source?: string | null;
+            /** Format: double */
+            assignment_coverage_pct: number;
             currency?: string | null;
             data_status: components["schemas"]["SCurveDataStatus"];
+            /** Format: double */
+            due_date_coverage_pct: number;
             metric: components["schemas"]["SCurveMetric"];
             metric_actual: components["schemas"]["DashboardMetricPoint"][];
             metric_plan: components["schemas"]["DashboardMetricPoint"][];
             metric_supported: boolean;
+            /** Format: double */
+            overall_progress_pct: number;
             plan: components["schemas"]["ProjectPlanPoint"][];
             planned_source?: string | null;
             project: components["schemas"]["Project"];
+            task_status_counts: components["schemas"]["TaskStatusCounts"];
             unit?: string | null;
+            workload_distribution: components["schemas"]["WorkloadDistributionItem"][];
         };
         DeletedResponse: {
             message: string;
@@ -1502,6 +1510,13 @@ export interface components {
         Task: {
             /** Format: uuid */
             assignee?: string | null;
+            /**
+             * Format: date-time
+             * @example 2025-10-12T14:30:00Z
+             */
+            completed_at?: string | null;
+            /** @example false */
+            completed_at_is_backfilled: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -1525,6 +1540,7 @@ export interface components {
             progress: number;
             /** Format: uuid */
             project_id: string;
+            schedule_status: components["schemas"]["TaskScheduleStatus"];
             /**
              * Format: date-time
              * @example 2025-10-01T09:00:00Z
@@ -1630,9 +1646,23 @@ export interface components {
             type_: string;
         };
         /** @enum {string} */
+        TaskScheduleStatus: "finished_early" | "overdue" | "on_time" | "not_specified";
+        /** @enum {string} */
         TaskSortBy: "start_date" | "due_date" | "created_at" | "updated_at" | "title" | "status" | "progress";
         /** @enum {string} */
         TaskSortDir: "asc" | "desc";
+        TaskStatusCounts: {
+            /** Format: int64 */
+            finished_early: number;
+            /** Format: int64 */
+            not_specified: number;
+            /** Format: int64 */
+            on_time: number;
+            /** Format: int64 */
+            overdue: number;
+            /** Format: int64 */
+            total: number;
+        };
         TaskUpdateRequest: {
             /** Format: uuid */
             assignee?: string | null;
@@ -1804,6 +1834,13 @@ export interface components {
             resource_role_id?: string | null;
             /** @example 2026-03-10 */
             work_date?: string | null;
+        };
+        WorkloadDistributionItem: {
+            /** Format: int64 */
+            task_count: number;
+            /** Format: uuid */
+            user_id: string;
+            user_name: string;
         };
     };
     responses: never;
@@ -2932,6 +2969,8 @@ export interface operations {
                 q?: string | null;
                 /** @description Filter by task status. Supports comma-separated values (e.g. todo,done). */
                 status?: string | null;
+                /** @description Filter by backend-computed schedule status. Supports comma-separated values: finished_early, overdue, on_time, not_specified. */
+                schedule_status?: string | null;
                 /**
                  * @description Filter by assignee user id.
                  * @example 00000000-0000-0000-0000-000000000000
