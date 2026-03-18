@@ -4,6 +4,8 @@ import {
     rbacApi,
     type AuditLogResponse,
     type EffectivePermissionsResponse,
+    type ListAuditLogsParams,
+    normalizeAuditLogParams,
     type Permission,
     type Role,
 } from "@/api/rbac";
@@ -23,8 +25,8 @@ export const rbacKeys = {
     rolesWithPermissions: [...RBAC_QUERY_KEY, "roles-with-permissions"] as const,
     userRoles: (userId: string) => [...RBAC_QUERY_KEY, "user-roles", userId] as const,
     userPermissions: (userId: string) => [...RBAC_QUERY_KEY, "user-permissions", userId] as const,
-    auditLogs: (page: number, actionFilter: string) =>
-        [...RBAC_QUERY_KEY, "audit-logs", { page, actionFilter }] as const,
+    auditLogs: (params: ListAuditLogsParams) =>
+        [...RBAC_QUERY_KEY, "audit-logs", params] as const,
 };
 
 export function useRolesQuery(options?: { enabled?: boolean }) {
@@ -90,17 +92,29 @@ export function useUserEffectivePermissionsQuery(userId?: string, options?: { en
 }
 
 export function useAuditLogsQuery(
-    params: { page: number; actionFilter: string },
+    params: {
+        page: number;
+        actionFilter: string;
+        actorUserId?: string;
+        targetUserId?: string;
+        fromDate?: string;
+        toDate?: string;
+    },
     options?: { enabled?: boolean },
 ) {
+    const normalizedParams = normalizeAuditLogParams({
+        page: params.page,
+        per_page: 20,
+        action: params.actionFilter === "all" ? undefined : params.actionFilter,
+        actor_id: params.actorUserId === "all" ? undefined : params.actorUserId,
+        user_id: params.targetUserId === "all" ? undefined : params.targetUserId,
+        from: params.fromDate,
+        to: params.toDate,
+    }) ?? { page: 1, per_page: 20 };
+
     return useQuery<AuditLogResponse>({
-        queryKey: rbacKeys.auditLogs(params.page, params.actionFilter),
-        queryFn: () =>
-            rbacApi.listAuditLogs({
-                page: params.page,
-                per_page: 20,
-                action: params.actionFilter === "all" ? undefined : params.actionFilter,
-            }),
+        queryKey: rbacKeys.auditLogs(normalizedParams),
+        queryFn: () => rbacApi.listAuditLogs(normalizedParams),
         enabled: options?.enabled ?? true,
     });
 }

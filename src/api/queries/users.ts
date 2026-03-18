@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { usersApi, type ListUsersParams, type ListUsersResponse } from "@/api/users";
+import { normalizeApiSearchQuery } from "@/lib/apiSearch";
 
 const USERS_QUERY_KEY = ["users"] as const;
 
@@ -11,7 +12,7 @@ export const usersKeys = {
 };
 
 function normalizeUsersParams(params: ListUsersParams): ListUsersParams {
-    const normalizedQuery = params.q?.trim();
+    const normalizedQuery = normalizeApiSearchQuery(params.q);
     return {
         ...(normalizedQuery ? { q: normalizedQuery } : {}),
         ...(params.page ? { page: params.page } : {}),

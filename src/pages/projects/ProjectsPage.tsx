@@ -9,11 +9,13 @@ import { projectSchema, type ProjectFormValues } from "@/schemas/project";
 import {
     useCreateProjectMutation,
     useDeleteProjectMutation,
+    useProjectSCurveHealthFallbacks,
     usePortfolioSCurveSummary,
     useProjectsQuery,
     useUpdateProjectByIdMutation,
 } from "@/api/queries/projects";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -36,6 +38,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { useRealtimeStore } from "@/store/realtimeStore";
 import type { Project } from "@/types/domain";
 
 const projectColumnHelper = createColumnHelper<Project>();
@@ -56,6 +60,8 @@ function getMutationErrorMessage(err: unknown, action: string) {
 export function ProjectsPage() {
     const navigate = useNavigate();
     const { data: projects, isLoading, refetch, isRefetching, error } = useProjectsQuery();
+    const clearAllRemoteChanges = useRealtimeStore((state) => state.clearAllRemoteChanges);
+    const remoteChangesByProjectId = useRealtimeStore((state) => state.remoteChangesByProjectId);
     const { data: portfolioSummary } = usePortfolioSCurveSummary("progress");
     const [editing, setEditing] = useState<Project | null>(null);
     const [projectQuery, setProjectQuery] = useState("");
@@ -151,6 +157,7 @@ export function ProjectsPage() {
         return byId;
     }, [portfolioSummary?.projects]);
     const normalizedProjectQuery = projectQuery.trim().toLowerCase();
+    const trimmedProjectQuery = projectQuery.trim();
     const filteredRows = normalizedProjectQuery.length === 0
         ? rows
         : rows.filter((project) => {
@@ -159,6 +166,42 @@ export function ProjectsPage() {
             return haystack.includes(normalizedProjectQuery);
         });
     const paginatedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
+    const visibleFallbackProjectIds = useMemo(
+        () => paginatedRows
+            .map((project) => project.id)
+            .filter((projectId) => !projectSummaryById.has(projectId)),
+        [paginatedRows, projectSummaryById],
+    );
+    const { dataByProjectId: fallbackHealthByProjectId } = useProjectSCurveHealthFallbacks(
+        visibleFallbackProjectIds,
+        "progress",
+        { enabled: visibleFallbackProjectIds.length > 0 },
+    );
+    const resolvedProjectSummaryById = useMemo(() => {
+        const byId = new Map(projectSummaryById);
+        fallbackHealthByProjectId.forEach((health, projectId) => {
+            if (!health || byId.has(projectId)) return;
+            byId.set(projectId, {
+                actualPct: typeof health.actual_pct === "number" && Number.isFinite(health.actual_pct) ? health.actual_pct : null,
+                dataStatus: health.data_status,
+                metricSupported: health.metric_supported,
+                stage: health.stage ?? null,
+            });
+        });
+        return byId;
+    }, [fallbackHealthByProjectId, projectSummaryById]);
+    const remoteChangeCount = useMemo(
+        () => Object.keys(remoteChangesByProjectId).length,
+        [remoteChangesByProjectId],
+    );
+    const latestRemoteChangeSummary = useMemo(() => {
+        const changes = Object.values(remoteChangesByProjectId);
+        if (changes.length === 0) return null;
+        return changes
+            .slice()
+            .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())[0]
+            ?.summary ?? null;
+    }, [remoteChangesByProjectId]);
 
     return (
         <div className="space-y-6">
@@ -168,8 +211,29 @@ export function ProjectsPage() {
                     <p className="text-muted-foreground">Monitor progress and manage milestones.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button type="button" variant="secondary" onClick={() => refetch()} disabled={isRefetching}>
-                        {isRefetching ? "Refreshing…" : "Refresh"}
+                    <Button
+                        type="button"
+                        variant={remoteChangeCount > 0 ? "default" : "secondary"}
+                        className={cn(
+                            "relative",
+                            remoteChangeCount > 0
+                                ? "ring-2 ring-amber-400/70 ring-offset-2 ring-offset-background"
+                                : undefined,
+                        )}
+                        onClick={async () => {
+                            await refetch();
+                            clearAllRemoteChanges();
+                        }}
+                        disabled={isRefetching}
+                        title={latestRemoteChangeSummary ?? undefined}
+                        data-testid="projects-refresh-button"
+                    >
+                        {remoteChangeCount > 0 ? (
+                            <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-amber-950">
+                                {remoteChangeCount > 9 ? "9+" : remoteChangeCount}
+                            </span>
+                        ) : null}
+                        {isRefetching ? "Refreshing…" : (remoteChangeCount > 0 ? "Refresh updates" : "Refresh")}
                     </Button>
 
                     <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -443,6 +507,17 @@ export function ProjectsPage() {
                             </Button>
                         ) : null}
                     </div>
+                    <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="projects-filter-summary">
+                        {trimmedProjectQuery ? (
+                            <>
+                                <Badge variant="outline">Search: {trimmedProjectQuery}</Badge>
+                                <Badge variant="outline">{filteredRows.length} match(es)</Badge>
+                                <span>Filtering name, description, stage, and data status.</span>
+                            </>
+                        ) : (
+                            <span>Search filters projects by name, description, stage, and data status.</span>
+                        )}
+                    </div>
                     {error ? (
                         <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                             <div className="flex items-start justify-between gap-3">
@@ -464,7 +539,7 @@ export function ProjectsPage() {
                         <>
                             <VirtualizedProjectsTable
                                 projects={paginatedRows}
-                                projectSummaryById={projectSummaryById}
+                                projectSummaryById={resolvedProjectSummaryById}
                                 setEditing={setEditing}
                                 editForm={editForm}
                                 setProjectToDelete={setProjectToDelete}

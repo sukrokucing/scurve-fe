@@ -1,7 +1,6 @@
 import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -13,7 +12,7 @@ export default defineConfig(({ mode }) => {
     const allowedHosts = Array.from(new Set([...allowedFromEnv, "fe"]));
 
     return {
-        plugins: [react(), tailwindcss()],
+        plugins: [react()],
         resolve: {
             alias: {
                 "@": path.resolve(__dirname, "./src"),
@@ -46,6 +45,12 @@ export default defineConfig(({ mode }) => {
                     secure: false,
                     rewrite: (path) => path.replace(/^\/api/, ''),
                 },
+                '/realtime': {
+                    target: env.VITE_API_URL || 'https://rust-service:8800',
+                    changeOrigin: true,
+                    secure: false,
+                    ws: true,
+                },
                 // Keep OpenAPI proxied if needed
                 '/openapi': {
                     target: env.VITE_API_URL || 'https://rust-service:8800',
@@ -70,6 +75,12 @@ export default defineConfig(({ mode }) => {
                     changeOrigin: true,
                     secure: false,
                     rewrite: (path) => path.replace(/^\/api/, ''),
+                },
+                '/realtime': {
+                    target: env.VITE_API_URL || 'https://rust-service:8800',
+                    changeOrigin: true,
+                    secure: false,
+                    ws: true,
                 },
                 '/openapi': {
                     target: env.VITE_API_URL || 'https://rust-service:8800',
@@ -106,6 +117,10 @@ export default defineConfig(({ mode }) => {
                         // UI / icons / utilities
                         if (id.includes('lucide-react')) return 'vendor.icons';
                         if (id.includes('sonner')) return 'vendor.sonner';
+                        if (id.includes('recharts')) return 'vendor.recharts';
+                        if (id.includes('@dnd-kit')) return 'vendor.dnd-kit';
+                        if (id.includes('@rsagiev/gantt-task-react-19')) return 'vendor.gantt';
+                        if (id.includes('react-day-picker')) return 'vendor.day-picker';
                         if (id.includes('class-variance-authority') || id.includes('tailwind-merge')) return 'vendor.utils';
                         if (id.includes('@radix-ui')) return 'vendor.radix';
 

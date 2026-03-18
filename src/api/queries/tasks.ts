@@ -111,6 +111,9 @@ export function useTaskMutation(projectId?: string) {
                 ...(payload.dueDate !== undefined && payload.dueDate !== "" ? { due_date: payload.dueDate } : {}),
                 ...(payload.startDate !== undefined && payload.startDate !== "" ? { start_date: payload.startDate } : {}),
                 ...(payload.endDate !== undefined && payload.endDate !== "" ? { end_date: payload.endDate } : {}),
+                ...(Object.prototype.hasOwnProperty.call(payload, "assigneeId")
+                    ? { assignee: payload.assigneeId === "" ? null : payload.assigneeId }
+                    : {}),
                 ...(payload.progress !== undefined && payload.progressMethod !== "weighted_components"
                     ? { progress: payload.progress }
                     : {}),
@@ -556,6 +559,24 @@ export function useReplaceTaskProgressComponents(projectId?: string, taskId?: st
         },
         onSuccess: () => {
             invalidateTaskProgressQueries(queryClient, projectId, taskId);
+            toast.success("Progress components updated");
+        },
+        onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update progress components: ${message}`);
+        },
+    });
+}
+
+export function useReplaceTaskProgressComponentsForTask(projectId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (args: { taskId: string; payload: ReplaceTaskProgressComponentsRequest }) => {
+            if (!projectId || !args.taskId) throw new Error("projectId and taskId are required to update progress components");
+            return openapi.replaceTaskProgressComponents(projectId, args.taskId, args.payload);
+        },
+        onSuccess: (_data, variables) => {
+            invalidateTaskProgressQueries(queryClient, projectId, variables.taskId);
             toast.success("Progress components updated");
         },
         onError: (err: unknown) => {

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 
 import { openapi } from "@/api/openapiClient";
@@ -185,6 +186,48 @@ export function useProjectSCurveHealth(
         },
         enabled: Boolean(projectId) && (options?.enabled ?? true),
     });
+}
+
+export function useProjectSCurveHealthFallbacks(
+    projectIds: string[],
+    metric: ApiSCurveMetric = "progress",
+    options?: { enabled?: boolean },
+) {
+    const uniqueProjectIds = useMemo(
+        () => Array.from(new Set(projectIds.filter(Boolean))),
+        [projectIds],
+    );
+
+    const results = useQueries({
+        queries: uniqueProjectIds.map((projectId) => ({
+            queryKey: projectsKeys.sCurveHealth(projectId, metric),
+            queryFn: async () => {
+                try {
+                    return await openapi.getProjectSCurveHealth(projectId, metric);
+                } catch (err: unknown) {
+                    if (isNoAccessError(err)) return null;
+                    throw err;
+                }
+            },
+            enabled: Boolean(projectId) && (options?.enabled ?? true),
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+
+    const dataByProjectId = useMemo(() => {
+        const mapped = new Map<string, ApiSCurveHealthResponse | null>();
+        uniqueProjectIds.forEach((projectId, index) => {
+            mapped.set(projectId, results[index]?.data ?? null);
+        });
+        return mapped;
+    }, [results, uniqueProjectIds]);
+
+    const isLoading = results.some((result) => result.isLoading);
+
+    return {
+        dataByProjectId,
+        isLoading,
+    };
 }
 
 export function usePortfolioSCurveSummary(metric: ApiSCurveMetric = "progress", options?: { enabled?: boolean }) {

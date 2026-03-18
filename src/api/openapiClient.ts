@@ -1,4 +1,5 @@
 import { api } from "@/api/client";
+import { normalizeApiSearchQuery } from "@/lib/apiSearch";
 
 import type { components } from "@/types/api";
 import type { Project as DomainProject } from "@/types/domain";
@@ -28,6 +29,10 @@ type ApiTaskProgressComponentInput = components["schemas"]["TaskProgressComponen
 type ReplaceTaskProgressComponentsRequest = components["schemas"]["ReplaceTaskProgressComponentsRequest"];
 type ApiTaskHealthRuleSetResponse = components["schemas"]["TaskHealthRuleSetResponse"];
 type UpdateTaskHealthRulesRequest = components["schemas"]["UpdateTaskHealthRulesRequest"];
+type ApiNotification = components["schemas"]["Notification"];
+type ApiNotificationUnreadCountResponse = components["schemas"]["NotificationUnreadCountResponse"];
+type ApiNotificationsReadResponse = components["schemas"]["NotificationsReadResponse"];
+type ApiMarkNotificationsReadRequest = components["schemas"]["MarkNotificationsReadRequest"];
 type TaskCreateRequest = components["schemas"]["TaskCreateRequest"];
 type TaskUpdateRequest = components["schemas"]["TaskUpdateRequest"];
 type ApiTaskDependency = components["schemas"]["TaskDependency"];
@@ -156,8 +161,14 @@ export const openapi = {
     },
 
     async listTasksByProjectPaginated(projectId: string, params?: TaskListQueryParams): Promise<PaginatedTasksResult> {
+        const normalizedParams = params
+            ? {
+                ...params,
+                ...(params.q !== undefined ? { q: normalizeApiSearchQuery(params.q) } : {}),
+            }
+            : undefined;
         const response = await api.get<ApiTask[]>(`/projects/${projectId}/tasks`, {
-            params,
+            params: normalizedParams,
         });
         const totalHeader = response.headers["x-total-count"] ?? response.headers["X-Total-Count"];
         const headerValue = Array.isArray(totalHeader) ? totalHeader[0] : totalHeader;
@@ -362,6 +373,26 @@ export const openapi = {
         const { data } = await api.get<{ task_ids: string[] }>(`/projects/${id}/critical-path`);
         return data.task_ids;
     },
+
+    async listNotifications(): Promise<ApiNotification[]> {
+        const { data } = await api.get<ApiNotification[]>("/notifications");
+        return Array.isArray(data) ? data : [];
+    },
+
+    async markNotificationsRead(payload: ApiMarkNotificationsReadRequest): Promise<ApiNotificationsReadResponse> {
+        const { data } = await api.post<ApiNotificationsReadResponse>("/notifications/read", payload);
+        return data;
+    },
+
+    async markNotificationsReadAll(): Promise<ApiNotificationsReadResponse> {
+        const { data } = await api.post<ApiNotificationsReadResponse>("/notifications/read-all");
+        return data;
+    },
+
+    async getUnreadNotificationCount(): Promise<ApiNotificationUnreadCountResponse> {
+        const { data } = await api.get<ApiNotificationUnreadCountResponse>("/notifications/unread-count");
+        return data;
+    },
 };
 
 export type {
@@ -395,4 +426,8 @@ export type {
     ReplaceTaskProgressComponentsRequest,
     ApiTaskHealthRuleSetResponse,
     UpdateTaskHealthRulesRequest,
+    ApiNotification,
+    ApiNotificationUnreadCountResponse,
+    ApiNotificationsReadResponse,
+    ApiMarkNotificationsReadRequest,
 };

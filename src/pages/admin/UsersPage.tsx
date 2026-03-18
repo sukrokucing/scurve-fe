@@ -13,6 +13,7 @@ import { AppDataTable } from "@/components/ui/app-data-table";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import { useUsersListQuery } from "@/api/queries/users";
+import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
 import type { User } from "@/api/users";
 
 type UserRow = User;
@@ -22,7 +23,7 @@ export const UsersPage = () => {
     const [searchInput, setSearchInput] = useState("");
     const debouncedSearchInput = useDebouncedValue(searchInput, 300);
     const deferredSearchInput = useDeferredValue(debouncedSearchInput);
-    const searchQuery = useMemo(() => deferredSearchInput.trim(), [deferredSearchInput]);
+    const searchQuery = useMemo(() => normalizeApiSearchQuery(deferredSearchInput), [deferredSearchInput]);
 
     const { data, isLoading } = useUsersListQuery({ q: searchQuery || undefined });
 
@@ -121,9 +122,31 @@ export const UsersPage = () => {
                             placeholder="Search by name or email..."
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
+                            maxLength={API_SEARCH_QUERY_MAX_LENGTH}
                             className="pl-8"
                             data-testid="users-search-input"
                         />
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="users-filter-summary">
+                        {searchQuery ? (
+                            <>
+                                <Badge variant="outline">Search: {searchQuery}</Badge>
+                                <Badge variant="outline">{users.length} match(es)</Badge>
+                                <span>Filtering user name and email.</span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2"
+                                    onClick={() => setSearchInput("")}
+                                    data-testid="users-clear-search-button"
+                                >
+                                    Clear search
+                                </Button>
+                            </>
+                        ) : (
+                            <span>Search filters users by name and email.</span>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent>

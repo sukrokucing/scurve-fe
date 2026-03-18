@@ -1,96 +1,91 @@
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjQ4ZDk2YS03NjVlLTRmYWUtOTk3Ny05NjkxMTBjZmZiODYiLCJleHAiOjE3NzM3NDMxNTgsImlhdCI6MTc3MzY1Njc1OH0.VUZsp-uUM088JTOm7SrbKMVv-z5VOImT_c8hKmKuIEM",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkZTZjYjE0OC1hYThlLTRhNDMtOTRmOS1mZDVlZTZjOGNiYjMiLCJleHAiOjE3NzM4MTAzMDcsImlhdCI6MTc3MzcyMzkwN30.sewSdUaGw0OyUYPHytThCkXV4sUgHsRNRTTp5B32c30",
   "user": {
-    "id": "a248d96a-765e-4fae-9977-969110cffb86",
-    "name": "Jimmy",
-    "email": "jimmy@dwp.co.id"
+    "id": "de6cb148-aa8e-4a43-94f9-fd5ee6c8cbb3",
+    "name": "Demo Project Owner",
+    "email": "demo.project.owner@example.com"
   },
   "permissions": [
     {
       "name": "project.create",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "project.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "project.update",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "project.delete",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "task.create",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "task.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "task.update",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "task.delete",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "progress.create",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "progress.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "user.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "user.manage",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "role.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "role.manage",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "permission.view",
       "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     },
     {
       "name": "permission.manage",
       "source": "role",
-      "role_name": "super_admin"
-    },
-    {
-      "name": "telemetry.ingest",
-      "source": "role",
-      "role_name": "super_admin"
+      "role_name": "project_owner"
     }
   ],
-  "createdAt": "2026-03-16T10:25:58.687Z"
+  "createdAt": "2026-03-17T05:05:07.973Z"
 }

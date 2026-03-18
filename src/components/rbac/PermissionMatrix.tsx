@@ -104,6 +104,22 @@ export const PermissionMatrix = () => {
         () => (roleFilter === ALL_ROLES ? null : roles.find((role) => role.id === roleFilter) ?? null),
         [roleFilter, roles],
     );
+    const activeFilterSummary = useMemo(() => {
+        const summary: string[] = [];
+        if (roleFilter !== ALL_ROLES && selectedRole) {
+            summary.push(`Role: ${selectedRole.name}`);
+        }
+        if (resourceFilter !== ALL_RESOURCES) {
+            summary.push(`Resource: ${resourceFilter}`);
+        }
+        if (normalizedPermissionQuery) {
+            summary.push(`Search: ${permissionQueryInput.trim()}`);
+        }
+        if (assignedOnly) {
+            summary.push("Assigned only");
+        }
+        return summary;
+    }, [assignedOnly, normalizedPermissionQuery, permissionQueryInput, resourceFilter, roleFilter, selectedRole]);
 
     const filteredGroupedPermissions = useMemo(() => {
         const next: Record<string, Permission[]> = {};
@@ -560,6 +576,31 @@ export const PermissionMatrix = () => {
                 </Button>
                 <div className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
                     {filteredRoles.length} role(s) • {totalVisiblePermissions} permission(s) • {totalVisibleCells} cell(s)
+                </div>
+            </div>
+            <div className="border-t bg-muted/20 px-3 py-2 text-xs text-muted-foreground" data-testid="rbac-filter-summary">
+                <div className="flex flex-wrap items-center gap-2">
+                    {activeFilterSummary.length > 0 ? (
+                        <>
+                            {activeFilterSummary.map((item) => (
+                                <Badge key={item} variant="outline">
+                                    {item}
+                                </Badge>
+                            ))}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={handleResetFilters}
+                                data-testid="rbac-filter-summary-reset-button"
+                            >
+                                Reset filters
+                            </Button>
+                        </>
+                    ) : (
+                        <span>All roles and resources are visible. Search narrows permission names when needed.</span>
+                    )}
                 </div>
             </div>
             {showQuickStart ? (

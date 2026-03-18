@@ -1,11 +1,13 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEventHandler } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { addDays, format, isSameDay } from "date-fns";
+import { addDays, format, formatDistanceToNowStrict, isSameDay } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 
 import {
     useMyProjectScopesQuery,
     useProjectAssigneesQuery,
+    useProjectMembersQuery,
     useProjectResourceRoleRatesQuery,
     useProjectsQuery,
     useResourceRolesQuery,
@@ -27,12 +29,13 @@ import {
     useUpdateTaskWorkLog,
     useDeleteTaskWorkLog,
     useReplaceTaskProgressComponents,
+    useReplaceTaskProgressComponentsForTask,
 } from "@/api/queries/tasks";
 import { useUsersLookupQuery } from "@/api/queries/users";
-import type { ApiTaskProgressComponent, ApiWorkLog } from "@/api/openapiClient";
+import type { ApiTaskProgressComponent, ApiTaskProgressComponentInput, ApiWorkLog } from "@/api/openapiClient";
 import { taskSchema, type TaskFormValues } from "@/schemas/task";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
-import type { Task, TaskProgressMethod, TaskScheduleStatus, TaskStatus } from "@/types/domain";
+import type { Task, TaskHealthStatus, TaskProgressMethod, TaskScheduleStatus, TaskStatus } from "@/types/domain";
 import type { components } from "@/types/api";
 import { toast } from "sonner";
 
@@ -49,6 +52,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -77,9 +81,12 @@ import { Badge } from "@/components/ui/badge";
 import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
+import { useRealtimeStore } from "@/store/realtimeStore";
 import { cn } from "@/lib/utils";
+import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
 import {
     formatTaskPercent,
     formatTaskVariance,
@@ -114,6 +121,7 @@ const workLogColumnHelper = createColumnHelper<ApiWorkLog>();
 const DEFAULT_TASK_FORM_VALUES: TaskFormValues = {
     title: "",
     description: "",
+    assigneeId: "",
     plan: 1,
     progress: 0,
     status: "todo",
@@ -148,7 +156,7 @@ function TaskSelectionCheckbox({ checked, label, testId, onToggle, onClick }: Ta
             }}
             onClick={onClick}
             className={cn(
-                "h-7 w-7 rounded-md border border-border/70 bg-background/60 text-primary shadow-none hover:border-primary/40 hover:bg-accent/35",
+                "h-11 w-11 rounded-lg border border-border/70 bg-background/60 text-primary shadow-none hover:border-primary/40 hover:bg-accent/35 md:h-9 md:w-9 md:rounded-md",
                 checked ? "border-primary/55 bg-accent/55" : "",
             )}
         />
@@ -220,6 +228,13 @@ function formatWorkLogDateLabel(value?: string | null): string {
     return format(parsed, "MMM d, yyyy");
 }
 
+function formatFilterDateSummaryLabel(value?: string | null): string {
+    if (!value) return "Any";
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return format(parsed, "MMM d");
+}
+
 function isWeightedProgressTask(task?: Pick<Task, "progressMethod"> | null) {
     return task?.progressMethod === "weighted_components";
 }
@@ -249,6 +264,46 @@ function createEmptyProgressComponentDraft(sortOrder = 1): TaskProgressComponent
         plannedAt: "",
         completedAt: "",
     };
+}
+
+function buildWeightedStarterComponents(options: {
+    startDate?: string | null;
+    endDate?: string | null;
+}): ApiTaskProgressComponentInput[] {
+    const start = options.startDate ? new Date(options.startDate) : null;
+    const end = options.endDate ? new Date(options.endDate) : null;
+    const hasStart = start && !Number.isNaN(start.getTime());
+    const hasEnd = end && !Number.isNaN(end.getTime());
+    const midpoint = hasStart && hasEnd
+        ? new Date(start.getTime() + ((end.getTime() - start.getTime()) / 2))
+        : null;
+
+    return [
+        {
+            name: "Planning ready",
+            component_type: "milestone",
+            weight: 20,
+            completion_pct: 0,
+            planned_at: hasStart ? start.toISOString() : null,
+            sort_order: 1,
+        },
+        {
+            name: "Execution complete",
+            component_type: "deliverable",
+            weight: 60,
+            completion_pct: 0,
+            planned_at: midpoint ? midpoint.toISOString() : (hasEnd ? end.toISOString() : null),
+            sort_order: 2,
+        },
+        {
+            name: "Review and sign-off",
+            component_type: "milestone",
+            weight: 20,
+            completion_pct: 0,
+            planned_at: hasEnd ? end.toISOString() : null,
+            sort_order: 3,
+        },
+    ];
 }
 
 function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
@@ -324,6 +379,18 @@ function clampProgress(value: number): number {
     return Math.min(100, Math.max(0, Math.round(value)));
 }
 
+function getTeamMemberInitials(name?: string | null, email?: string | null) {
+    const label = name?.trim() || email?.trim() || "Unknown";
+    const words = label
+        .split(/[\s@._-]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    if (words.length === 0) return "U";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+}
+
 function isWithinDateRange(value: string | null | undefined, from?: string, to?: string): boolean {
     if (!value) return true;
     const candidateDate = new Date(value);
@@ -367,18 +434,78 @@ type ResourceRoleOption = {
     ratePerHour: number;
     currency: string;
 };
+type TaskListSortDirection = "asc" | "desc";
+type TaskListSortField =
+    | "updated_at"
+    | "expected_progress_pct"
+    | "actual_progress_pct"
+    | "variance_pct"
+    | "health_status";
+type TaskListSortOptionValue = `${TaskListSortField}:${TaskListSortDirection}`;
+
+const TASK_SORT_OPTIONS: { value: TaskListSortOptionValue; label: string }[] = [
+    { value: "updated_at:desc", label: "Recently updated" },
+    { value: "updated_at:asc", label: "Least recently updated" },
+    { value: "expected_progress_pct:desc", label: "Expected progress: high to low" },
+    { value: "expected_progress_pct:asc", label: "Expected progress: low to high" },
+    { value: "actual_progress_pct:desc", label: "Actual progress: high to low" },
+    { value: "actual_progress_pct:asc", label: "Actual progress: low to high" },
+    { value: "variance_pct:desc", label: "Variance: highest first" },
+    { value: "variance_pct:asc", label: "Variance: lowest first" },
+    { value: "health_status:asc", label: "Health status: A to Z" },
+    { value: "health_status:desc", label: "Health status: Z to A" },
+];
+const TASK_HEALTH_SUMMARY_ORDER: TaskHealthStatus[] = ["ahead", "on_track", "at_risk", "critical", "needs_plan"];
+
+function parseTaskSortOption(value: string): { sortBy: TaskListSortField; sortDir: TaskListSortDirection } {
+    const [rawSortBy, rawSortDir] = value.split(":");
+    const sortByValues: TaskListSortField[] = [
+        "updated_at",
+        "expected_progress_pct",
+        "actual_progress_pct",
+        "variance_pct",
+        "health_status",
+    ];
+    const sortDirValues: TaskListSortDirection[] = ["asc", "desc"];
+    const sortBy = sortByValues.includes(rawSortBy as TaskListSortField)
+        ? (rawSortBy as TaskListSortField)
+        : "updated_at";
+    const sortDir = sortDirValues.includes(rawSortDir as TaskListSortDirection)
+        ? (rawSortDir as TaskListSortDirection)
+        : "desc";
+    return { sortBy, sortDir };
+}
 
 export function TasksPage() {
     const currentUserId = useAuthStore((state) => state.user?.id);
     const { data: projects } = useProjectsQuery();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [selectedProject, setSelectedProject] = useState<string>("");
     const [createMode, setCreateMode] = useState<'plan' | 'range' | 'today'>('plan');
     const [editMode, setEditMode] = useState<'plan' | 'range' | 'today'>('plan');
+    const requestedProjectId = searchParams.get("project") ?? "";
 
     useEffect(() => {
         if (!projects || projects.length === 0) return;
+        const requestedProjectExists = requestedProjectId
+            ? projects.some((project) => project.id === requestedProjectId)
+            : false;
+
+        if (requestedProjectExists) {
+            setSelectedProject((current) => (current === requestedProjectId ? current : requestedProjectId));
+            return;
+        }
+
         setSelectedProject((current) => (current ? current : projects[0]?.id ?? ""));
-    }, [projects]);
+    }, [projects, requestedProjectId]);
+    useEffect(() => {
+        if (!selectedProject) return;
+        if (searchParams.get("project") === selectedProject) return;
+
+        const nextSearchParams = new URLSearchParams(searchParams);
+        nextSearchParams.set("project", selectedProject);
+        setSearchParams(nextSearchParams, { replace: true });
+    }, [searchParams, selectedProject, setSearchParams]);
     const [view, setView] = useState<"list" | "gantt" | "kanban">("list");
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -386,6 +513,7 @@ export function TasksPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [scheduleStatusFilter, setScheduleStatusFilter] = useState<string>("all");
     const [healthStatusFilter, setHealthStatusFilter] = useState<string>("all");
+    const [sortOption, setSortOption] = useState<TaskListSortOptionValue>("updated_at:desc");
     const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
     const [startFromFilter, setStartFromFilter] = useState("");
     const [startToFilter, setStartToFilter] = useState("");
@@ -393,13 +521,21 @@ export function TasksPage() {
     const [dueToFilter, setDueToFilter] = useState("");
     const debouncedSearchQuery = useDebouncedValue(searchQuery, 180);
     const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
-    const normalizedSearchQuery = deferredSearchQuery.trim();
+    const normalizedSearchQuery = normalizeApiSearchQuery(deferredSearchQuery) ?? "";
     const normalizedSearchQueryLower = normalizedSearchQuery.toLowerCase();
     const apiStatusFilter = useMemo(
         () => (statusFilter === "all" ? undefined : mapTaskStatusToApi(statusFilter as TaskStatus)),
         [statusFilter],
     );
     const apiAssigneeFilter = assigneeFilter === "all" ? undefined : assigneeFilter;
+    const { sortBy, sortDir } = useMemo(
+        () => parseTaskSortOption(sortOption),
+        [sortOption],
+    );
+    const activeSortLabel = useMemo(
+        () => TASK_SORT_OPTIONS.find((option) => option.value === sortOption)?.label ?? "Recently updated",
+        [sortOption],
+    );
 
     const listQueryParams = useMemo(
         () => ({
@@ -414,8 +550,8 @@ export function TasksPage() {
             due_to: dueToFilter || undefined,
             page,
             per_page: pageSize,
-            sort_by: "updated_at",
-            sort_dir: "desc" as const,
+            sort_by: sortBy,
+            sort_dir: sortDir,
         }),
         [
             apiAssigneeFilter,
@@ -427,6 +563,8 @@ export function TasksPage() {
             pageSize,
             healthStatusFilter,
             scheduleStatusFilter,
+            sortBy,
+            sortDir,
             startFromFilter,
             startToFilter,
         ],
@@ -484,6 +622,9 @@ export function TasksPage() {
     const { data: projectAssignees = [] } = useProjectAssigneesQuery(selectedProject ?? "", {
         enabled: Boolean(selectedProject),
     });
+    const { data: projectMembers = [] } = useProjectMembersQuery(selectedProject ?? "", {
+        enabled: Boolean(selectedProject),
+    });
     const { data: usersLookup } = useUsersLookupQuery();
     const { data: projectResourceRoleRates = [] } = useProjectResourceRoleRatesQuery(selectedProject ?? "", {
         enabled: Boolean(selectedProject),
@@ -494,29 +635,76 @@ export function TasksPage() {
     const { data: globalResourceRoles = [] } = useResourceRolesQuery({
         enabled: Boolean(selectedProject) && projectResourceRoleRates.length === 0,
     });
+    const selectedProjectPresence = useRealtimeStore((state) => (
+        selectedProject ? state.presenceByProjectId[selectedProject] ?? [] : []
+    ));
 
     const projectAssigneeList = useMemo(
         () => projectAssignees,
         [projectAssignees],
     );
+    const projectMemberList = useMemo(
+        () => projectMembers.map((member) => ({
+            id: member.user_id,
+            name: member.user_name,
+            email: member.user_email,
+        })),
+        [projectMembers],
+    );
 
     const assignableUsers = useMemo(() => {
-        if (projectAssigneeList.length > 0) {
-            return projectAssigneeList;
-        }
-        return usersLookup?.users ?? [];
-    }, [projectAssigneeList, usersLookup?.users]);
+        const entries = new Map<string, { id: string; name?: string | null; email: string }>();
+        projectMemberList.forEach((user) => {
+            entries.set(user.id, user);
+        });
+        projectAssigneeList.forEach((user) => {
+            entries.set(user.id, user);
+        });
+        return Array.from(entries.values()).sort((left, right) => {
+            const leftLabel = (left.name?.trim() || left.email).toLowerCase();
+            const rightLabel = (right.name?.trim() || right.email).toLowerCase();
+            return leftLabel.localeCompare(rightLabel);
+        });
+    }, [projectAssigneeList, projectMemberList]);
+    const teamMembersForSummary = useMemo(() => {
+        const presenceByUserId = new Map(
+            selectedProjectPresence.map((user) => [user.user_id, user] as const),
+        );
+        const source = projectMemberList.length > 0 ? projectMemberList : assignableUsers;
+        return source
+            .map((member) => ({
+                id: member.id,
+                name: member.name?.trim() || null,
+                email: member.email,
+                label: member.name?.trim() || member.email,
+                initials: getTeamMemberInitials(member.name, member.email),
+                presence: presenceByUserId.get(member.id) ?? null,
+            }))
+            .sort((left, right) => left.label.localeCompare(right.label));
+    }, [assignableUsers, projectMemberList, selectedProjectPresence]);
+    const visibleTeamMembers = useMemo(
+        () => teamMembersForSummary.slice(0, 5),
+        [teamMembersForSummary],
+    );
+    const hiddenTeamMemberCount = Math.max(teamMembersForSummary.length - visibleTeamMembers.length, 0);
+    const onlineTeamMemberCount = useMemo(
+        () => teamMembersForSummary.filter((member) => member.presence?.status === "online").length,
+        [teamMembersForSummary],
+    );
 
     const assigneeDirectory = useMemo(() => {
         const entries = new Map<string, { id: string; name?: string | null; email: string }>();
         (usersLookup?.users ?? []).forEach((user) => {
             entries.set(user.id, user);
         });
+        projectMemberList.forEach((user) => {
+            entries.set(user.id, user);
+        });
         projectAssigneeList.forEach((user) => {
             entries.set(user.id, user);
         });
         return entries;
-    }, [projectAssigneeList, usersLookup?.users]);
+    }, [projectAssigneeList, projectMemberList, usersLookup?.users]);
 
     const assigneeById = useMemo(
         () => assigneeDirectory,
@@ -598,6 +786,20 @@ export function TasksPage() {
         return "List";
     }, [view]);
     const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+    const resetSecondaryTaskControls = useCallback((options?: { closeAdvanced?: boolean }) => {
+        setSortOption("updated_at:desc");
+        setAssigneeFilter("all");
+        setHealthStatusFilter("all");
+        setScheduleStatusFilter("all");
+        setStartFromFilter("");
+        setStartToFilter("");
+        setDueFromFilter("");
+        setDueToFilter("");
+        if (options?.closeAdvanced) {
+            setIsAdvancedFiltersOpen(false);
+        }
+    }, []);
+    const hasSecondaryTaskControls = sortOption !== "updated_at:desc" || hasAdvancedFilters;
     const [isSelectionActionsOpen, setIsSelectionActionsOpen] = useState(false);
     const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
     const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
@@ -628,6 +830,35 @@ export function TasksPage() {
         [selectedTasks],
     );
     const canBulkEditProgress = selectedTasks.length > 0 && selectedWeightedTaskCount < selectedTasks.length;
+    const healthSummaryTasks = useMemo(
+        () => (view === "list" ? pagedTasks : filteredTasks),
+        [filteredTasks, pagedTasks, view],
+    );
+    const healthSummaryScopeLabel = useMemo(() => {
+        if (view === "list") {
+            if (pagedTasks.length === 0) return "Current page";
+            if (totalFilteredCount > pagedTasks.length) {
+                return `Current page (${pagedTasks.length} of ${totalFilteredCount})`;
+            }
+            return `Current page (${pagedTasks.length})`;
+        }
+        return `Filtered set (${filteredTasks.length})`;
+    }, [filteredTasks.length, pagedTasks.length, totalFilteredCount, view]);
+    const healthSummaryItems = useMemo(() => {
+        const counts = new Map<TaskHealthStatus, number>(
+            TASK_HEALTH_SUMMARY_ORDER.map((healthStatus) => [healthStatus, 0]),
+        );
+        healthSummaryTasks.forEach((task) => {
+            const resolvedHealth = task.healthStatus ?? getTaskScurveSnapshot(task).health;
+            counts.set(resolvedHealth, (counts.get(resolvedHealth) ?? 0) + 1);
+        });
+        return TASK_HEALTH_SUMMARY_ORDER.map((healthStatus) => ({
+            healthStatus,
+            label: getTaskHealthLabel(healthStatus),
+            count: counts.get(healthStatus) ?? 0,
+            active: healthStatusFilter === healthStatus,
+        }));
+    }, [healthStatusFilter, healthSummaryTasks]);
     const selectionScopeLabel = useMemo(() => {
         if (view === "list") {
             return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
@@ -693,6 +924,40 @@ export function TasksPage() {
         ],
         [],
     );
+    const activeHealthFilterLabel = useMemo(
+        () => healthStatusFilterOptions.find((option) => option.value === healthStatusFilter)?.label ?? "All health",
+        [healthStatusFilter, healthStatusFilterOptions],
+    );
+    const activeScheduleFilterLabel = useMemo(
+        () => scheduleStatusFilterOptions.find((option) => option.value === scheduleStatusFilter)?.label ?? "All schedule",
+        [scheduleStatusFilter, scheduleStatusFilterOptions],
+    );
+    const activeAssigneeFilterLabel = useMemo(
+        () => assigneeFilterOptions.find((option) => option.value === assigneeFilter)?.label ?? "All assignees",
+        [assigneeFilter, assigneeFilterOptions],
+    );
+    const hiddenAdvancedFilterSummary = useMemo(() => {
+        const summaryParts: string[] = [];
+
+        if (assigneeFilter !== "all") {
+            summaryParts.push(`Assignee: ${activeAssigneeFilterLabel.replace(/\s+\([^)]*\)\s*$/, "")}`);
+        }
+        if (startFromFilter || startToFilter) {
+            summaryParts.push(`Start: ${formatFilterDateSummaryLabel(startFromFilter)} to ${formatFilterDateSummaryLabel(startToFilter)}`);
+        }
+        if (dueFromFilter || dueToFilter) {
+            summaryParts.push(`Due: ${formatFilterDateSummaryLabel(dueFromFilter)} to ${formatFilterDateSummaryLabel(dueToFilter)}`);
+        }
+
+        return summaryParts;
+    }, [
+        activeAssigneeFilterLabel,
+        assigneeFilter,
+        dueFromFilter,
+        dueToFilter,
+        startFromFilter,
+        startToFilter,
+    ]);
     const allowedResourceRoleIds = useMemo(() => {
         const scopes = Array.isArray(myProjectScopes) ? myProjectScopes : [];
         const selectedScope = scopes.find((scope) => scope.project_id === selectedProject);
@@ -754,9 +1019,11 @@ export function TasksPage() {
         assigneeFilter,
         dueFromFilter,
         dueToFilter,
+        healthStatusFilter,
         normalizedSearchQuery,
         selectedProject,
         scheduleStatusFilter,
+        sortOption,
         startFromFilter,
         startToFilter,
         statusFilter,
@@ -815,19 +1082,30 @@ export function TasksPage() {
     }, [filteredTasks, toggleSelectAllOnPage, view]);
 
     const isRefetching = view === "list" ? isRefetchingListTasks : isRefetchingAllTasks;
-    const refreshTasks = useCallback(() => {
+    const clearProjectRemoteChange = useRealtimeStore((state) => state.clearProjectRemoteChange);
+    const selectedProjectRemoteChange = useRealtimeStore((state) => (
+        selectedProject ? state.remoteChangesByProjectId[selectedProject] ?? null : null
+    ));
+    const refreshTasks = useCallback(async () => {
         if (view === "list") {
-            void refetchListTasks();
+            await refetchListTasks();
+            if (selectedProject) {
+                clearProjectRemoteChange(selectedProject);
+            }
             return;
         }
-        void refetchAllTasks();
-    }, [refetchAllTasks, refetchListTasks, view]);
+        await refetchAllTasks();
+        if (selectedProject) {
+            clearProjectRemoteChange(selectedProject);
+        }
+    }, [clearProjectRemoteChange, refetchAllTasks, refetchListTasks, selectedProject, view]);
 
     const createForm = useForm<TaskFormValues>({
         defaultValues: DEFAULT_TASK_FORM_VALUES,
     });
     const [createOpen, setCreateOpen] = useState(false);
     const [createProgressMethod, setCreateProgressMethod] = useState<TaskProgressMethod>("manual_percent_legacy");
+    const [createWeightedStarterTemplateEnabled, setCreateWeightedStarterTemplateEnabled] = useState(true);
     const [quickCreateTitle, setQuickCreateTitle] = useState("");
     const createRef = useRef<HTMLInputElement | null>(null);
     const timeToTaskSessionIdRef = useRef<string | null>(null);
@@ -870,6 +1148,7 @@ export function TasksPage() {
     const updateTaskWorkLogMutation = useUpdateTaskWorkLog(selectedProject, editing?.id);
     const deleteTaskWorkLogMutation = useDeleteTaskWorkLog(selectedProject, editing?.id);
     const replaceTaskProgressComponentsMutation = useReplaceTaskProgressComponents(selectedProject, editing?.id);
+    const replaceTaskProgressComponentsForCreateMutation = useReplaceTaskProgressComponentsForTask(selectedProject);
     const taskWorkLogs = useMemo(() => {
         const rows = Array.isArray(taskWorkLogsQuery.data) ? taskWorkLogsQuery.data : [];
         return [...rows].sort((a, b) => {
@@ -905,6 +1184,7 @@ export function TasksPage() {
         createForm.reset(DEFAULT_TASK_FORM_VALUES);
         setCreateMode("plan");
         setCreateProgressMethod("manual_percent_legacy");
+        setCreateWeightedStarterTemplateEnabled(true);
     }, [createForm]);
 
     const handleCreateDialogOpenChange = useCallback((open: boolean) => {
@@ -1233,6 +1513,7 @@ export function TasksPage() {
         editForm.reset({
             title: task.name,
             description: task.description ?? "",
+            assigneeId: task.assigneeId ?? "",
             plan: task.durationDays ?? 1,
             start_date: formatDateForInput(task.startDate),
             end_date: formatDateForInput(task.endDate),
@@ -1740,6 +2021,102 @@ export function TasksPage() {
     const virtualRows = rowVirtualizer.getVirtualItems();
     const firstVirtualRow = virtualRows[0];
     const lastVirtualRow = virtualRows[virtualRows.length - 1];
+    const hasMobileQuickControlOverrides = hasSecondaryTaskControls;
+    const mobileListQuickControls = view === "list" ? (
+        <Card className="border-border/70 bg-muted/20" data-testid="tasks-mobile-quick-controls">
+            <CardContent className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium">Quick controls</p>
+                        <p className="text-xs text-muted-foreground">
+                            Sort and filter mobile tasks without reopening the crowded top toolbar.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <Badge variant="outline" className="shrink-0">
+                            {activeSortLabel}
+                        </Badge>
+                        {scheduleStatusFilter !== "all" ? (
+                            <Badge variant="outline" className="shrink-0">
+                                {activeScheduleFilterLabel}
+                            </Badge>
+                        ) : null}
+                        {healthStatusFilter !== "all" ? (
+                            <Badge variant="outline" className="shrink-0">
+                                {activeHealthFilterLabel}
+                            </Badge>
+                        ) : null}
+                    </div>
+                </div>
+                {hiddenAdvancedFilterSummary.length > 0 ? (
+                    <div
+                        className="rounded-md border border-dashed border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground"
+                        data-testid="tasks-mobile-hidden-filters-summary"
+                    >
+                        <span className="font-medium text-foreground">Hidden advanced filters:</span>{" "}
+                        {hiddenAdvancedFilterSummary.join(" • ")}
+                    </div>
+                ) : null}
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Sort tasks</Label>
+                        <Combobox
+                            value={sortOption}
+                            onChange={(value) => {
+                                if (!value) return;
+                                setSortOption(value as TaskListSortOptionValue);
+                            }}
+                            options={TASK_SORT_OPTIONS}
+                            placeholder="Sort tasks"
+                            searchPlaceholder="Search sort order..."
+                            className="w-full"
+                            triggerTestId="tasks-mobile-sort-combobox"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Health</Label>
+                        <Combobox
+                            value={healthStatusFilter}
+                            onChange={setHealthStatusFilter}
+                            options={healthStatusFilterOptions}
+                            placeholder="Health"
+                            searchPlaceholder="Search health..."
+                            className="w-full"
+                            triggerTestId="tasks-mobile-health-filter-combobox"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Schedule status</Label>
+                        <Combobox
+                            value={scheduleStatusFilter}
+                            onChange={setScheduleStatusFilter}
+                            options={scheduleStatusFilterOptions}
+                            placeholder="Schedule status"
+                            searchPlaceholder="Search schedule status..."
+                            className="w-full"
+                            triggerTestId="tasks-mobile-schedule-filter-combobox"
+                        />
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                        Reset restores the default sort and clears the hidden advanced filters too.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 w-full sm:w-auto"
+                        disabled={!hasMobileQuickControlOverrides}
+                        onClick={() => resetSecondaryTaskControls()}
+                        data-testid="tasks-mobile-quick-controls-reset-button"
+                    >
+                        Reset quick controls
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    ) : null;
 
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
@@ -1754,14 +2131,19 @@ export function TasksPage() {
             </div>
         );
         if (!tasks || tasks.length === 0) return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                    <ListTodo className="h-8 w-8 text-muted-foreground" />
+            <div className="space-y-3">
+                <div className="md:hidden">
+                    {mobileListQuickControls}
                 </div>
-                <h3 className="text-lg font-semibold">No tasks found</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mt-2">
-                    Get started by creating a new task using the button above.
-                </p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-4 mb-4">
+                        <ListTodo className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold">No tasks found</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-2">
+                        Get started by creating a new task using the button above.
+                    </p>
+                </div>
             </div>
         );
 
@@ -1880,6 +2262,7 @@ export function TasksPage() {
         return (
             <div className="space-y-3">
                 <div className="md:hidden space-y-3">
+                    {mobileListQuickControls}
                     {pagedTasks.map((task, index) => {
                         const taskSnapshot = getTaskScurveSnapshot(task);
                         return (
@@ -2129,11 +2512,26 @@ export function TasksPage() {
                     />
                     <Button
                         type="button"
-                        variant="secondary"
-                        onClick={refreshTasks}
+                        variant={selectedProjectRemoteChange ? "default" : "secondary"}
+                        className={cn(
+                            "relative",
+                            selectedProjectRemoteChange
+                                ? "ring-2 ring-amber-400/70 ring-offset-2 ring-offset-background"
+                                : undefined,
+                        )}
+                        onClick={() => {
+                            void refreshTasks();
+                        }}
                         disabled={!selectedProject || isRefetching || isRateLimited}
+                        title={selectedProjectRemoteChange ? selectedProjectRemoteChange.summary : undefined}
+                        data-testid="tasks-refresh-button"
                     >
-                        {isRateLimited ? "Cooling down..." : (isRefetching ? "Refreshing…" : "Refresh")}
+                        {selectedProjectRemoteChange ? (
+                            <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden="true" />
+                        ) : null}
+                        {isRateLimited
+                            ? "Cooling down..."
+                            : (isRefetching ? "Refreshing…" : (selectedProjectRemoteChange ? "Refresh updates" : "Refresh"))}
                     </Button>
                     <div className="flex min-w-[280px] flex-1 flex-col gap-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2174,6 +2572,7 @@ export function TasksPage() {
                             <Button type="button" data-testid="tasks-new-button">New task</Button>
                         </DialogTrigger>
                         <AppDialogContent
+                            className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"
                             title="Create task"
                             description="Create a new task for your project with manual or weighted progress tracking."
                         >
@@ -2215,6 +2614,7 @@ export function TasksPage() {
                                         createMutation.mutateAsync({
                                             name: parsed.data.title,
                                             description: normalizedDescription || undefined,
+                                            assigneeId: parsed.data.assigneeId || "",
                                             dueDate: dueDate,
                                             startDate: startDate,
                                             endDate: finalEndDate,
@@ -2224,7 +2624,22 @@ export function TasksPage() {
                                                 : undefined,
                                             progressMethod: createProgressMethod,
                                         })
-                                            .then(() => {
+                                            .then(async (createdTask) => {
+                                                if (createProgressMethod === "weighted_components" && createWeightedStarterTemplateEnabled) {
+                                                    try {
+                                                        await replaceTaskProgressComponentsForCreateMutation.mutateAsync({
+                                                            taskId: createdTask.id,
+                                                            payload: {
+                                                                components: buildWeightedStarterComponents({
+                                                                    startDate,
+                                                                    endDate: finalEndDate,
+                                                                }),
+                                                            },
+                                                        });
+                                                    } catch {
+                                                        toast.warning("Task created, but starter weighted components could not be added. You can add them from Edit task.");
+                                                    }
+                                                }
                                                 const activeSessionId = timeToTaskSessionIdRef.current;
                                                 if (activeSessionId) {
                                                     completeTimeToTaskSession(activeSessionId, {
@@ -2309,6 +2724,31 @@ export function TasksPage() {
                                                         data-testid="tasks-create-description-input"
                                                     />
                                                 </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={createForm.control}
+                                        name="assigneeId"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>Assignee</FormLabel>
+                                                <Combobox
+                                                    options={assigneeOptions}
+                                                    value={field.value ?? ""}
+                                                    onChange={field.onChange}
+                                                    placeholder="Select assignee"
+                                                    searchPlaceholder="Search team member..."
+                                                    className="w-full"
+                                                    triggerTestId="tasks-create-assignee-combobox"
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    {assignableUsers.length > 0
+                                                        ? "Choose a current project member or leave the task unassigned."
+                                                        : "No project members are available yet. Add members from Project Settings first."}
+                                                </p>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -2535,8 +2975,46 @@ export function TasksPage() {
                                                 )}
                                             />
                                         ) : (
-                                            <div className="rounded-md border border-dashed border-border/70 bg-background/80 p-3 text-sm text-muted-foreground" data-testid="tasks-create-weighted-hint">
-                                                This task will start at 0%. After creation, open Edit task to add weighted components and let backend calculate actual progress.
+                                            <div className="space-y-3 rounded-md border border-dashed border-border/70 bg-background/80 p-3 text-sm text-muted-foreground">
+                                                <div className="flex items-start gap-3">
+                                                    <Checkbox
+                                                        checked={createWeightedStarterTemplateEnabled}
+                                                        onCheckedChange={(checked) => setCreateWeightedStarterTemplateEnabled(checked === true)}
+                                                        className="mt-0.5"
+                                                        data-testid="tasks-create-weighted-template-checkbox"
+                                                        aria-label="Create starter weighted components"
+                                                    />
+                                                    <div className="space-y-1">
+                                                        <p className="font-medium text-foreground">Create starter weighted components</p>
+                                                        <p>
+                                                            Seed a simple three-step template so the task is usable immediately after creation.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    className="rounded-md border border-border/60 bg-muted/30 p-3"
+                                                    data-testid="tasks-create-weighted-template-preview"
+                                                >
+                                                    <div className="grid gap-2 sm:grid-cols-3">
+                                                        <div className="rounded border border-border/50 bg-background/80 p-2">
+                                                            <p className="text-xs font-semibold text-foreground">Planning ready</p>
+                                                            <p className="text-[11px]">20% weight</p>
+                                                        </div>
+                                                        <div className="rounded border border-border/50 bg-background/80 p-2">
+                                                            <p className="text-xs font-semibold text-foreground">Execution complete</p>
+                                                            <p className="text-[11px]">60% weight</p>
+                                                        </div>
+                                                        <div className="rounded border border-border/50 bg-background/80 p-2">
+                                                            <p className="text-xs font-semibold text-foreground">Review and sign-off</p>
+                                                            <p className="text-[11px]">20% weight</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p data-testid="tasks-create-weighted-hint">
+                                                    {createWeightedStarterTemplateEnabled
+                                                        ? "You can fine-tune weights, milestones, and dates from Edit task after creation."
+                                                        : "This task will start without components. Open Edit task after creation to define its weighted progress structure."}
+                                                </p>
                                             </div>
                                         )}
                                     </div>
@@ -2564,6 +3042,101 @@ export function TasksPage() {
                     <CardDescription>
                         View project backlog, progress and blockers from the backend API.
                     </CardDescription>
+                    {selectedProject ? (
+                        <div
+                            className="flex flex-wrap items-center gap-3 pt-2"
+                            data-testid="tasks-team-summary"
+                        >
+                            <TooltipProvider delayDuration={120}>
+                                <div className="flex items-center">
+                                    {visibleTeamMembers.length > 0 ? (
+                                        visibleTeamMembers.map((member, index) => (
+                                            <Tooltip key={member.id}>
+                                                <TooltipTrigger asChild>
+                                                    <div
+                                                        className={cn("relative", index > 0 ? "-ml-2" : "")}
+                                                        aria-label={member.label}
+                                                        data-testid="tasks-team-avatar"
+                                                    >
+                                                        <Avatar
+                                                            className={cn(
+                                                                member.presence?.status === "online"
+                                                                    ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
+                                                                    : undefined,
+                                                            )}
+                                                        >
+                                                            <AvatarFallback>{member.initials}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span
+                                                            className={cn(
+                                                                "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background",
+                                                                member.presence?.status === "online"
+                                                                    ? "bg-emerald-500"
+                                                                    : "bg-muted-foreground/40",
+                                                            )}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <div className="space-y-1">
+                                                        <p className="font-medium">{member.label}</p>
+                                                        <p className="text-[11px] text-muted-foreground">{member.email}</p>
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            {member.presence?.status === "online"
+                                                                ? "Online now"
+                                                                : member.presence?.last_seen_at
+                                                                    ? `Last seen ${formatDistanceToNowStrict(new Date(member.presence.last_seen_at), { addSuffix: true })}`
+                                                                    : "Offline"}
+                                                        </p>
+                                                        {member.presence?.route ? (
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                Route: {member.presence.route}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ))
+                                    ) : (
+                                        <Avatar
+                                            className="border-dashed bg-muted/40 text-muted-foreground"
+                                            data-testid="tasks-team-avatar-empty"
+                                        >
+                                            <AvatarFallback className="bg-muted/40 text-muted-foreground">0</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    {hiddenTeamMemberCount > 0 ? (
+                                        <div
+                                            className="-ml-2 flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-background px-2 text-xs font-semibold text-foreground ring-2 ring-background"
+                                            data-testid="tasks-team-avatar-overflow"
+                                            title={`${hiddenTeamMemberCount} more team member${hiddenTeamMemberCount === 1 ? "" : "s"}`}
+                                        >
+                                            +{hiddenTeamMemberCount}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </TooltipProvider>
+                            <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline" data-testid="tasks-team-count-badge">
+                                        {teamMembersForSummary.length} member{teamMembersForSummary.length === 1 ? "" : "s"}
+                                    </Badge>
+                                    <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
+                                        {onlineTeamMemberCount} online
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                        Project team size visible to everyone working in this menu.
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {teamMembersForSummary.length > 0
+                                        ? "Use this as the quick team-size and availability signal before assigning or filtering tasks."
+                                        : "No project members are available yet. Add members in Project Settings to make the team visible here."}
+                                </p>
+                            </div>
+                        </div>
+                    ) : null}
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="mb-6 flex flex-col gap-3">
@@ -2575,6 +3148,7 @@ export function TasksPage() {
                                     className="h-10 pl-9"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    maxLength={API_SEARCH_QUERY_MAX_LENGTH}
                                     data-testid="tasks-search-input"
                                 />
                             </div>
@@ -2593,6 +3167,22 @@ export function TasksPage() {
                                 className="w-full lg:w-[180px]"
                                 triggerTestId="tasks-filter-status-combobox"
                             />
+                            {view === "list" ? (
+                                <div className="hidden md:block">
+                                    <Combobox
+                                        value={sortOption}
+                                        onChange={(value) => {
+                                            if (!value) return;
+                                            setSortOption(value as TaskListSortOptionValue);
+                                        }}
+                                        options={TASK_SORT_OPTIONS}
+                                        placeholder="Sort tasks"
+                                        searchPlaceholder="Search sort order..."
+                                        className="w-full lg:w-[260px]"
+                                        triggerTestId="tasks-sort-combobox"
+                                    />
+                                </div>
+                            ) : null}
                             <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -2763,20 +3353,11 @@ export function TasksPage() {
                                                 type="button"
                                                 variant="ghost"
                                                 className="h-10 w-full sm:w-auto"
-                                                onClick={() => {
-                                                    setAssigneeFilter("all");
-                                                    setHealthStatusFilter("all");
-                                                    setScheduleStatusFilter("all");
-                                                    setStartFromFilter("");
-                                                    setStartToFilter("");
-                                                    setDueFromFilter("");
-                                                    setDueToFilter("");
-                                                    setIsAdvancedFiltersOpen(false);
-                                                }}
-                                                disabled={!hasAdvancedFilters}
+                                                onClick={() => resetSecondaryTaskControls({ closeAdvanced: true })}
+                                                disabled={!hasSecondaryTaskControls}
                                                 data-testid="tasks-clear-advanced-filters-button"
                                             >
-                                                Clear filters
+                                                Reset filters & sort
                                             </Button>
                                         </div>
                                     </div>
@@ -2785,6 +3366,9 @@ export function TasksPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
                             <Badge variant="outline">View: {currentViewLabel}</Badge>
+                            {view === "list" ? (
+                                <Badge variant="outline">Sort: {activeSortLabel}</Badge>
+                            ) : null}
                             {activeAdvancedFilterCount > 0 ? (
                                 <Badge variant="outline">Filters: {activeAdvancedFilterCount}</Badge>
                             ) : (
@@ -2792,7 +3376,67 @@ export function TasksPage() {
                                     Advanced contains view switch plus health, schedule, date, and assignee filters.
                                 </span>
                             )}
+                            {hiddenAdvancedFilterSummary.length > 0 ? (
+                                <span
+                                    className="rounded-md border border-dashed border-border/70 bg-background/70 px-2 py-1 text-[11px]"
+                                    data-testid="tasks-toolbar-hidden-filters-summary"
+                                >
+                                    Hidden: {hiddenAdvancedFilterSummary.join(" • ")}
+                                </span>
+                            ) : null}
                         </div>
+                        {selectedProject && !isLoading ? (
+                            <div
+                                className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                                data-testid="tasks-health-summary-strip"
+                            >
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium">Health snapshot</p>
+                                        <p
+                                            className="text-xs text-muted-foreground"
+                                            data-testid="tasks-health-summary-scope"
+                                        >
+                                            Quick filter by task health. Counts reflect {healthSummaryScopeLabel.toLowerCase()}.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {healthSummaryItems.map((item) => (
+                                            <Button
+                                                key={item.healthStatus}
+                                                type="button"
+                                                variant={item.active ? "secondary" : "outline"}
+                                                size="sm"
+                                                className="h-10 gap-2"
+                                                onClick={() => {
+                                                    setHealthStatusFilter((current) => (
+                                                        current === item.healthStatus ? "all" : item.healthStatus
+                                                    ));
+                                                }}
+                                                data-testid="tasks-health-summary-chip"
+                                            >
+                                                <Badge variant={getTaskHealthVariant(item.healthStatus)}>
+                                                    {item.label}
+                                                </Badge>
+                                                <span>{item.count}</span>
+                                            </Button>
+                                        ))}
+                                        {healthStatusFilter !== "all" ? (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-10"
+                                                onClick={() => setHealthStatusFilter("all")}
+                                                data-testid="tasks-health-summary-clear-button"
+                                            >
+                                                Clear health filter
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
 
                     {view === "list" && selectedTaskIds.length > 0 ? (
@@ -3016,6 +3660,7 @@ export function TasksPage() {
                                     payload: {
                                         name: parsed.data.title,
                                         description: normalizedDescription,
+                                        assigneeId: parsed.data.assigneeId || "",
                                         startDate,
                                         endDate: finalEndDate,
                                         ...(isWeightedProgressTask(editing) ? {} : { progress: parsed.data.progress }),
@@ -3071,6 +3716,31 @@ export function TasksPage() {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
+                            <FormField
+                                control={editForm.control}
+                                name="assigneeId"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Assignee</FormLabel>
+                                        <Combobox
+                                            options={assigneeOptions}
+                                            value={field.value ?? ""}
+                                            onChange={field.onChange}
+                                            placeholder="Select assignee"
+                                            searchPlaceholder="Search team member..."
+                                            className="w-full"
+                                            triggerTestId="tasks-edit-assignee-combobox"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            {assignableUsers.length > 0
+                                                ? "Choose a current project member or leave the task unassigned."
+                                                : "No project members are available yet. Add members from Project Settings first."}
+                                        </p>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
                             {/* Schedule Mode Toggle - Horizontal Layout */}
                             <div className="space-y-2">

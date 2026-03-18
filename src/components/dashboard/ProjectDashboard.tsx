@@ -561,7 +561,10 @@ export const ProjectDashboard = () => {
                             </div>
                             <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Top load</p>
-                                <p className="mt-1 truncate text-lg font-semibold">
+                                <p
+                                    className="mt-1 truncate text-lg font-semibold"
+                                    title={workloadDistribution.topOwner ? workloadDistribution.topOwner.label : "No assignee yet"}
+                                >
                                     {workloadDistribution.topOwner ? workloadDistribution.topOwner.label : "No assignee yet"}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
@@ -586,9 +589,11 @@ export const ProjectDashboard = () => {
                                         <div key={row.id} className="space-y-1.5">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="min-w-0">
-                                                    <p className="truncate text-sm font-medium">{row.label}</p>
+                                                    <p className="truncate text-sm font-medium" title={row.label}>{row.label}</p>
                                                     {row.sublabel ? (
-                                                        <p className="truncate text-xs text-muted-foreground">{row.sublabel}</p>
+                                                        <p className="truncate text-xs text-muted-foreground" title={row.sublabel}>
+                                                            {row.sublabel}
+                                                        </p>
                                                     ) : null}
                                                 </div>
                                                 <p className="shrink-0 text-sm font-semibold">{row.count}</p>

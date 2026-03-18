@@ -1,4 +1,9 @@
 import { api } from "@/api/client";
+import {
+    normalizeApiFilterValue,
+    normalizeDateOnlyToApiDateTime,
+    normalizePositiveIntegerParam,
+} from "@/lib/apiSearch";
 import type { components } from "@/types/api";
 
 // Types
@@ -18,10 +23,46 @@ export type AuditLogResponse = {
     per_page: number;
 };
 
+export type ListAuditLogsParams = {
+    page?: number;
+    per_page?: number;
+    action?: string;
+    user_id?: string;
+    actor_id?: string;
+    from?: string;
+    to?: string;
+};
+
+export function normalizeAuditLogParams(params?: ListAuditLogsParams): ListAuditLogsParams | undefined {
+    if (!params) return undefined;
+
+    const normalized = {
+        page: normalizePositiveIntegerParam(params.page, { min: 1, fallback: 1 }),
+        per_page: normalizePositiveIntegerParam(params.per_page, { min: 1, max: 100, fallback: 20 }),
+        action: normalizeApiFilterValue(params.action),
+        user_id: normalizeApiFilterValue(params.user_id),
+        actor_id: normalizeApiFilterValue(params.actor_id),
+        from: normalizeDateOnlyToApiDateTime(params.from, "start"),
+        to: normalizeDateOnlyToApiDateTime(params.to, "end"),
+    };
+
+    return {
+        ...(normalized.page ? { page: normalized.page } : {}),
+        ...(normalized.per_page ? { per_page: normalized.per_page } : {}),
+        ...(normalized.action ? { action: normalized.action } : {}),
+        ...(normalized.user_id ? { user_id: normalized.user_id } : {}),
+        ...(normalized.actor_id ? { actor_id: normalized.actor_id } : {}),
+        ...(normalized.from ? { from: normalized.from } : {}),
+        ...(normalized.to ? { to: normalized.to } : {}),
+    };
+}
+
 export const rbacApi = {
     // Audit Logs
-    async listAuditLogs(params?: { page?: number; per_page?: number; action?: string; from?: string; to?: string }): Promise<AuditLogResponse> {
-        const { data } = await api.get<AuditLogResponse>("/rbac/audit-logs", { params });
+    async listAuditLogs(params?: ListAuditLogsParams): Promise<AuditLogResponse> {
+        const { data } = await api.get<AuditLogResponse>("/rbac/audit-logs", {
+            params: normalizeAuditLogParams(params),
+        });
         return data;
     },
 

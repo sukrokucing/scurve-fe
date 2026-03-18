@@ -5,10 +5,12 @@ import clsx from "clsx";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
 
 import { useRolePermissionsQuery, useUserRolesQuery } from "@/api/queries/rbac";
 import { useUsersListQuery } from "@/api/queries/users";
+import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
 import type { User } from "@/api/users";
 import type { Role } from "@/api/rbac";
 
@@ -19,9 +21,10 @@ export const HierarchyExplorer = () => {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
+    const normalizedSearchQuery = normalizeApiSearchQuery(searchQuery);
 
     // --- Column 1: Users (from real backend) ---
-    const { data: usersData, isLoading: loadingUsers } = useUsersListQuery({ q: searchQuery || undefined });
+    const { data: usersData, isLoading: loadingUsers } = useUsersListQuery({ q: normalizedSearchQuery || undefined });
 
     const users = usersData?.users ?? EMPTY_USERS;
     const userOptions = useMemo(() => {
@@ -45,6 +48,27 @@ export const HierarchyExplorer = () => {
 
     // --- Column 3: Role Permissions (from real RBAC API) ---
     const { data: rolePermissions, isLoading: loadingRolePerms } = useRolePermissionsQuery(selectedRole?.id);
+
+    const activeExplorerSummary = useMemo(() => {
+        const summary: string[] = [];
+        if (normalizedSearchQuery) {
+            summary.push(`Search: ${normalizedSearchQuery}`);
+        }
+        if (selectedUser) {
+            summary.push(`User: ${selectedUser.name}`);
+        }
+        if (selectedRole) {
+            summary.push(`Role: ${selectedRole.name}`);
+        }
+        return summary;
+    }, [normalizedSearchQuery, selectedRole, selectedUser]);
+
+    const handleClearSearch = () => setSearchQuery("");
+
+    const handleResetScope = () => {
+        setSelectedUser(null);
+        setSelectedRole(null);
+    };
 
     // Helper for Column Loading State
     const ColumnLoading = () => (
@@ -84,6 +108,7 @@ export const HierarchyExplorer = () => {
                         shouldFilterClientSide={false}
                         searchDebounceMs={300}
                         minSearchLength={0}
+                        searchMaxLength={API_SEARCH_QUERY_MAX_LENGTH}
                         isLoading={loadingUsers}
                         placeholder="Search users..."
                         searchPlaceholder="Type name or email..."
@@ -93,6 +118,54 @@ export const HierarchyExplorer = () => {
                         triggerAriaLabel="Search and select user"
                         triggerTestId="access-flow-user-search-combobox"
                     />
+                </div>
+                <div
+                    className="border-b bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
+                    data-testid="access-flow-filter-summary"
+                >
+                    {activeExplorerSummary.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                            {activeExplorerSummary.map((item) => (
+                                <Badge key={item} variant="outline">
+                                    {item}
+                                </Badge>
+                            ))}
+                            {normalizedSearchQuery ? (
+                                <Badge variant="outline">
+                                    {usersData?.total ?? users.length} match(es)
+                                </Badge>
+                            ) : null}
+                            {normalizedSearchQuery ? (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={handleClearSearch}
+                                    data-testid="access-flow-clear-search-button"
+                                >
+                                    Clear search
+                                </Button>
+                            ) : null}
+                            {selectedUser || selectedRole ? (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={handleResetScope}
+                                    data-testid="access-flow-reset-scope-button"
+                                >
+                                    Reset scope
+                                </Button>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <span>
+                            Search narrows users by name or email. Selecting a user or role keeps the explorer scoped until
+                            you reset it.
+                        </span>
+                    )}
                 </div>
                 <ScrollArea className="max-h-[260px] md:max-h-none md:flex-1">
                     {loadingUsers ? <ColumnLoading /> : (

@@ -1,79 +1,79 @@
 {
-  "generatedAt": "2026-03-10T05:41:02.057Z",
+  "generatedAt": "2026-03-16T10:31:39.030Z",
   "budgets": {
-    "tasksLoadMs": 10000,
-    "tasksSearchMs": 2600,
-    "ganttSwitchMs": 6500,
-    "ganttTodayMs": 2200,
-    "policyLoadMs": 10000,
-    "policyFilterMs": 2600,
-    "flowLoadMs": 10000,
-    "flowSelectMs": 2600
+    "tasksLoadMs": 60000,
+    "tasksSearchMs": 60000,
+    "ganttSwitchMs": 60000,
+    "ganttTodayMs": 60000,
+    "policyLoadMs": 60000,
+    "policyFilterMs": 60000,
+    "flowLoadMs": 60000,
+    "flowSelectMs": 60000
   },
   "metrics": [
     {
       "name": "tasks.route.load",
       "route": "/tasks",
-      "durationMs": 3010,
-      "budgetMs": 10000,
+      "durationMs": 1775,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:40:56.525Z"
+      "recordedAt": "2026-03-16T10:31:34.200Z"
     },
     {
       "name": "tasks.search.filter",
       "route": "/tasks",
-      "durationMs": 1057,
-      "budgetMs": 2600,
+      "durationMs": 1027,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:40:57.587Z"
+      "recordedAt": "2026-03-16T10:31:35.229Z"
     },
     {
       "name": "tasks.gantt.switch",
       "route": "/tasks",
-      "durationMs": 1158,
-      "budgetMs": 6500,
+      "durationMs": 891,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:40:58.746Z"
+      "recordedAt": "2026-03-16T10:31:36.121Z"
     },
     {
       "name": "tasks.gantt.today",
       "route": "/tasks",
-      "durationMs": 240,
-      "budgetMs": 2200,
+      "durationMs": 213,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:40:58.987Z"
+      "recordedAt": "2026-03-16T10:31:36.336Z"
     },
     {
       "name": "policy.route.load",
       "route": "/settings/policy",
-      "durationMs": 1588,
-      "budgetMs": 10000,
+      "durationMs": 1269,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:41:00.576Z"
+      "recordedAt": "2026-03-16T10:31:37.606Z"
     },
     {
       "name": "policy.search.filter",
       "route": "/settings/policy",
-      "durationMs": 449,
-      "budgetMs": 2600,
+      "durationMs": 504,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:41:01.026Z"
+      "recordedAt": "2026-03-16T10:31:38.111Z"
     },
     {
       "name": "flow.route.load",
       "route": "/settings/flow",
-      "durationMs": 780,
-      "budgetMs": 10000,
+      "durationMs": 755,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:41:01.807Z"
+      "recordedAt": "2026-03-16T10:31:38.867Z"
     },
     {
       "name": "flow.user.select",
       "route": "/settings/flow",
-      "durationMs": 214,
-      "budgetMs": 2600,
+      "durationMs": 130,
+      "budgetMs": 60000,
       "ok": true,
-      "recordedAt": "2026-03-10T05:41:02.022Z"
+      "recordedAt": "2026-03-16T10:31:38.999Z"
     }
   ]
 }

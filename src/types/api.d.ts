@@ -144,6 +144,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description List Notifications Handles `GET` requests for `/notifications`. Requires bearer authentication.
+         */
+        get: operations["list_notifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Notifications Read
+         * @description Mark Notifications Read Handles `POST` requests for `/notifications/read`. Requires bearer authentication.
+         */
+        post: operations["mark_notifications_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Notifications Read All
+         * @description Mark Notifications Read All Handles `POST` requests for `/notifications/read-all`. Requires bearer authentication.
+         */
+        post: operations["mark_notifications_read_all"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Unread Notification Count
+         * @description Get Unread Notification Count Handles `GET` requests for `/notifications/unread-count`. Requires bearer authentication.
+         */
+        get: operations["get_unread_notification_count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/s-curve/summary": {
         parameters: {
             query?: never;
@@ -940,6 +1020,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/realtime/ws": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Websocket Feed
+         * @description Websocket Feed Handles `GET` requests for `/realtime/ws`. Requires bearer authentication.
+         */
+        get: operations["websocket_feed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-roles": {
         parameters: {
             query?: never;
@@ -1231,6 +1331,9 @@ export interface components {
             /** @example S3cureP@ssw0rd */
             password: string;
         };
+        MarkNotificationsReadRequest: {
+            ids: string[];
+        };
         MessageResponse: {
             message: string;
         };
@@ -1243,6 +1346,47 @@ export interface components {
             project_id: string;
             project_name: string;
             resource_roles: components["schemas"]["ResourceRoleRef"][];
+        };
+        Notification: {
+            actor: components["schemas"]["NotificationActor"];
+            change_type: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            entity_id?: string | null;
+            entity_type: string;
+            /** Format: uuid */
+            event_id: string;
+            /** Format: uuid */
+            id: string;
+            message: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /** Format: uuid */
+            project_id?: string | null;
+            project_name?: string | null;
+            /** Format: date-time */
+            read_at?: string | null;
+            route?: string | null;
+            severity: components["schemas"]["NotificationSeverity"];
+            title: string;
+            unread: boolean;
+        };
+        NotificationActor: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @enum {string} */
+        NotificationSeverity: "critical" | "important" | "noise";
+        NotificationUnreadCountResponse: {
+            /** Format: int64 */
+            unread_count: number;
+        };
+        NotificationsReadResponse: {
+            /** Format: int64 */
+            unread_count: number;
+            updated: number;
         };
         /** @description Paginated response for audit logs */
         PaginatedAuditLogs: {
@@ -1315,6 +1459,8 @@ export interface components {
             projects: components["schemas"]["PortfolioSCurveProjectSummary"][];
             unit?: string | null;
         };
+        /** @enum {string} */
+        PresenceStatus: "online" | "offline";
         Progress: {
             /** Format: date-time */
             created_at: string;
@@ -1454,6 +1600,76 @@ export interface components {
             name?: string | null;
             /** @example #2ecc71 */
             theme_color?: string | null;
+        };
+        RealtimeActor: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        RealtimeClientCommand: {
+            project_ids: string[];
+            route?: string | null;
+            /** @enum {string} */
+            type: "subscribe";
+        } | {
+            project_ids: string[];
+            /** @enum {string} */
+            type: "unsubscribe";
+        } | {
+            /** @enum {string} */
+            type: "ping";
+        };
+        RealtimeErrorMessage: {
+            error: string;
+            message: string;
+        };
+        RealtimeEvent: {
+            actor: components["schemas"]["RealtimeActor"];
+            change_type: string;
+            /** Format: uuid */
+            entity_id?: string | null;
+            entity_type: string;
+            /** Format: uuid */
+            event_id: string;
+            family: components["schemas"]["RealtimeEventFamily"];
+            metadata?: components["schemas"]["RealtimeEventMetadata"] | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /** Format: uuid */
+            project_id?: string | null;
+            /** Format: int64 */
+            unread_count?: number | null;
+        };
+        /** @enum {string} */
+        RealtimeEventFamily: "notification" | "presence" | "data_changed";
+        RealtimeEventMetadata: components["schemas"]["RealtimePresenceMetadata"] | components["schemas"]["RealtimeNotificationCounterMetadata"] | components["schemas"]["RealtimeInvalidateMetadata"];
+        RealtimeInvalidateMetadata: {
+            invalidate: string[];
+        };
+        RealtimeNotificationCounterMetadata: {
+            updated: number;
+        };
+        RealtimePresenceMetadata: {
+            /** Format: date-time */
+            last_seen_at: string;
+            project_snapshot?: components["schemas"]["RealtimePresenceUser"][] | null;
+            route?: string | null;
+            status: components["schemas"]["PresenceStatus"];
+            /** Format: uuid */
+            user_id: string;
+        };
+        RealtimePresenceUser: {
+            /** Format: date-time */
+            last_seen_at: string;
+            name: string;
+            route?: string | null;
+            status: components["schemas"]["PresenceStatus"];
+            /** Format: uuid */
+            user_id: string;
+        };
+        RealtimeWsQuery: {
+            /** @example <jwt-token> */
+            token?: string | null;
         };
         RegisterRequest: {
             /** @example ada@example.com */
@@ -2360,6 +2576,90 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_notifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible notifications for the current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+        };
+    };
+    mark_notifications_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkNotificationsReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Notifications marked as read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsReadResponse"];
+                };
+            };
+        };
+    };
+    mark_notifications_read_all: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All visible notifications marked as read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsReadResponse"];
+                };
+            };
+        };
+    };
+    get_unread_notification_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unread notification count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCountResponse"];
+                };
             };
         };
     };
@@ -4787,6 +5087,41 @@ export interface operations {
         responses: {
             /** @description Role revoked */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    websocket_feed: {
+        parameters: {
+            query?: {
+                /** @description Optional JWT bearer token query fallback for browser websocket clients. Authorization header remains supported. */
+                token?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WebSocket upgrade endpoint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -39,7 +39,7 @@ export function SettingsLayout() {
                                                 <span
                                                     className={cn(
                                                         "hidden text-xs font-normal lg:block",
-                                                        isActive ? "text-primary-foreground/85" : "text-muted-foreground",
+                                                        isActive ? "text-primary-foreground" : "text-muted-foreground",
                                                     )}
                                                 >
                                                     {item.description}

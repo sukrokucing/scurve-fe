@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Loader2, User, History } from "lucide-react";
@@ -16,9 +16,11 @@ import { AppDataTable } from "@/components/ui/app-data-table";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuditLogsQuery } from "@/api/queries/rbac";
 import { rbacApi } from "@/api/rbac";
+import { useUsersLookupQuery } from "@/api/queries/users";
 
 type AuditLogRow = Awaited<ReturnType<typeof rbacApi.listAuditLogs>>["items"][number];
 const auditLogColumnHelper = createColumnHelper<AuditLogRow>();
@@ -27,11 +29,69 @@ export function AuditLogDialog() {
     const [open, setOpen] = useState(false);
     const [page, setPage] = useState(1);
     const [actionFilter, setActionFilter] = useState<string>("all");
+    const [actorUserId, setActorUserId] = useState<string>("all");
+    const [targetUserId, setTargetUserId] = useState<string>("all");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const { data: usersLookup, isLoading: loadingUsersLookup } = useUsersLookupQuery({ enabled: open });
 
-    const { data, isLoading } = useAuditLogsQuery({ page, actionFilter }, { enabled: open });
+    const { data, isLoading } = useAuditLogsQuery({
+        page,
+        actionFilter,
+        actorUserId,
+        targetUserId,
+        fromDate,
+        toDate,
+    }, { enabled: open });
 
     const logs = data?.items || [];
     const totalPages = data ? Math.ceil(data.total / data.per_page) : 1;
+    const userOptions = useMemo(
+        () => [
+            { value: "all", label: "All users" },
+            ...((usersLookup?.users ?? []).map((user) => ({
+                value: user.id,
+                label: `${user.name} (${user.email})`,
+            }))),
+        ],
+        [usersLookup?.users],
+    );
+    const userLabelById = useMemo(() => {
+        const map = new Map<string, string>();
+        (usersLookup?.users ?? []).forEach((user) => {
+            map.set(user.id, user.name);
+        });
+        return map;
+    }, [usersLookup?.users]);
+    const activeFilters = useMemo(() => {
+        const filters: string[] = [];
+        if (actionFilter !== "all") {
+            filters.push(`Action: ${actionFilter}`);
+        }
+        if (actorUserId !== "all") {
+            filters.push(`Actor: ${userLabelById.get(actorUserId) ?? actorUserId}`);
+        }
+        if (targetUserId !== "all") {
+            filters.push(`Target: ${userLabelById.get(targetUserId) ?? targetUserId}`);
+        }
+        if (fromDate) {
+            filters.push(`From: ${format(new Date(`${fromDate}T00:00:00`), "MMM d, yyyy")}`);
+        }
+        if (toDate) {
+            filters.push(`To: ${format(new Date(`${toDate}T00:00:00`), "MMM d, yyyy")}`);
+        }
+        return filters;
+    }, [actionFilter, actorUserId, fromDate, targetUserId, toDate, userLabelById]);
+    const hasActiveFilters = activeFilters.length > 0;
+
+    const resetFilters = () => {
+        setActionFilter("all");
+        setActorUserId("all");
+        setTargetUserId("all");
+        setFromDate("");
+        setToDate("");
+        setPage(1);
+    };
 
     const actionColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
         "role.create": "default",
@@ -98,24 +158,97 @@ export function AuditLogDialog() {
                 description="View the history of security and access control changes."
             >
 
-                <div className="flex items-center gap-4 py-4">
-                    <Combobox
-                        value={actionFilter}
-                        onChange={(v) => { setActionFilter(v); setPage(1); }}
-                        className="w-[200px]"
-                        placeholder="Filter by action"
-                        options={[
-                            { value: "all", label: "All Actions" },
-                            { value: "role.assign", label: "Role Assigned" },
-                            { value: "role.revoke", label: "Role Revoked" },
-                            { value: "permission.grant", label: "Permission Granted" },
-                            { value: "permission.revoke", label: "Permission Revoked" },
-                            { value: "role.create", label: "Role Created" },
-                            { value: "role.delete", label: "Role Deleted" },
-                            { value: "user.create", label: "User Created" },
-                            { value: "user.delete", label: "User Deleted" },
-                        ]}
-                    />
+                <div className="flex flex-col gap-3 py-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                        <Combobox
+                            value={actionFilter}
+                            onChange={(v) => { setActionFilter(v); setPage(1); }}
+                            className="w-full md:w-[200px]"
+                            placeholder="Filter by action"
+                            options={[
+                                { value: "all", label: "All Actions" },
+                                { value: "role.assign", label: "Role Assigned" },
+                                { value: "role.revoke", label: "Role Revoked" },
+                                { value: "permission.grant", label: "Permission Granted" },
+                                { value: "permission.revoke", label: "Permission Revoked" },
+                                { value: "role.create", label: "Role Created" },
+                                { value: "role.delete", label: "Role Deleted" },
+                                { value: "user.create", label: "User Created" },
+                                { value: "user.delete", label: "User Deleted" },
+                            ]}
+                            triggerTestId="policy-audit-log-action-filter-combobox"
+                        />
+                        <Combobox
+                            value={actorUserId}
+                            onChange={(value) => { setActorUserId(value || "all"); setPage(1); }}
+                            className="w-full md:w-[240px]"
+                            placeholder="Filter by actor"
+                            searchPlaceholder="Search actors..."
+                            options={userOptions}
+                            isLoading={loadingUsersLookup}
+                            triggerTestId="policy-audit-log-actor-filter-combobox"
+                            triggerAriaLabel="Filter audit log by actor"
+                        />
+                        <Combobox
+                            value={targetUserId}
+                            onChange={(value) => { setTargetUserId(value || "all"); setPage(1); }}
+                            className="w-full md:w-[240px]"
+                            placeholder="Filter by target user"
+                            searchPlaceholder="Search target users..."
+                            options={userOptions}
+                            isLoading={loadingUsersLookup}
+                            triggerTestId="policy-audit-log-target-filter-combobox"
+                            triggerAriaLabel="Filter audit log by target user"
+                        />
+                        <div className="grid w-full gap-3 sm:grid-cols-2 md:max-w-[360px]">
+                            <Input
+                                type="date"
+                                value={fromDate}
+                                onChange={(event) => {
+                                    setFromDate(event.target.value);
+                                    setPage(1);
+                                }}
+                                data-testid="policy-audit-log-from-input"
+                                aria-label="Filter audit log from date"
+                            />
+                            <Input
+                                type="date"
+                                value={toDate}
+                                onChange={(event) => {
+                                    setToDate(event.target.value);
+                                    setPage(1);
+                                }}
+                                data-testid="policy-audit-log-to-input"
+                                aria-label="Filter audit log to date"
+                            />
+                        </div>
+                    </div>
+                    <div
+                        className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                        data-testid="policy-audit-log-filter-summary"
+                    >
+                        {hasActiveFilters ? (
+                            <>
+                                {activeFilters.map((filter) => (
+                                    <Badge key={filter} variant="outline">
+                                        {filter}
+                                    </Badge>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2"
+                                    onClick={resetFilters}
+                                    data-testid="policy-audit-log-reset-filters-button"
+                                >
+                                    Reset filters
+                                </Button>
+                            </>
+                        ) : (
+                            <span>Filter audit history by action, actor, target user, or date range. Pagination stays server-driven.</span>
+                        )}
+                    </div>
                 </div>
 
                 <ScrollArea className="flex-1 rounded-md border">

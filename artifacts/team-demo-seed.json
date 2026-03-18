@@ -1,0 +1,183 @@
+{
+  "generated_at": "2026-03-17T06:39:18.463Z",
+  "base_url": "https://localhost:8800",
+  "auth_source": "env-login",
+  "auth_identity": "jimmy@dwp.co.id",
+  "project": {
+    "id": "0d67c590-4435-4929-ac5e-0b6886208fc2",
+    "name": "Demo Team Visibility Project"
+  },
+  "stats": {
+    "rolesCreated": 0,
+    "usersCreated": 0,
+    "resourceRolesCreated": 0,
+    "resourceRolesUpdated": 0,
+    "projectCreated": 0,
+    "membershipsChanged": 0,
+    "tasksCreated": 0,
+    "tasksUpdated": 5,
+    "permissionsAdded": 0,
+    "globalRoleAssignments": 0
+  },
+  "verification": {
+    "ok": true,
+    "issues": [],
+    "members": [
+      {
+        "user_name": "Demo Backend Developer",
+        "user_email": "demo.backend.developer@example.com",
+        "access_role_name": "backend_developer",
+        "resource_roles": [
+          "backend developer"
+        ]
+      },
+      {
+        "user_name": "Demo Backend Developer Intern",
+        "user_email": "demo.backend.intern@example.com",
+        "access_role_name": "backend_developer_intern",
+        "resource_roles": [
+          "backend developer intern"
+        ]
+      },
+      {
+        "user_name": "Demo Frontend Developer",
+        "user_email": "demo.frontend.developer@example.com",
+        "access_role_name": "frontend_developer",
+        "resource_roles": [
+          "frontend developer"
+        ]
+      },
+      {
+        "user_name": "Demo Project Owner",
+        "user_email": "demo.project.owner@example.com",
+        "access_role_name": "project_owner",
+        "resource_roles": [
+          "project owner"
+        ]
+      },
+      {
+        "user_name": "Demo System Analyst",
+        "user_email": "demo.system.analyst@example.com",
+        "access_role_name": "system_analyst",
+        "resource_roles": [
+          "system analyst"
+        ]
+      }
+    ],
+    "tasks": [
+      {
+        "title": "[team-demo] Requirements baseline review",
+        "assignee_email": "demo.system.analyst@example.com",
+        "actual_progress_pct": 45,
+        "expected_progress_pct": 39.58,
+        "variance_pct": 5.42,
+        "health_status": "on_track",
+        "schedule_status": "on_time",
+        "execution_status": "in_progress",
+        "completed_at": null,
+        "completed_at_is_backfilled": false
+      },
+      {
+        "title": "[team-demo] Member API contract update",
+        "assignee_email": "demo.backend.developer@example.com",
+        "actual_progress_pct": 65,
+        "expected_progress_pct": 100,
+        "variance_pct": -35,
+        "health_status": "critical",
+        "schedule_status": "overdue",
+        "execution_status": "in_progress",
+        "completed_at": null,
+        "completed_at_is_backfilled": false
+      },
+      {
+        "title": "[team-demo] Tasks responsive polish",
+        "assignee_email": "demo.frontend.developer@example.com",
+        "actual_progress_pct": 15,
+        "expected_progress_pct": 10.83,
+        "variance_pct": 4.17,
+        "health_status": "on_track",
+        "schedule_status": "on_time",
+        "execution_status": "in_progress",
+        "completed_at": null,
+        "completed_at_is_backfilled": false
+      },
+      {
+        "title": "[team-demo] Intern bugfix support bundle",
+        "assignee_email": "demo.backend.intern@example.com",
+        "actual_progress_pct": 100,
+        "expected_progress_pct": 27.07,
+        "variance_pct": 72.93,
+        "health_status": "ahead",
+        "schedule_status": "finished_early",
+        "execution_status": "completed",
+        "completed_at": "2026-03-17T04:13:44.309934570Z",
+        "completed_at_is_backfilled": false
+      },
+      {
+        "title": "[team-demo] Project sign-off checkpoint",
+        "assignee_email": "demo.project.owner@example.com",
+        "actual_progress_pct": 0,
+        "expected_progress_pct": null,
+        "variance_pct": null,
+        "health_status": "needs_plan",
+        "schedule_status": "not_specified",
+        "execution_status": "not_started",
+        "completed_at": null,
+        "completed_at_is_backfilled": false
+      }
+    ],
+    "actual_schedule_counts": {
+      "finished_early": 1,
+      "overdue": 1,
+      "not_specified": 1,
+      "on_time": 2
+    },
+    "task_status_counts": {
+      "total": 5,
+      "finished_early": 1,
+      "overdue": 1,
+      "on_time": 2,
+      "not_specified": 1
+    },
+    "workload_distribution": [
+      {
+        "user_id": "6591f5df-cef2-4fba-9733-6beb1fbb07ac",
+        "user_name": "Demo Backend Developer",
+        "task_count": 1
+      },
+      {
+        "user_id": "2d339170-9572-4323-bb6c-2652e2d505c7",
+        "user_name": "Demo Backend Developer Intern",
+        "task_count": 1
+      },
+      {
+        "user_id": "c9d4ddfd-88ff-45a9-a402-681ecebb0527",
+        "user_name": "Demo Frontend Developer",
+        "task_count": 1
+      },
+      {
+        "user_id": "de6cb148-aa8e-4a43-94f9-fd5ee6c8cbb3",
+        "user_name": "Demo Project Owner",
+        "task_count": 1
+      },
+      {
+        "user_id": "73071ac3-abed-472f-84cd-4a6783b94e76",
+        "user_name": "Demo System Analyst",
+        "task_count": 1
+      }
+    ],
+    "overall_progress_pct": 45,
+    "assignment_coverage_pct": 100,
+    "due_date_coverage_pct": 80,
+    "project_health": {
+      "data_status": "ok",
+      "metric_supported": true,
+      "planned_pct": 44.37,
+      "actual_pct": 45,
+      "variance_pct": 0.63,
+      "stage": "maturity",
+      "rule_50_70_status": "insufficient_elapsed_time_data",
+      "rule_50_70_pass": null
+    }
+  }
+}

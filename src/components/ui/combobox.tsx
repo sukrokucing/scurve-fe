@@ -39,6 +39,7 @@ interface ComboboxProps {
     placeholder?: string
     searchPlaceholder?: string
     emptyText?: string
+    searchMaxLength?: number
     className?: string
     height?: string
     contentClassName?: string
@@ -64,6 +65,7 @@ export function Combobox({
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
     emptyText = "No option found.",
+    searchMaxLength,
     className,
     height = "300px", // Default max height
     contentClassName,
@@ -175,6 +177,7 @@ export function Combobox({
                     <CommandInput
                         wrapperClassName="border-0"
                         className="focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0"
+                        maxLength={searchMaxLength}
                         placeholder={searchPlaceholder}
                         value={search}
                         onValueChange={setSearch}

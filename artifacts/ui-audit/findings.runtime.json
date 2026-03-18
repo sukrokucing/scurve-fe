@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-03-12T01:41:59.045Z",
-  "runId": "audit-1773279583842-lyh9f8",
+  "generatedAt": "2026-03-16T10:33:10.980Z",
+  "runId": "audit-1773657101414-854vcc",
   "source": "runtime",
-  "mode": "full",
+  "mode": "visual",
   "screenshotCount": 180,
   "findings": [],
   "observations": [
@@ -365,7 +365,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -391,7 +391,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -417,7 +417,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -641,7 +641,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -666,7 +666,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -691,7 +691,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -848,7 +848,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -874,7 +874,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -900,7 +900,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": true,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -1124,7 +1124,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -1149,7 +1149,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -1167,14 +1167,14 @@
         "hasHorizontalOverflow": false,
         "smallTargetCount": 0,
         "unlabeledButtonCount": 0,
-        "overflowingTableCount": 0,
+        "overflowingTableCount": 1,
         "truncationRiskCount": 0,
         "focusedElementHasVisibleRing": true,
         "searchSurfaceOpened": true,
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "tasksPrimaryControlCount": 3,
+        "tasksPrimaryControlCount": 4,
         "tasksTelemetryHasIntentLabel": true,
         "tasksTelemetryHasPassiveExitLabel": true
       }
@@ -1331,7 +1331,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": false,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -1357,7 +1357,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": false,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false
@@ -1383,7 +1383,7 @@
         "searchSurfaceSmallTargetCount": 0,
         "searchSurfaceUnlabeledButtonCount": 0,
         "searchSurfaceHasHorizontalOverflow": false,
-        "rbacControlCount": 5,
+        "rbacControlCount": 6,
         "rbacBasicModeVisible": false,
         "rbacAdvancedMatrixVisible": false,
         "rbacMatrixHasHorizontalOverflow": false

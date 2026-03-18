@@ -114,6 +114,10 @@ export const LoginRequestSchema = z.object({
     password: z.string(), // example: "S3cureP@ssw0rd"
   });
 
+export const MarkNotificationsReadRequestSchema = z.object({
+    ids: z.array(z.string()),
+  });
+
 export const MessageResponseSchema = z.object({
     message: z.string(),
   });
@@ -125,6 +129,41 @@ export const MyProjectScopeSummarySchema = z.object({
     project_id: z.string(),
     project_name: z.string(),
     resource_roles: z.array(z.lazy(() => ResourceRoleRefSchema)),
+  });
+
+export const NotificationSchema = z.object({
+    actor: z.lazy(() => NotificationActorSchema),
+    change_type: z.string(),
+    created_at: z.string().datetime(),
+    entity_id: z.string().nullable().optional(),
+    entity_type: z.string(),
+    event_id: z.string(),
+    id: z.string(),
+    message: z.string(),
+    occurred_at: z.string().datetime(),
+    project_id: z.string().nullable().optional(),
+    project_name: z.string().nullable().optional(),
+    read_at: z.string().datetime().nullable().optional(),
+    route: z.string().nullable().optional(),
+    severity: z.lazy(() => NotificationSeveritySchema),
+    title: z.string(),
+    unread: z.boolean(),
+  });
+
+export const NotificationActorSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+  });
+
+export const NotificationSeveritySchema = z.string();
+
+export const NotificationUnreadCountResponseSchema = z.object({
+    unread_count: z.number(),
+  });
+
+export const NotificationsReadResponseSchema = z.object({
+    unread_count: z.number(),
+    updated: z.number(),
   });
 
 export const PaginatedAuditLogsSchema = z.object({
@@ -184,6 +223,8 @@ export const PortfolioSCurveSummaryResponseSchema = z.object({
     projects: z.array(z.lazy(() => PortfolioSCurveProjectSummarySchema)),
     unit: z.string().nullable().optional(),
   });
+
+export const PresenceStatusSchema = z.string();
 
 export const ProgressSchema = z.object({
     created_at: z.string().datetime(),
@@ -277,6 +318,63 @@ export const ProjectUpdateRequestSchema = z.object({
     description: z.string().nullable().optional(), // example: "Updated description"
     name: z.string().nullable().optional(), // example: "Launch Planning"
     theme_color: z.string().nullable().optional(), // example: "#2ecc71"
+  });
+
+export const RealtimeActorSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+  });
+
+export const RealtimeClientCommandSchema = z.any();
+
+export const RealtimeErrorMessageSchema = z.object({
+    error: z.string(),
+    message: z.string(),
+  });
+
+export const RealtimeEventSchema = z.object({
+    actor: z.lazy(() => RealtimeActorSchema),
+    change_type: z.string(),
+    entity_id: z.string().nullable().optional(),
+    entity_type: z.string(),
+    event_id: z.string(),
+    family: z.lazy(() => RealtimeEventFamilySchema),
+    metadata: z.any().optional(),
+    occurred_at: z.string().datetime(),
+    project_id: z.string().nullable().optional(),
+    unread_count: z.number().optional(),
+  });
+
+export const RealtimeEventFamilySchema = z.string();
+
+export const RealtimeEventMetadataSchema = z.any();
+
+export const RealtimeInvalidateMetadataSchema = z.object({
+    invalidate: z.array(z.string()),
+  });
+
+export const RealtimeNotificationCounterMetadataSchema = z.object({
+    updated: z.number(),
+  });
+
+export const RealtimePresenceMetadataSchema = z.object({
+    last_seen_at: z.string().datetime(),
+    project_snapshot: z.array(z.lazy(() => RealtimePresenceUserSchema)).optional(),
+    route: z.string().nullable().optional(),
+    status: z.lazy(() => PresenceStatusSchema),
+    user_id: z.string(),
+  });
+
+export const RealtimePresenceUserSchema = z.object({
+    last_seen_at: z.string().datetime(),
+    name: z.string(),
+    route: z.string().nullable().optional(),
+    status: z.lazy(() => PresenceStatusSchema),
+    user_id: z.string(),
+  });
+
+export const RealtimeWsQuerySchema = z.object({
+    token: z.string().nullable().optional(), // example: "<jwt-token>"
   });
 
 export const RegisterRequestSchema = z.object({
@@ -682,13 +780,20 @@ export const components = { schemas: {
   GrantPermissionRequest: GrantPermissionRequestSchema,
   HealthResponse: HealthResponseSchema,
   LoginRequest: LoginRequestSchema,
+  MarkNotificationsReadRequest: MarkNotificationsReadRequestSchema,
   MessageResponse: MessageResponseSchema,
   MyProjectScopeSummary: MyProjectScopeSummarySchema,
+  Notification: NotificationSchema,
+  NotificationActor: NotificationActorSchema,
+  NotificationSeverity: NotificationSeveritySchema,
+  NotificationUnreadCountResponse: NotificationUnreadCountResponseSchema,
+  NotificationsReadResponse: NotificationsReadResponseSchema,
   PaginatedAuditLogs: PaginatedAuditLogsSchema,
   Permission: PermissionSchema,
   PermissionCreateRequest: PermissionCreateRequestSchema,
   PortfolioSCurveProjectSummary: PortfolioSCurveProjectSummarySchema,
   PortfolioSCurveSummaryResponse: PortfolioSCurveSummaryResponseSchema,
+  PresenceStatus: PresenceStatusSchema,
   Progress: ProgressSchema,
   ProgressCreateRequest: ProgressCreateRequestSchema,
   ProgressUpdateRequest: ProgressUpdateRequestSchema,
@@ -701,6 +806,17 @@ export const components = { schemas: {
   ProjectResourceRoleRate: ProjectResourceRoleRateSchema,
   ProjectResourceRoleRateUpsertRequest: ProjectResourceRoleRateUpsertRequestSchema,
   ProjectUpdateRequest: ProjectUpdateRequestSchema,
+  RealtimeActor: RealtimeActorSchema,
+  RealtimeClientCommand: RealtimeClientCommandSchema,
+  RealtimeErrorMessage: RealtimeErrorMessageSchema,
+  RealtimeEvent: RealtimeEventSchema,
+  RealtimeEventFamily: RealtimeEventFamilySchema,
+  RealtimeEventMetadata: RealtimeEventMetadataSchema,
+  RealtimeInvalidateMetadata: RealtimeInvalidateMetadataSchema,
+  RealtimeNotificationCounterMetadata: RealtimeNotificationCounterMetadataSchema,
+  RealtimePresenceMetadata: RealtimePresenceMetadataSchema,
+  RealtimePresenceUser: RealtimePresenceUserSchema,
+  RealtimeWsQuery: RealtimeWsQuerySchema,
   RegisterRequest: RegisterRequestSchema,
   ReplaceTaskProgressComponentsRequest: ReplaceTaskProgressComponentsRequestSchema,
   ResetPasswordRequest: ResetPasswordRequestSchema,
