@@ -84,7 +84,7 @@ import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
-import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal, MoreHorizontal, Plus } from "lucide-react";
+import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal, MoreHorizontal, PencilLine, Plus, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -274,6 +274,42 @@ function formatCurrencyAmount(amount: number, currency = "USD"): string {
         }).format(amount);
     } catch {
         return `${currency} ${amount.toFixed(2)}`;
+    }
+}
+
+function getCompactTaskStatusLabel(status: Task["executionStatus"] | Task["status"] | null | undefined) {
+    switch (status) {
+        case "todo":
+        case "not_started":
+            return "Todo";
+        case "in_progress":
+            return "Doing";
+        case "blocked":
+            return "Blocked";
+        case "done":
+        case "completed":
+            return "Done";
+        default:
+            return getTaskStatusLabel(status ?? "todo");
+    }
+}
+
+function getTaskListWidthClass(columnId: string) {
+    switch (columnId) {
+        case "selection":
+            return "w-[72px]";
+        case "name":
+            return "w-[39%] min-w-[320px]";
+        case "progress":
+            return "w-[21%] min-w-[180px]";
+        case "timeline":
+            return "w-[19%] min-w-[190px]";
+        case "variance":
+            return "w-[120px]";
+        case "actions":
+            return "w-[64px]";
+        default:
+            return "";
     }
 }
 
@@ -1872,62 +1908,99 @@ export function TasksPage() {
 
     const workLogColumns = useMemo<ColumnDef<ApiWorkLog, unknown>[]>(() => ([
         workLogColumnHelper.accessor("work_date", {
-            header: "Date",
-            cell: (info) => formatWorkLogDateLabel(info.getValue()),
+            header: () => <div className="w-24">Date</div>,
+            cell: (info) => (
+                <span className="block w-24 text-sm tabular-nums">
+                    {formatWorkLogDateLabel(info.getValue())}
+                </span>
+            ),
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
         workLogColumnHelper.accessor("hours", {
-            header: () => <div className="text-right">Hours</div>,
-            cell: (info) => <div className="text-right">{info.getValue().toFixed(2)}</div>,
+            header: () => <div className="w-20 text-right">Hours</div>,
+            cell: (info) => <div className="w-20 text-right text-sm tabular-nums">{info.getValue().toFixed(2)}</div>,
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
         workLogColumnHelper.accessor("resource_role_name", {
-            header: "Role",
+            header: () => <div className="w-40">Role</div>,
+            cell: (info) => (
+                <span className="block w-40 truncate text-sm" title={info.getValue()}>
+                    {info.getValue()}
+                </span>
+            ),
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
         workLogColumnHelper.display({
             id: "cost",
-            header: () => <div className="text-right">Cost</div>,
+            header: () => <div className="w-28 text-right">Cost</div>,
             cell: (info) => (
-                <div className="text-right">
+                <div className="w-28 text-right text-sm tabular-nums">
                     {formatCurrencyAmount(info.row.original.cost_amount, info.row.original.currency_snapshot)}
                 </div>
             ),
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
         workLogColumnHelper.accessor("note", {
-            header: "Note",
+            header: () => <div>Note</div>,
             cell: (info) => (
-                <span className="max-w-[220px] truncate" title={info.getValue() ?? ""}>
+                <span className="block max-w-[260px] truncate text-sm text-muted-foreground" title={info.getValue() ?? ""}>
                     {info.getValue()?.trim() ? info.getValue() : "—"}
                 </span>
             ),
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
         workLogColumnHelper.display({
             id: "actions",
-            header: () => <div className="w-40 text-right">Actions</div>,
+            header: () => <div className="w-[72px] text-right">Actions</div>,
             cell: (info) => (
-                <div className="flex justify-end gap-2">
+                <div className="flex w-[72px] justify-end gap-1">
                     <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-8 w-8"
+                        aria-label={`Edit work log from ${formatWorkLogDateLabel(info.row.original.work_date)}`}
                         onClick={() => handleStartEditWorkLog(info.row.original)}
                         disabled={isWorkLogSaving}
                         data-testid="tasks-work-log-edit-button"
                     >
-                        Edit
+                        <PencilLine className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        aria-label={`Delete work log from ${formatWorkLogDateLabel(info.row.original.work_date)}`}
                         onClick={() => {
                             void handleDeleteWorkLog(info.row.original.id);
                         }}
                         disabled={isWorkLogSaving}
                         data-testid="tasks-work-log-delete-button"
                     >
-                        Delete
+                        <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                 </div>
             ),
+            meta: {
+                headerClassName: "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-3 py-2 align-middle",
+            },
         }),
     ]), [handleDeleteWorkLog, handleStartEditWorkLog, isWorkLogSaving]);
 
@@ -1976,26 +2049,19 @@ export function TasksPage() {
                                         "shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium",
                                         getTaskStatusTintClass(task.executionStatus ?? task.status),
                                     )}
+                                    title={getTaskStatusLabel(task.executionStatus ?? task.status)}
                                 >
-                                    {getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                    {getCompactTaskStatusLabel(task.executionStatus ?? task.status)}
                                 </Badge>
                                 <span className="min-w-0 flex-1 truncate font-medium text-foreground" title={info.getValue()}>
                                     {info.getValue()}
                                 </span>
-                                <span className="hidden max-w-[170px] truncate text-xs text-muted-foreground xl:inline" title={assigneeLabel}>
+                                <span className="hidden max-w-[160px] truncate text-xs text-muted-foreground xl:inline" title={assigneeLabel}>
                                     {assigneeLabel}
                                 </span>
-                                <span className="hidden rounded-full bg-muted/70 px-2 py-0.5 font-mono text-[10px] text-muted-foreground 2xl:inline-flex">
+                                <span className="hidden rounded-full bg-muted/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground 2xl:inline-flex">
                                     {task.id.slice(0, 8)}
                                 </span>
-                                {task.completedAtIsBackfilled ? (
-                                    <span
-                                        className="hidden text-[10px] text-muted-foreground 2xl:inline"
-                                        title="Completion timestamp reconstructed by backend for legacy data"
-                                    >
-                                        Backfilled
-                                    </span>
-                                ) : null}
                             </div>
                         </div>
                     );
@@ -2013,8 +2079,8 @@ export function TasksPage() {
                         : Math.max(0, Math.min(snapshot.expected, 100));
 
                     return (
-                        <div className="flex min-w-[190px] items-center gap-3" title={getTaskScurveTitle(task)}>
-                            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/80">
+                        <div className="flex min-w-[165px] items-center gap-2.5" title={getTaskScurveTitle(task)}>
+                            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/70">
                                 <div
                                     className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(snapshot.health))}
                                     style={{ width: `${actualValue}%` }}
@@ -2027,12 +2093,9 @@ export function TasksPage() {
                                     />
                                 ) : null}
                             </div>
-                            <span className="w-11 shrink-0 text-right text-sm font-semibold text-foreground">
+                            <span className="w-10 shrink-0 text-right text-sm font-semibold text-foreground tabular-nums">
                                 {formatTaskPercent(snapshot.actual)}
                             </span>
-                            {snapshot.expected === null ? (
-                                <span className="shrink-0 text-[11px] text-muted-foreground">Plan</span>
-                            ) : null}
                             <span className="sr-only">
                                 Expected {formatTaskPercent(snapshot.expected)}. Actual {formatTaskPercent(snapshot.actual)}. Variance {formatTaskVariance(snapshot.variance)}. {getTaskHealthLabel(snapshot.health)}.
                             </span>
@@ -2047,10 +2110,10 @@ export function TasksPage() {
                     const task = info.row.original;
                     const dueLabel = task.dueDate
                         ? `Due ${format(new Date(task.dueDate), "MMM d")}`
-                        : "Open-ended";
+                        : "No due date";
                     const planLabel = task.durationDays
-                        ? `${task.durationDays}d plan`
-                        : (task.startDate ? "Planned" : "No plan");
+                        ? `${task.durationDays}d`
+                        : null;
                     const scheduleLabel = task.scheduleStatus && task.scheduleStatus !== "not_specified"
                         ? getScheduleStatusLabel(task.scheduleStatus)
                         : null;
@@ -2058,11 +2121,18 @@ export function TasksPage() {
                     return (
                         <div className="flex min-w-0 items-center gap-2 text-sm">
                             <span className="shrink-0 font-medium text-foreground">{dueLabel}</span>
-                            <span className="shrink-0 text-muted-foreground">{planLabel}</span>
+                            {planLabel ? <span className="shrink-0 text-muted-foreground">{planLabel}</span> : null}
                             {scheduleLabel ? (
-                                <span className="truncate text-[11px] text-muted-foreground">{scheduleLabel}</span>
+                                <span
+                                    className={cn(
+                                        "truncate rounded-full border border-border/70 px-1.5 py-0.5 text-[10px]",
+                                        task.scheduleStatus ? getScheduleStatusToneClass(task.scheduleStatus) : undefined,
+                                    )}
+                                >
+                                    {scheduleLabel}
+                                </span>
                             ) : null}
-                            <span className="sr-only">{scheduleLabel ?? "Not specified"}</span>
+                            <span className="sr-only">{scheduleLabel ?? "Schedule not specified"}</span>
                         </div>
                     );
                 },
@@ -2073,19 +2143,19 @@ export function TasksPage() {
             baseColumns.push(
                 taskListColumnHelper.display({
                     id: "variance",
-                    header: "Variance vs plan",
+                    header: "Variance",
                     cell: (info) => {
                         const snapshot = getTaskScurveSnapshot(info.row.original);
                         return (
-                            <div>
+                            <div className="text-sm tabular-nums">
                                 <span
                                     className={cn(
                                         "font-medium",
                                         snapshot.variance === null
                                             ? "text-muted-foreground"
-                                            : snapshot.variance >= 0
-                                                ? "text-emerald-700 dark:text-emerald-300"
-                                                : "text-amber-700 dark:text-amber-300",
+                                        : snapshot.variance >= 0
+                                            ? "text-emerald-700 dark:text-emerald-300"
+                                            : "text-amber-700 dark:text-amber-300",
                                     )}
                                     title={getTaskScurveTitle(info.row.original)}
                                 >
@@ -2498,7 +2568,10 @@ export function TasksPage() {
                                     {headerGroup.headers.map((header) => (
                                         <TableHead
                                             key={header.id}
-                                            className="border-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                                            className={cn(
+                                                "border-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                                                getTaskListWidthClass(header.column.id),
+                                            )}
                                         >
                                             {header.isPlaceholder
                                                 ? null
@@ -2520,10 +2593,16 @@ export function TasksPage() {
                                 <TableRow
                                     key={row.id}
                                     onDoubleClick={() => openTaskEditor(row.original)}
-                                    className="group border-0 bg-transparent transition-colors odd:bg-muted/[0.14] hover:bg-muted/30"
+                                    className="group border-0 bg-transparent transition-colors odd:bg-muted/[0.12] hover:bg-muted/24"
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="border-0 px-3 py-2.5 align-middle">
+                                        <TableCell
+                                            key={cell.id}
+                                            className={cn(
+                                                "border-0 px-3 py-2 align-middle",
+                                                getTaskListWidthClass(cell.column.id),
+                                            )}
+                                        >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
@@ -3187,17 +3266,26 @@ export function TasksPage() {
                             </div>
                         </div>
                     </section>
-                    <section className="space-y-1 border-t border-border/70 pt-2" data-testid="tasks-page-primary-actions-card">
+                    <section className="border-t border-border/70 pt-2" data-testid="tasks-page-primary-actions-card">
                         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
                                 {visibleTaskScopeSummary.map((item) => (
                                     <Badge key={item} variant="outline">{item}</Badge>
                                 ))}
                                 {activeAdvancedFilterCount > 0 ? (
                                     <Badge variant="outline">Advanced: {activeAdvancedFilterCount}</Badge>
                                 ) : null}
+                                {hiddenAdvancedFilterSummary.length > 0 ? (
+                                    <div
+                                        className="min-w-0 truncate rounded-full border border-dashed border-border/70 bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground"
+                                        data-testid="tasks-toolbar-hidden-filters-summary"
+                                        title={hiddenAdvancedFilterSummary.join(" • ")}
+                                    >
+                                        {hiddenAdvancedFilterSummary.join(" • ")}
+                                    </div>
+                                ) : null}
                             </div>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="flex flex-wrap items-center gap-2">
                                 {view === "list" ? (
                                     <div className="hidden lg:block">
                                         <Combobox
@@ -3390,86 +3478,77 @@ export function TasksPage() {
                                 </Popover>
                             </div>
                         </div>
-                        {hiddenAdvancedFilterSummary.length > 0 ? (
-                            <div
-                                className="rounded-md border border-dashed border-border/70 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground"
-                                data-testid="tasks-toolbar-hidden-filters-summary"
-                            >
-                                <span className="font-medium text-foreground">Hidden advanced filters:</span>{" "}
-                                {hiddenAdvancedFilterSummary.join(" • ")}
-                            </div>
-                        ) : null}
                     </section>
 
                     <section className="space-y-2 border-t border-border/70 pt-2" data-testid="tasks-secondary-insights-card">
                         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="min-w-0 flex-1 space-y-1.5" data-testid="tasks-health-summary-strip">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"} className="rounded-full">
-                                            {healthSummaryExceptionCount} need attention
+                            <div className="min-w-0 flex-1 space-y-2" data-testid="tasks-health-summary-strip">
+                                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                        <Badge variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"} className="shrink-0 rounded-full">
+                                            {healthSummaryExceptionCount} attention
                                         </Badge>
-                                        <span className="hidden text-[11px] text-muted-foreground lg:inline" data-testid="tasks-health-summary-scope">
+                                        <div className="flex h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-muted">
+                                            {healthSummaryItems
+                                                .filter((item) => item.count > 0)
+                                                .map((item) => (
+                                                    <div
+                                                        key={item.healthStatus}
+                                                        className={cn(getTaskHealthBarClass(item.healthStatus))}
+                                                        style={{
+                                                            width: `${healthSummaryTotalCount === 0 ? 0 : (item.count / healthSummaryTotalCount) * 100}%`,
+                                                        }}
+                                                        title={`${item.label}: ${item.count}`}
+                                                    />
+                                                ))}
+                                        </div>
+                                        <span className="hidden text-[11px] text-muted-foreground xl:inline" data-testid="tasks-health-summary-scope">
                                             {healthSummaryScopeLabel}
                                         </span>
                                     </div>
-                                </div>
-                                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                    {healthSummaryItems
-                                        .filter((item) => item.count > 0)
-                                        .map((item) => (
-                                            <div
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {healthSummaryItems.map((item) => (
+                                            <Button
                                                 key={item.healthStatus}
-                                                className={cn(getTaskHealthBarClass(item.healthStatus))}
-                                                style={{
-                                                    width: `${healthSummaryTotalCount === 0 ? 0 : (item.count / healthSummaryTotalCount) * 100}%`,
+                                                type="button"
+                                                variant={item.active ? "secondary" : "outline"}
+                                                size="sm"
+                                                className="h-6 gap-1.5 rounded-full px-2 text-[11px]"
+                                                onClick={() => {
+                                                    setHealthStatusFilter((current) => (
+                                                        current === item.healthStatus ? "all" : item.healthStatus
+                                                    ));
                                                 }}
-                                                title={`${item.label}: ${item.count}`}
-                                            />
+                                                data-testid="tasks-health-summary-chip"
+                                            >
+                                                <span>{item.label}</span>
+                                                <span>{item.count}</span>
+                                            </Button>
                                         ))}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {healthSummaryItems.map((item) => (
-                                        <Button
-                                            key={item.healthStatus}
-                                            type="button"
-                                            variant={item.active ? "secondary" : "outline"}
-                                            size="sm"
-                                            className="h-7 gap-2 rounded-full px-2.5"
-                                            onClick={() => {
-                                                setHealthStatusFilter((current) => (
-                                                    current === item.healthStatus ? "all" : item.healthStatus
-                                                ));
-                                            }}
-                                            data-testid="tasks-health-summary-chip"
-                                        >
-                                            <span>{item.label}</span>
-                                            <span>{item.count}</span>
-                                        </Button>
-                                    ))}
-                                    {healthStatusFilter !== "all" ? (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 rounded-full px-2.5"
-                                            onClick={() => setHealthStatusFilter("all")}
-                                            data-testid="tasks-health-summary-clear-button"
-                                        >
-                                            Clear
-                                        </Button>
-                                    ) : null}
+                                        {healthStatusFilter !== "all" ? (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 rounded-full px-2 text-[11px]"
+                                                onClick={() => setHealthStatusFilter("all")}
+                                                data-testid="tasks-health-summary-clear-button"
+                                            >
+                                                Clear
+                                            </Button>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 xl:justify-end" data-testid="tasks-time-to-task-summary">
-                                <Badge variant="outline">P50: {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
-                                <Badge variant="outline">Last: {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
+                                <Badge variant="outline">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
+                                <Badge variant="outline">Last {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
                                 {showTimeToTaskInsights ? (
                                     <>
                                         <Badge variant="outline">Intent {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%</Badge>
                                         <Badge variant="outline">Samples {timeToTaskSummary.intentSampleCount}</Badge>
-                                        <Badge variant="outline">Passive exits {timeToTaskSummary.passiveExitCount}</Badge>
+                                        <Badge variant="outline">Passive {timeToTaskSummary.passiveExitCount}</Badge>
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -3975,21 +4054,16 @@ export function TasksPage() {
                             </div>
 
                             {isEditingWeightedTask ? (
-                                <div className="space-y-4 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-weighted-progress-section">
-                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                        <div className="space-y-1">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="text-sm font-semibold">Weighted progress components</p>
-                                                <Badge variant="outline">{getProgressMethodLabel(editing?.progressMethod)}</Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                This task uses backend-managed weighted components. Direct progress slider updates are disabled.
-                                            </p>
+                                <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-weighted-progress-section">
+                                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-sm font-semibold">Weighted components</p>
+                                            <Badge variant="outline">{getProgressMethodLabel(editing?.progressMethod)}</Badge>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                                            <Badge variant="outline">Actual: {formatTaskPercent(editingTaskScurve?.actual ?? null)}</Badge>
-                                            <Badge variant="outline">Expected: {formatTaskPercent(editingTaskScurve?.expected ?? null)}</Badge>
-                                            <Badge variant="outline">Variance: {formatTaskVariance(editingTaskScurve?.variance ?? null)}</Badge>
+                                            <Badge variant="outline">Actual {formatTaskPercent(editingTaskScurve?.actual ?? null)}</Badge>
+                                            <Badge variant="outline">Expected {formatTaskPercent(editingTaskScurve?.expected ?? null)}</Badge>
+                                            <Badge variant="outline">Variance {formatTaskVariance(editingTaskScurve?.variance ?? null)}</Badge>
                                             <Badge variant={getTaskHealthVariant(editingTaskScurve?.health ?? "needs_plan")}>
                                                 {getTaskHealthLabel(editingTaskScurve?.health ?? "needs_plan")}
                                             </Badge>
@@ -4006,20 +4080,18 @@ export function TasksPage() {
                                             {progressComponentDrafts.map((draft, index) => (
                                                 <div
                                                     key={draft.id ?? `component-${index}`}
-                                                    className="space-y-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                                                    className="rounded-lg border border-border/70 bg-background/80 p-2.5"
                                                     data-testid="tasks-progress-component-row"
                                                 >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="space-y-1">
-                                                            <p className="text-sm font-medium">Component {index + 1}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Weight drives actual progress. Completion is the state of this component itself.
-                                                            </p>
-                                                        </div>
+                                                    <div className="mb-2 flex items-center justify-between gap-3">
+                                                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                                            Component {index + 1}
+                                                        </p>
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
                                                             size="sm"
+                                                            className="h-7 px-2 text-xs"
                                                             onClick={() => removeProgressComponentDraft(index)}
                                                             disabled={isProgressComponentsSaving}
                                                             data-testid="tasks-progress-component-remove-button"
@@ -4028,9 +4100,9 @@ export function TasksPage() {
                                                         </Button>
                                                     </div>
 
-                                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_110px_130px_minmax(0,1.2fr)_minmax(0,1.2fr)]">
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Name</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Name</Label>
                                                             <Input
                                                                 value={draft.name}
                                                                 onChange={(event) => updateProgressComponentDraft(index, "name", event.target.value)}
@@ -4039,7 +4111,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Type</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Type</Label>
                                                             <Input
                                                                 value={draft.componentType}
                                                                 onChange={(event) => updateProgressComponentDraft(index, "componentType", event.target.value)}
@@ -4048,7 +4120,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Weight (%)</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Weight</Label>
                                                             <Input
                                                                 type="number"
                                                                 min="0"
@@ -4060,7 +4132,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Completion (%)</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Done</Label>
                                                             <Input
                                                                 type="number"
                                                                 min="0"
@@ -4072,7 +4144,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Planned at</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Planned</Label>
                                                             <Input
                                                                 type="datetime-local"
                                                                 value={draft.plannedAt}
@@ -4081,7 +4153,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Completed at</Label>
+                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Completed</Label>
                                                             <Input
                                                                 type="datetime-local"
                                                                 value={draft.completedAt}
@@ -4094,14 +4166,12 @@ export function TasksPage() {
                                             ))}
 
                                             <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Total weight: <span className={cn(Math.abs(totalProgressComponentWeight - 100) < 0.01 ? "text-success" : "text-warning")}>{totalProgressComponentWeight.toFixed(1)}%</span>
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Keep weights near 100% so actual progress remains intuitive.
-                                                    </p>
-                                                </div>
+                                                <Badge
+                                                    variant={Math.abs(totalProgressComponentWeight - 100) < 0.01 ? "success" : "warning"}
+                                                    className="w-fit"
+                                                >
+                                                    Total weight {totalProgressComponentWeight.toFixed(1)}%
+                                                </Badge>
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <Button
                                                         type="button"
@@ -4152,16 +4222,18 @@ export function TasksPage() {
                             )}
 
                             <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-work-log-section">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-semibold">Work logs (hours and cost)</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Log real effort with a project resource role. Dashboard hours and cost metrics use these entries.
-                                    </p>
+                                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                    <p className="text-sm font-semibold">Work logs</p>
+                                    <Badge variant="outline">
+                                        {draftWorkLogEstimatedCost !== null && selectedWorkLogRole
+                                            ? `Est. ${formatCurrencyAmount(draftWorkLogEstimatedCost, selectedWorkLogRole.currency)}`
+                                            : "Hours + role = cost"}
+                                    </Badge>
                                 </div>
 
-                                <div className="grid gap-3 md:grid-cols-2">
+                                <div className="grid gap-3 lg:grid-cols-[140px_100px_minmax(0,1.2fr)_minmax(0,1.6fr)_auto] lg:items-end">
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">Work date</Label>
+                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</Label>
                                         <Input
                                             type="date"
                                             value={workLogDate}
@@ -4170,7 +4242,7 @@ export function TasksPage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">Hours</Label>
+                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Hours</Label>
                                         <Input
                                             type="number"
                                             min={0.25}
@@ -4180,11 +4252,8 @@ export function TasksPage() {
                                             data-testid="tasks-work-log-hours-input"
                                         />
                                     </div>
-                                </div>
-
-                                <div className="grid gap-3 md:grid-cols-2">
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">Resource role</Label>
+                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Role</Label>
                                         <Combobox
                                             value={workLogResourceRoleId}
                                             onChange={setWorkLogResourceRoleId}
@@ -4194,14 +4263,9 @@ export function TasksPage() {
                                             className="w-full"
                                             triggerTestId="tasks-work-log-role-combobox"
                                         />
-                                        {resourceRoleOptions.length === 0 ? (
-                                            <p className="text-xs text-muted-foreground">
-                                                No assigned resource role for this project. Ask a project owner/admin to assign one.
-                                            </p>
-                                        ) : null}
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">Note (optional)</Label>
+                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Note</Label>
                                         <Input
                                             value={workLogNote}
                                             onChange={(event) => setWorkLogNote(event.target.value)}
@@ -4209,15 +4273,7 @@ export function TasksPage() {
                                             data-testid="tasks-work-log-note-input"
                                         />
                                     </div>
-                                </div>
-
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-xs text-muted-foreground">
-                                        {draftWorkLogEstimatedCost !== null && selectedWorkLogRole
-                                            ? `Estimated cost: ${formatCurrencyAmount(draftWorkLogEstimatedCost, selectedWorkLogRole.currency)}`
-                                            : "Estimated cost appears after entering hours and role."}
-                                    </p>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-end gap-2">
                                         {editingWorkLogId ? (
                                             <Button
                                                 type="button"
@@ -4226,11 +4282,12 @@ export function TasksPage() {
                                                 disabled={isWorkLogSaving}
                                                 data-testid="tasks-work-log-cancel-edit-button"
                                             >
-                                                Cancel edit
+                                                Cancel
                                             </Button>
                                         ) : null}
                                         <Button
                                             type="button"
+                                            className="h-10"
                                             onClick={() => {
                                                 void handleSaveWorkLog();
                                             }}
@@ -4243,12 +4300,21 @@ export function TasksPage() {
                                         </Button>
                                     </div>
                                 </div>
+                                {resourceRoleOptions.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        No project resource role is available for this task yet.
+                                    </p>
+                                ) : null}
 
                                 <div className="overflow-x-auto rounded-md border border-border/70 bg-background">
                                     <AppDataTable
                                         data={taskWorkLogs}
                                         columns={workLogColumns}
                                         getRowId={(row) => row.id}
+                                        className="min-w-[760px] table-fixed"
+                                        headerClassName="[&_tr]:border-0 bg-background"
+                                        bodyClassName="[&_tr:nth-child(even)]:bg-muted/[0.08]"
+                                        rowClassName="border-0 align-middle hover:bg-muted/20"
                                         isLoading={taskWorkLogsQuery.isLoading}
                                         loadingRow={(
                                             <TableRow>

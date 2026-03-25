@@ -81,7 +81,7 @@ function getStageVariant(stage: string | null | undefined): "outline" | "seconda
 function getDataStatusLabel(dataStatus: string | null | undefined) {
     if (!dataStatus) return "Awaiting supported rule evaluations";
     if (dataStatus === "ok") return "Health data available";
-    if (dataStatus === "insufficient_data") return "Awaiting enough timeline data for a stable reading";
+    if (dataStatus === "insufficient_data") return "Awaiting timeline data";
     if (dataStatus === "unsupported_metric") return "Progress metric is unsupported for this view";
     return dataStatus.replace(/_/g, " ");
 }
@@ -132,14 +132,14 @@ function getProjectSignalLabel(summary: {
     metricSupported: boolean;
     stage: string | null;
 } | null) {
-    if (!summary) return "Portfolio signal is still warming up.";
+    if (!summary) return "Signal pending";
     if (summary.metricSupported === false || summary.dataStatus === "unsupported_metric") {
         return "Unsupported for this metric";
     }
     if (summary.dataStatus === "insufficient_data") {
         return "Needs more timeline data";
     }
-    return "Live portfolio reading";
+    return "Live";
 }
 
 export function ProjectsPage() {
@@ -412,15 +412,13 @@ export function ProjectsPage() {
                             </div>
                             <div className="space-y-1">
                                 <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-                                <p className="max-w-3xl text-muted-foreground">
-                                    Create a project, move into Project Settings to finish team, rates, and health rules,
-                                    then use the dashboard for monitoring and governance.
+                                <p className="max-w-3xl text-sm text-muted-foreground">
+                                    Create, finish setup, then monitor.
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <Badge variant="outline">Settings first</Badge>
                                 <Badge variant="outline">Dashboard after setup</Badge>
-                                <span>Actions stay tucked into each row so the portfolio signal stays readable.</span>
                             </div>
                             {latestRemoteChangeSummary ? (
                                 <p className="text-xs text-muted-foreground">
@@ -746,12 +744,7 @@ export function ProjectsPage() {
 
                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
                         <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-foreground">Search workspace</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Filter by project identity, S-curve stage, or portfolio data readiness.
-                                </p>
-                            </div>
+                            <p className="text-sm font-medium text-foreground">Search workspace</p>
                             <div className="max-w-xl">
                                 <label htmlFor="projects-search-input" className="mb-1 block text-xs font-medium text-muted-foreground">
                                     Search projects
@@ -771,7 +764,6 @@ export function ProjectsPage() {
                                 {trimmedProjectQuery ? (
                                     <>
                                         <Badge variant="outline">Search: {trimmedProjectQuery}</Badge>
-                                        <span>Filtering name, description, stage, and data status.</span>
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -782,18 +774,14 @@ export function ProjectsPage() {
                                             Clear
                                         </Button>
                                     </>
-                                ) : (
-                                    <span>Projects stay setup-first: open Settings before using Dashboard as the source of truth.</span>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
                         <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/25 p-4" data-testid="projects-signal-summary">
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-foreground">Portfolio signal</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Stable projects stay quiet. This strip is here to surface exceptions and missing data.
-                                </p>
+                                <p className="text-sm text-muted-foreground">Exceptions first.</p>
                             </div>
                             <div className="overflow-hidden rounded-full bg-muted">
                                 <div className="flex h-2 w-full">
@@ -823,14 +811,11 @@ export function ProjectsPage() {
             <Card className="shadow-sm transition-shadow hover:shadow-md" data-testid="projects-page-table-card">
                 <CardHeader>
                     <CardTitle>Workspace projects</CardTitle>
-                    <CardDescription>
-                        Scan project identity first, use the signal column for health and progress, then open actions only when you need them.
-                    </CardDescription>
+                    <CardDescription>Identity, signal, actions.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant="outline">{visibleProjectSummaryLabel}</Badge>
-                        <span>Project Settings and Dashboard stay in the overflow menu so the row stays focused on signal, not controls.</span>
                     </div>
                     {error ? (
                         <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -917,34 +902,33 @@ function VirtualizedProjectsTable({
     const columns = useMemo<ColumnDef<Project, unknown>[]>(() => ([
         projectColumnHelper.display({
             id: "project",
-            header: "Project",
+            header: () => <div className="min-w-[320px]">Project</div>,
             cell: (info) => {
                 const summary = getProjectSummary(info.row.original.id);
                 return (
-                    <div className="space-y-2 py-1">
+                    <div className="min-w-0 py-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold text-foreground">{info.row.original.name}</span>
                             {(!summary || summary.dataStatus === "insufficient_data") ? (
-                                <Badge variant="outline">Finish setup</Badge>
+                                <Badge variant="outline" className="text-[10px]">Setup</Badge>
                             ) : null}
                         </div>
-                        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            {info.row.original.description?.trim() || "No project description yet."}
-                        </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>
-                                {summary?.dataStatus === "ok"
-                                    ? "Ready for dashboard review"
-                                    : "Project Settings still has important setup work"}
+                            <span className="max-w-[440px] truncate" title={info.row.original.description?.trim() || "No project description yet."}>
+                                {info.row.original.description?.trim() || "No description yet"}
                             </span>
                         </div>
                     </div>
                 );
             },
+            meta: {
+                headerClassName: "px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-4 py-2 align-middle",
+            },
         }),
         projectColumnHelper.display({
             id: "signal",
-            header: "Portfolio signal",
+            header: () => <div className="min-w-[240px]">Signal</div>,
             cell: (info) => {
                 const project = info.row.original;
                 const summary = getProjectSummary(project.id);
@@ -952,7 +936,7 @@ function VirtualizedProjectsTable({
                     ? Math.max(0, Math.min(100, summary.actualPct))
                     : null;
                 return (
-                    <div className="min-w-[240px] space-y-2 py-1">
+                    <div className="min-w-[240px] py-1.5">
                         <div className="flex items-center justify-between gap-3">
                             <Badge variant={getStageVariant(summary?.stage)}>
                                 {getStageLabel(summary?.stage)}
@@ -961,7 +945,7 @@ function VirtualizedProjectsTable({
                                 {formatActualProgress(project.id)}
                             </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
                                 className={cn("h-full rounded-full transition-all", getProjectSignalBarClass(summary))}
                                 style={{
@@ -969,18 +953,21 @@ function VirtualizedProjectsTable({
                                         ? `${numericActual}%`
                                         : summary?.dataStatus === "insufficient_data"
                                             ? "32%"
-                                            : "16%",
+                                        : "16%",
                                 }}
                             />
                         </div>
-                        <p className="max-w-[260px] text-xs text-muted-foreground">
-                            {getProjectSignalLabel(summary)}
-                        </p>
-                        <p className="max-w-[260px] text-xs text-muted-foreground">
-                            {getDataStatusLabel(summary?.dataStatus)}
-                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{getProjectSignalLabel(summary)}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{getDataStatusLabel(summary?.dataStatus)}</span>
+                        </div>
                     </div>
                 );
+            },
+            meta: {
+                headerClassName: "px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "px-4 py-2 align-middle",
             },
         }),
         projectColumnHelper.display({
@@ -1000,6 +987,10 @@ function VirtualizedProjectsTable({
                     </div>
                 );
             },
+            meta: {
+                headerClassName: "w-[84px] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                cellClassName: "w-[84px] px-4 py-2 align-middle",
+            },
         }),
     ]), [editForm, formatActualProgress, getProjectSummary, setConfirmOpen, setEditing, setProjectToDelete]);
 
@@ -1011,7 +1002,7 @@ function VirtualizedProjectsTable({
                 data={projects}
                 columns={columns}
                 getRowId={(row) => row.id}
-                className="min-w-[760px]"
+                className="min-w-[760px] table-fixed"
                 headerClassName="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
                 bodyClassName="[&_tr:nth-child(even)]:bg-muted/15"
                 rowClassName="align-top transition-colors hover:bg-muted/35"

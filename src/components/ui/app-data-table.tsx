@@ -16,6 +16,11 @@ type DataTableRowProps = React.HTMLAttributes<HTMLTableRowElement> & {
     [key: `data-${string}`]: string | number | boolean | undefined;
 };
 
+type DataTableColumnMeta = {
+    headerClassName?: string;
+    cellClassName?: string;
+};
+
 export type AppDataTableProps<TData extends RowData> = {
     data: TData[];
     columns: ColumnDef<TData, unknown>[];
@@ -60,7 +65,10 @@ export function AppDataTable<TData extends RowData>({
                 {headerGroups.map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                         {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
+                            <TableHead
+                                key={header.id}
+                                className={(header.column.columnDef.meta as DataTableColumnMeta | undefined)?.headerClassName}
+                            >
                                 {header.isPlaceholder
                                     ? null
                                     : flexRender(header.column.columnDef.header, header.getContext())}
@@ -104,7 +112,10 @@ export function AppDataTable<TData extends RowData>({
                             )}
                         >
                             {row.getVisibleCells().map((cell) => (
-                                <TableCell key={cell.id}>
+                                <TableCell
+                                    key={cell.id}
+                                    className={(cell.column.columnDef.meta as DataTableColumnMeta | undefined)?.cellClassName}
+                                >
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </TableCell>
                             ))}

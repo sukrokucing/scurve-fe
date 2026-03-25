@@ -423,7 +423,7 @@ export const ProjectDashboard = () => {
                                 <Badge variant="outline">Stage {stageLabel}</Badge>
                             </div>
                             <p className="max-w-2xl text-sm text-muted-foreground">
-                                {dashboard.project.description || "Project progress, execution health, and S-curve performance in one place."}
+                                {dashboard.project.description || "Progress, workload, and S-curve signal."}
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -457,7 +457,7 @@ export const ProjectDashboard = () => {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Overall progress</CardTitle>
-                                <CardDescription>Project completion signal.</CardDescription>
+                                <CardDescription>Completion signal.</CardDescription>
                             </div>
                             <Target className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -485,7 +485,9 @@ export const ProjectDashboard = () => {
                                     style={{ width: `${Math.max(0, Math.min(100, overallProgress ?? 0))}%` }}
                                 />
                             </div>
-                            <p className="text-xs text-muted-foreground">Falls back to average task progress when needed.</p>
+                            {overallProgress === null ? (
+                                <p className="text-xs text-muted-foreground">Awaiting progress data.</p>
+                            ) : null}
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
@@ -553,7 +555,7 @@ export const ProjectDashboard = () => {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Workload distribution</CardTitle>
-                                <CardDescription>Task count per project member.</CardDescription>
+                                <CardDescription>Task count by owner.</CardDescription>
                             </div>
                             <Users2 className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -573,7 +575,7 @@ export const ProjectDashboard = () => {
                             <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Assignment coverage</p>
                                 <p className="mt-1 text-lg font-semibold">{assignmentCoverage}%</p>
-                                <p className="text-xs text-muted-foreground">Tasks with an explicit owner</p>
+                                <p className="text-xs text-muted-foreground">Tasks with an owner</p>
                             </div>
                             <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Top load</p>
@@ -585,8 +587,8 @@ export const ProjectDashboard = () => {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                     {workloadDistribution.topOwner
-                                        ? `${workloadDistribution.topOwner.count} task(s) currently assigned`
-                                        : "Distribute work after assigning owners"}
+                                        ? `${workloadDistribution.topOwner.count} task(s) assigned`
+                                        : "Assign owners to distribute work"}
                                 </p>
                             </div>
                         </div>
