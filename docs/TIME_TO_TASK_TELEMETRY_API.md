@@ -1,6 +1,6 @@
 # Time-to-Task Telemetry API Contract
 
-Last updated: 2026-03-04
+Last updated: 2026-03-25
 
 ## Purpose
 
@@ -31,9 +31,7 @@ Ingest frontend friction telemetry emitted from the Tasks flow (`/tasks`) so UX 
       "reason": "leave-tasks-page",
       "duration_ms": 9234,
       "intent_to_complete_ms": 4033,
-      "metadata": {
-        "source": "tasks-page"
-      }
+      "metadata": {}
     }
   ]
 }
@@ -42,10 +40,10 @@ Ingest frontend friction telemetry emitted from the Tasks flow (`/tasks`) so UX 
 Notes:
 
 - `events` is required and may contain 1..20 items.
-- Unknown keys should be ignored (forward-compatible ingestion).
+- `metadata` is currently required by the generated backend contract, but it must
+  be an empty object (`{}`).
 - `event_id` should be treated as idempotency key.
 - Optional fields may be omitted when not applicable.
-- `metadata.intent_qualified` and `metadata.passive_exit` may be sent on finalized events.
 
 ## Event Names Emitted by FE
 
@@ -57,9 +55,9 @@ Notes:
 Event semantics note:
 
 - `time_to_task.abandoned` includes both intent-qualified abandon and passive page exits.
-- Use metadata flags to segment:
-  - `metadata.intent_qualified=true` for intent-stage abandon.
-  - `metadata.passive_exit=true` for no-intent exits.
+- FE still tracks those distinctions locally, but the live ingest contract no longer
+  accepts custom metadata keys. If backend reintroduces typed metadata later, this
+  document should be updated again.
 
 ## Recommended Validation
 

@@ -1,6 +1,7 @@
 type TelemetryPrimitive = string | number | boolean | null;
 
-type TelemetryMetadata = Record<string, TelemetryPrimitive>;
+type TelemetryInputMetadata = Record<string, TelemetryPrimitive>;
+type TelemetryMetadata = Record<string, never>;
 
 export type TelemetryEventPayload = {
     eventId?: string;
@@ -15,7 +16,7 @@ export type TelemetryEventPayload = {
     reason?: string;
     durationMs?: number;
     intentToCompleteMs?: number;
-    metadata?: TelemetryMetadata;
+    metadata?: TelemetryInputMetadata;
 };
 
 type TelemetryEvent = {
@@ -39,6 +40,7 @@ const MAX_BATCH_SIZE = 20;
 const DEFAULT_FLUSH_MS = 2000;
 const DEFAULT_ENDPOINT = "/api/telemetry/events";
 const RETRY_BACKOFF_MS = 6000;
+const EMPTY_TELEMETRY_METADATA = Object.freeze({}) as TelemetryMetadata;
 
 const TELEMETRY_ENDPOINT = resolveEndpoint();
 const TELEMETRY_ENABLED = parseBoolean(import.meta.env.VITE_TELEMETRY_ENABLED, false);
@@ -100,6 +102,8 @@ function withDefinedValues<T extends Record<string, unknown>>(input: T): T {
 }
 
 function toEvent(payload: TelemetryEventPayload): TelemetryEvent {
+    // The live backend contract currently requires a metadata object but rejects
+    // ad-hoc keys, so we send a stable empty object until typed metadata returns.
     return withDefinedValues({
         event_id: payload.eventId ?? generateEventId(),
         event_name: payload.eventName,
@@ -113,7 +117,7 @@ function toEvent(payload: TelemetryEventPayload): TelemetryEvent {
         reason: payload.reason,
         duration_ms: payload.durationMs,
         intent_to_complete_ms: payload.intentToCompleteMs,
-        metadata: payload.metadata,
+        metadata: EMPTY_TELEMETRY_METADATA,
     });
 }
 
@@ -147,6 +151,24 @@ function dequeueBatch() {
 function enqueueBatch(batch: TelemetryEvent[]) {
     if (batch.length === 0) return;
     queue = [...batch, ...queue].slice(-MAX_QUEUE_SIZE);
+}
+
+function resetTelemetryQueueForUser(userId?: string) {
+    if (!userId) return;
+    const hasQueuedEventsForAnotherUser = queue.some((event) => (
+        typeof event.user_id === "string"
+        && event.user_id.length > 0
+        && event.user_id !== userId
+    ));
+
+    if (!hasQueuedEventsForAnotherUser) return;
+
+    queue = [];
+    if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+    }
+    cancelRetry();
 }
 
 function bindLifecycleHooks() {
@@ -204,6 +226,7 @@ export function emitTelemetryEvent(payload: TelemetryEventPayload) {
     if (Math.random() > TELEMETRY_SAMPLE_RATE) return;
 
     bindLifecycleHooks();
+    resetTelemetryQueueForUser(payload.userId);
     cancelRetry();
     queue.push(toEvent(payload));
     if (queue.length > MAX_QUEUE_SIZE) {

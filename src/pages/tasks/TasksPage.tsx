@@ -1,7 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEventHandler } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { addDays, format, formatDistanceToNowStrict, isSameDay } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -85,6 +85,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
 import { useRealtimeStore } from "@/store/realtimeStore";
+import {
+    getPresenceStatusLabel,
+    getRealtimeRouteLabel,
+    isPresenceRecentlyActive,
+    summarizePresenceRoutes,
+} from "@/lib/realtimePresentation";
 import { cn } from "@/lib/utils";
 import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
 import {
@@ -116,6 +122,7 @@ const KANBAN_COLUMNS = [
 const BASE_DURATION_DAYS = [1, 2, 3, 5, 7, 10, 14, 21, 30, 60, 90] as const;
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_PROGRESS: Progress[] = [];
+const EMPTY_REALTIME_PRESENCE: components["schemas"]["RealtimePresenceUser"][] = [];
 const taskListColumnHelper = createColumnHelper<Task>();
 const workLogColumnHelper = createColumnHelper<ApiWorkLog>();
 const DEFAULT_TASK_FORM_VALUES: TaskFormValues = {
@@ -636,7 +643,9 @@ export function TasksPage() {
         enabled: Boolean(selectedProject) && projectResourceRoleRates.length === 0,
     });
     const selectedProjectPresence = useRealtimeStore((state) => (
-        selectedProject ? state.presenceByProjectId[selectedProject] ?? [] : []
+        selectedProject
+            ? state.presenceByProjectId[selectedProject] ?? EMPTY_REALTIME_PRESENCE
+            : EMPTY_REALTIME_PRESENCE
     ));
 
     const projectAssigneeList = useMemo(
@@ -689,6 +698,14 @@ export function TasksPage() {
     const hiddenTeamMemberCount = Math.max(teamMembersForSummary.length - visibleTeamMembers.length, 0);
     const onlineTeamMemberCount = useMemo(
         () => teamMembersForSummary.filter((member) => member.presence?.status === "online").length,
+        [teamMembersForSummary],
+    );
+    const recentlyActiveTeamMemberCount = useMemo(
+        () => teamMembersForSummary.filter((member) => isPresenceRecentlyActive(member.presence)).length,
+        [teamMembersForSummary],
+    );
+    const presenceRouteSummary = useMemo(
+        () => summarizePresenceRoutes(teamMembersForSummary.map((member) => member.presence)).slice(0, 2),
         [teamMembersForSummary],
     );
 
@@ -3083,15 +3100,11 @@ export function TasksPage() {
                                                         <p className="font-medium">{member.label}</p>
                                                         <p className="text-[11px] text-muted-foreground">{member.email}</p>
                                                         <p className="text-[11px] text-muted-foreground">
-                                                            {member.presence?.status === "online"
-                                                                ? "Online now"
-                                                                : member.presence?.last_seen_at
-                                                                    ? `Last seen ${formatDistanceToNowStrict(new Date(member.presence.last_seen_at), { addSuffix: true })}`
-                                                                    : "Offline"}
+                                                            {getPresenceStatusLabel(member.presence)}
                                                         </p>
-                                                        {member.presence?.route ? (
+                                                        {member.presence?.route && getRealtimeRouteLabel(member.presence.route) ? (
                                                             <p className="text-[11px] text-muted-foreground">
-                                                                Route: {member.presence.route}
+                                                                Working in {getRealtimeRouteLabel(member.presence.route)}
                                                             </p>
                                                         ) : null}
                                                     </div>
@@ -3125,6 +3138,11 @@ export function TasksPage() {
                                     <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
                                         {onlineTeamMemberCount} online
                                     </Badge>
+                                    {recentlyActiveTeamMemberCount > 0 ? (
+                                        <Badge variant="secondary">
+                                            {recentlyActiveTeamMemberCount} recently active
+                                        </Badge>
+                                    ) : null}
                                     <span className="text-xs text-muted-foreground">
                                         Project team size visible to everyone working in this menu.
                                     </span>
@@ -3134,6 +3152,15 @@ export function TasksPage() {
                                         ? "Use this as the quick team-size and availability signal before assigning or filtering tasks."
                                         : "No project members are available yet. Add members in Project Settings to make the team visible here."}
                                 </p>
+                                {presenceRouteSummary.length > 0 ? (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {presenceRouteSummary.map((routeSummary) => (
+                                            <Badge key={routeSummary.label} variant="outline">
+                                                {routeSummary.count} in {routeSummary.label}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     ) : null}

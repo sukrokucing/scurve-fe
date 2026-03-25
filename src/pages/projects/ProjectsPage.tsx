@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { formatDistanceToNowStrict } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
 import { MoreHorizontal } from "lucide-react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
@@ -38,6 +39,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
+import { isPresenceRecentlyActive, summarizePresenceRoutes } from "@/lib/realtimePresentation";
 import { cn } from "@/lib/utils";
 import { useRealtimeStore } from "@/store/realtimeStore";
 import type { Project } from "@/types/domain";
@@ -62,6 +64,7 @@ export function ProjectsPage() {
     const { data: projects, isLoading, refetch, isRefetching, error } = useProjectsQuery();
     const clearAllRemoteChanges = useRealtimeStore((state) => state.clearAllRemoteChanges);
     const remoteChangesByProjectId = useRealtimeStore((state) => state.remoteChangesByProjectId);
+    const presenceByProjectId = useRealtimeStore((state) => state.presenceByProjectId);
     const { data: portfolioSummary } = usePortfolioSCurveSummary("progress");
     const [editing, setEditing] = useState<Project | null>(null);
     const [projectQuery, setProjectQuery] = useState("");
@@ -202,6 +205,51 @@ export function ProjectsPage() {
             .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())[0]
             ?.summary ?? null;
     }, [remoteChangesByProjectId]);
+    const latestRemoteChangeAt = useMemo(() => {
+        const changes = Object.values(remoteChangesByProjectId);
+        if (changes.length === 0) return null;
+        return changes
+            .slice()
+            .sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())[0]
+            ?.occurredAt ?? null;
+    }, [remoteChangesByProjectId]);
+    const presenceUsers = useMemo(() => {
+        const flattenedPresenceUsers = Object.values(presenceByProjectId).flat();
+        const byUserId = new Map<string, (typeof flattenedPresenceUsers)[number]>();
+        flattenedPresenceUsers.forEach((user) => {
+            const current = byUserId.get(user.user_id);
+            if (!current) {
+                byUserId.set(user.user_id, user);
+                return;
+            }
+
+            if (user.status === "online" && current.status !== "online") {
+                byUserId.set(user.user_id, user);
+                return;
+            }
+
+            if (new Date(user.last_seen_at).getTime() > new Date(current.last_seen_at).getTime()) {
+                byUserId.set(user.user_id, user);
+            }
+        });
+        return Array.from(byUserId.values());
+    }, [presenceByProjectId]);
+    const onlinePresenceCount = useMemo(
+        () => presenceUsers.filter((user) => user.status === "online").length,
+        [presenceUsers],
+    );
+    const recentlyActivePresenceCount = useMemo(
+        () => presenceUsers.filter((user) => isPresenceRecentlyActive(user)).length,
+        [presenceUsers],
+    );
+    const activePresenceProjectCount = useMemo(
+        () => Object.values(presenceByProjectId).filter((users) => users.some((user) => user.status === "online")).length,
+        [presenceByProjectId],
+    );
+    const topPresenceRoutes = useMemo(
+        () => summarizePresenceRoutes(presenceUsers).slice(0, 2),
+        [presenceUsers],
+    );
 
     return (
         <div className="space-y-6">
@@ -209,6 +257,32 @@ export function ProjectsPage() {
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
                     <p className="text-muted-foreground">Monitor progress and manage milestones.</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge variant={onlinePresenceCount > 0 ? "success" : "outline"}>
+                            {onlinePresenceCount} online
+                        </Badge>
+                        <Badge variant="outline">
+                            {activePresenceProjectCount} active project{activePresenceProjectCount === 1 ? "" : "s"}
+                        </Badge>
+                        {recentlyActivePresenceCount > 0 ? (
+                            <Badge variant="secondary">
+                                {recentlyActivePresenceCount} recently active
+                            </Badge>
+                        ) : null}
+                        {topPresenceRoutes.map((routeSummary) => (
+                            <Badge key={routeSummary.label} variant="outline">
+                                {routeSummary.count} in {routeSummary.label}
+                            </Badge>
+                        ))}
+                    </div>
+                    {latestRemoteChangeSummary ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Latest live update: {latestRemoteChangeSummary}
+                            {latestRemoteChangeAt
+                                ? ` · ${formatDistanceToNowStrict(new Date(latestRemoteChangeAt), { addSuffix: true })}`
+                                : ""}
+                        </p>
+                    ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button

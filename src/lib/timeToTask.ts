@@ -151,6 +151,17 @@ function finalizeSession(
     };
 }
 
+function shouldDiscardActiveSession(
+    activeSession: TimeToTaskSession,
+    nextUserId?: string,
+) {
+    return Boolean(
+        activeSession.userId
+        && nextUserId
+        && activeSession.userId !== nextUserId,
+    );
+}
+
 function emitSessionStarted(session: TimeToTaskSession) {
     emitTelemetryEvent({
         eventId: `time-to-task-start-${session.id}`,
@@ -206,9 +217,13 @@ function emitSessionFinalized(record: TimeToTaskRecord) {
 export function startTimeToTaskSession(context?: SessionContext): string {
     const current = readActiveSession();
     if (current) {
-        const restartedRecord = finalizeSession(current, "abandoned", { reason: "restarted-session" });
-        appendRecord(restartedRecord);
-        emitSessionFinalized(restartedRecord);
+        if (shouldDiscardActiveSession(current, context?.userId)) {
+            writeActiveSession(null);
+        } else {
+            const restartedRecord = finalizeSession(current, "abandoned", { reason: "restarted-session" });
+            appendRecord(restartedRecord);
+            emitSessionFinalized(restartedRecord);
+        }
     }
 
     const session: TimeToTaskSession = {

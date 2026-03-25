@@ -1,0 +1,91 @@
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkZTZjYjE0OC1hYThlLTRhNDMtOTRmOS1mZDVlZTZjOGNiYjMiLCJleHAiOjE3NzQ0ODgzNTIsImlhdCI6MTc3NDQwMTk1Mn0.PA2cH3JmES9L_w7UnuD8W-VUCI_UzfLPzlgpFAyBU-Y",
+  "user": {
+    "id": "de6cb148-aa8e-4a43-94f9-fd5ee6c8cbb3",
+    "name": "Demo Project Owner",
+    "email": "demo.project.owner@example.com"
+  },
+  "permissions": [
+    {
+      "name": "project.create",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "project.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "project.update",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "project.delete",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "task.create",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "task.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "task.update",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "task.delete",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "progress.create",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "progress.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "user.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "user.manage",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "role.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "role.manage",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "permission.view",
+      "source": "role",
+      "role_name": "project_owner"
+    },
+    {
+      "name": "permission.manage",
+      "source": "role",
+      "role_name": "project_owner"
+    }
+  ],
+  "createdAt": "2026-03-25T01:25:52.123Z"
+}

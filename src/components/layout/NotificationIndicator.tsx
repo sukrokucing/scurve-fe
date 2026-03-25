@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRealtimeRouteLabel } from "@/lib/realtimePresentation";
 import { cn } from "@/lib/utils";
 import { useRealtimeStore } from "@/store/realtimeStore";
 import { toast } from "sonner";
@@ -53,6 +54,9 @@ function NotificationList({
     onSelect: (notification: ApiNotification) => void;
     unreadCount: number;
 }) {
+    const criticalUnreadCount = items.filter((item) => item.unread && item.severity === "critical").length;
+    const importantUnreadCount = items.filter((item) => item.unread && item.severity === "important").length;
+
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-start justify-between gap-3 px-4 py-4">
@@ -64,6 +68,17 @@ function NotificationList({
                     <p className="text-xs text-muted-foreground">
                         Project-scoped updates that your current RBAC visibility allows you to see.
                     </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {criticalUnreadCount > 0 ? (
+                            <Badge variant="destructive">{criticalUnreadCount} critical</Badge>
+                        ) : null}
+                        {importantUnreadCount > 0 ? (
+                            <Badge variant="warning">{importantUnreadCount} important</Badge>
+                        ) : null}
+                        {criticalUnreadCount === 0 && importantUnreadCount === 0 && unreadCount > 0 ? (
+                            <Badge variant="outline">All unread items are low-noise</Badge>
+                        ) : null}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Badge
@@ -114,14 +129,20 @@ function NotificationList({
                         {items.map((notification) => {
                             const targetRoute = getNotificationRoute(notification);
                             const isCurrentTarget = targetRoute === currentRoute;
+                            const routeLabel = getRealtimeRouteLabel(targetRoute);
 
                             return (
                                 <button
                                     key={notification.id}
                                     type="button"
                                     className={cn(
-                                        "flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
+                                        "flex w-full flex-col gap-1 border-l-2 px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-2",
                                         notification.unread ? "bg-primary/5" : "bg-background",
+                                        notification.severity === "critical"
+                                            ? "border-l-destructive/70"
+                                            : notification.severity === "important"
+                                                ? "border-l-warning/70"
+                                                : "border-l-transparent",
                                     )}
                                     onClick={() => onSelect(notification)}
                                     data-testid="notification-item"
@@ -144,6 +165,9 @@ function NotificationList({
                                                     <Badge variant={getSeverityBadgeVariant(notification)}>
                                                         {notification.severity === "critical" ? "Critical" : "Important"}
                                                     </Badge>
+                                                ) : null}
+                                                {routeLabel ? (
+                                                    <Badge variant="secondary">Open {routeLabel}</Badge>
                                                 ) : null}
                                             </div>
                                             <p className="text-sm text-muted-foreground">

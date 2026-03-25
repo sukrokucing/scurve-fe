@@ -53,6 +53,8 @@ function isPresenceMetadata(value: RealtimeEvent["metadata"]): value is Realtime
     return Boolean(value && typeof value === "object" && "user_id" in value && "status" in value && "last_seen_at" in value);
 }
 
+const DISCONNECT_GRACE_MS = 150;
+
 export function buildRealtimeWebSocketUrl(token: string) {
     if (typeof window === "undefined") return null;
 
@@ -95,6 +97,7 @@ function applyRealtimeEventSideEffects(event: RealtimeEvent) {
 
 class RealtimeClient {
     private activeProjectIds = new Set<string>();
+    private disconnectTimer: ReturnType<typeof window.setTimeout> | null = null;
     private manualDisconnect = false;
     private pingTimer: ReturnType<typeof window.setInterval> | null = null;
     private reconnectAttempt = 0;
@@ -107,6 +110,7 @@ class RealtimeClient {
     private lastSubscribedRoute: string | null = null;
 
     connect(token: string, projectIds: string[], route: string | null) {
+        this.clearDisconnectTimer();
         this.token = token;
         this.desiredProjectIds = uniqSorted(projectIds);
         this.desiredRoute = route ?? null;
@@ -130,21 +134,39 @@ class RealtimeClient {
 
         const activeSocket = this.socket;
         if (activeSocket && activeSocket.readyState === WebSocket.OPEN) {
+            useRealtimeStore.getState().setConnectionStatus("connected");
             this.syncSubscriptions();
+            return;
+        }
+
+        if (activeSocket && activeSocket.readyState === WebSocket.CONNECTING) {
+            useRealtimeStore.getState().setConnectionStatus("connecting");
         }
     }
 
     disconnect() {
         this.manualDisconnect = true;
+        this.clearDisconnectTimer();
         this.clearReconnectTimer();
         this.stopPing();
         this.activeProjectIds.clear();
         this.lastSubscribedRoute = null;
         useRealtimeStore.getState().clearConnectionState();
-        if (this.socket) {
-            this.socket.close(1000, "client-disconnect");
+
+        this.disconnectTimer = window.setTimeout(() => {
+            this.disconnectTimer = null;
+            if (this.socket) {
+                this.socket.close(1000, "client-disconnect");
+            }
+            this.teardownSocket();
+        }, DISCONNECT_GRACE_MS);
+    }
+
+    private clearDisconnectTimer() {
+        if (this.disconnectTimer) {
+            window.clearTimeout(this.disconnectTimer);
+            this.disconnectTimer = null;
         }
-        this.teardownSocket();
     }
 
     private clearReconnectTimer() {
