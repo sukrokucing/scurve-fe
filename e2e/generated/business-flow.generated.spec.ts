@@ -359,6 +359,9 @@ function locatorFrom(page, locator) {
     if (locator.first) {
         target = target.first();
     }
+    if (locator.last) {
+        target = target.last();
+    }
     if (typeof locator.nth === "number") {
         target = target.nth(locator.nth);
     }
@@ -469,8 +472,11 @@ test.describe("business_flow_generated", () => {
         await test.step("Filter projects by created project name", async () => {
             await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-search-input"}, FLOW_VARS)).fill(interpolateString("${PROJECT_NAME}", FLOW_VARS));
         });
+        await test.step("Open project row actions", async () => {
+            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-actions-toggle\"]"}, FLOW_VARS)).click();
+        });
         await test.step("Open first project dashboard", async () => {
-            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-dashboard-link\"]"}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-row-dashboard-link","first":true}, FLOW_VARS)).click();
         });
         await test.step("S-Curve chart section is visible", async () => {
             await expect(locatorFrom(page, interpolateData({"by":"text","text":"S-Curve Performance"}, FLOW_VARS))).toBeVisible();
@@ -494,8 +500,11 @@ test.describe("business_flow_generated", () => {
         await test.step("Filter projects by created project name", async () => {
             await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-search-input"}, FLOW_VARS)).fill(interpolateString("${PROJECT_NAME}", FLOW_VARS));
         });
+        await test.step("Open project row actions", async () => {
+            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-actions-toggle\"]"}, FLOW_VARS)).click();
+        });
         await test.step("Open first project settings", async () => {
-            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-settings-link\"]"}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-row-settings-link","first":true}, FLOW_VARS)).click();
         });
         await test.step("Project settings page is visible", async () => {
             await expect(locatorFrom(page, interpolateData({"by":"testid","testid":"project-settings-page"}, FLOW_VARS))).toBeVisible();
@@ -534,8 +543,11 @@ test.describe("business_flow_generated", () => {
         await test.step("Filter projects by created project name", async () => {
             await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-search-input"}, FLOW_VARS)).fill(interpolateString("${PROJECT_NAME}", FLOW_VARS));
         });
+        await test.step("Open project row actions", async () => {
+            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-actions-toggle\"]"}, FLOW_VARS)).click();
+        });
         await test.step("Open first project settings", async () => {
-            await locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-settings-link\"]"}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"projects-row-settings-link","first":true}, FLOW_VARS)).click();
         });
         await test.step("Project settings page is visible", async () => {
             await expect(locatorFrom(page, interpolateData({"by":"testid","testid":"project-settings-page"}, FLOW_VARS))).toBeVisible();
@@ -598,14 +610,8 @@ test.describe("business_flow_generated", () => {
                 await optionalTarget.click();
             }
         });
-        await test.step("Open first project edit dialog", async () => {
-            const optionalTarget = locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-edit-button\"]"}, FLOW_VARS));
-            if (await optionalTarget.isVisible({ timeout: 1200 }).catch(() => false)) {
-                await optionalTarget.click();
-            }
-        });
         await test.step("Open first project edit dialog via compact actions menu", async () => {
-            const optionalTarget = locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-compact-edit-button\"]"}, FLOW_VARS));
+            const optionalTarget = locatorFrom(page, interpolateData({"by":"testid","testid":"projects-row-compact-edit-button","first":true}, FLOW_VARS));
             if (await optionalTarget.isVisible({ timeout: 1200 }).catch(() => false)) {
                 await optionalTarget.click();
             }
@@ -644,14 +650,8 @@ test.describe("business_flow_generated", () => {
                 await optionalTarget.click();
             }
         });
-        await test.step("Open first project delete confirmation", async () => {
-            const optionalTarget = locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-delete-button\"]"}, FLOW_VARS));
-            if (await optionalTarget.isVisible({ timeout: 1200 }).catch(() => false)) {
-                await optionalTarget.click();
-            }
-        });
         await test.step("Open first project delete confirmation via compact actions menu", async () => {
-            const optionalTarget = locatorFrom(page, interpolateData({"by":"css","selector":"tbody tr:has-text(\"${PROJECT_NAME}\") [data-testid=\"projects-row-compact-delete-button\"]"}, FLOW_VARS));
+            const optionalTarget = locatorFrom(page, interpolateData({"by":"testid","testid":"projects-row-compact-delete-button","first":true}, FLOW_VARS));
             if (await optionalTarget.isVisible({ timeout: 1200 }).catch(() => false)) {
                 await optionalTarget.click();
             }
@@ -775,7 +775,8 @@ test.describe("business_flow_generated", () => {
             await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-search-input"}, FLOW_VARS)).fill(interpolateString("${TASK_TITLE}", FLOW_VARS));
         });
         await test.step("Open first task edit dialog", async () => {
-            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-edit-button","first":true}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-actions-trigger","first":true}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-edit-button","last":true}, FLOW_VARS)).click();
         });
         await test.step("Edit task dialog is visible", async () => {
             await expect(locatorFrom(page, interpolateData({"by":"role","role":"dialog","name":"Edit task"}, FLOW_VARS))).toBeVisible();
@@ -803,10 +804,11 @@ test.describe("business_flow_generated", () => {
             await page.waitForTimeout(700);
         });
         await test.step("First task delete action is visible", async () => {
-            await expect(locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-delete-button","first":true}, FLOW_VARS))).toBeVisible({ timeout: 10000 });
+            await expect(locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-actions-trigger","first":true}, FLOW_VARS))).toBeVisible({ timeout: 10000 });
         });
         await test.step("Open first task delete confirmation", async () => {
-            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-delete-button","first":true}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-actions-trigger","first":true}, FLOW_VARS)).click();
+            await locatorFrom(page, interpolateData({"by":"testid","testid":"tasks-row-delete-button","last":true}, FLOW_VARS)).click();
         });
         await test.step("Delete task confirmation dialog is visible", async () => {
             await expect(locatorFrom(page, interpolateData({"by":"role","role":"dialog","name":"Delete task"}, FLOW_VARS))).toBeVisible();

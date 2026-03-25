@@ -50,11 +50,12 @@ test.describe("menu hierarchy", () => {
         await expect(page.getByTestId("projects-refresh-button")).toBeVisible();
         await expect(page.getByTestId("projects-new-button")).toBeVisible();
 
-        const settingsLinks = page.getByTestId("projects-row-settings-link");
-        const dashboardLinks = page.getByTestId("projects-row-dashboard-link");
-        if (await settingsLinks.count()) {
-            await expect(settingsLinks.first()).toBeVisible();
-            await expect(dashboardLinks.first()).toBeVisible();
+        const actionToggles = page.getByTestId("projects-row-actions-toggle");
+        if (await actionToggles.count()) {
+            await expect(actionToggles.first()).toBeVisible();
+            await actionToggles.first().click();
+            await expect(page.getByTestId("projects-row-settings-link").first()).toBeVisible();
+            await expect(page.getByTestId("projects-row-dashboard-link").first()).toBeVisible();
         }
     });
 
@@ -73,7 +74,7 @@ test.describe("menu hierarchy", () => {
         await expect(page.getByTestId("tasks-page-primary-actions-card")).toBeVisible();
         await expect(page.getByTestId("tasks-secondary-insights-card")).toBeVisible();
         await expect(page.getByTestId("tasks-team-summary")).toBeVisible();
-        await expect(page.getByTestId("tasks-quick-create-input")).toBeVisible();
+        await expect(page.getByTestId("tasks-search-input")).toBeVisible();
         await expect(page.getByTestId("tasks-new-button")).toBeVisible();
         await expect(page.getByTestId("tasks-time-to-task-summary")).toBeVisible();
         await expect(page.getByTestId("tasks-health-summary-strip")).toBeVisible();

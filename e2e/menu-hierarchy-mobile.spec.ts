@@ -74,7 +74,7 @@ test.describe("menu hierarchy mobile", () => {
         await expect(page.getByTestId("tasks-mobile-quick-controls")).toBeVisible();
         await expect(page.getByTestId("tasks-team-summary")).toBeVisible();
         await expect(page.getByTestId("tasks-new-button")).toBeVisible();
-        await expect(page.getByTestId("tasks-quick-create-input")).toBeVisible();
+        await expect(page.getByTestId("tasks-search-input")).toBeVisible();
         await assertNoViewportOverflow(page);
     });
 });

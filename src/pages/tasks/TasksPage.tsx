@@ -1,6 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type MouseEventHandler } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { addDays, format, isSameDay } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -43,7 +42,7 @@ type Progress = components["schemas"]["Progress"];
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useNetworkStore } from "@/store/networkStore";
-import { Dialog, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { AppDialogContent } from "@/components/ui/app-dialog-content";
 import { AppDataTable } from "@/components/ui/app-data-table";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
@@ -51,7 +50,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -73,23 +72,29 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
-import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal } from "lucide-react";
+import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal, MoreHorizontal, Plus } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useMedia } from "@/hooks/vendor/reactUse";
 import { useAuthStore } from "@/store/authStore";
 import { useRealtimeStore } from "@/store/realtimeStore";
 import {
     getPresenceStatusLabel,
     getRealtimeRouteLabel,
-    isPresenceRecentlyActive,
-    summarizePresenceRoutes,
 } from "@/lib/realtimePresentation";
 import { cn } from "@/lib/utils";
 import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
@@ -152,6 +157,15 @@ type TaskSelectionCheckboxProps = {
     onClick?: MouseEventHandler<HTMLElement>;
 };
 
+type TaskActionMenuProps = {
+    task: Task;
+    triggerTestId: string;
+    editTestId: string;
+    deleteTestId: string;
+    onEdit: (task: Task) => void;
+    onDelete: (task: Task) => void;
+};
+
 function TaskSelectionCheckbox({ checked, label, testId, onToggle, onClick }: TaskSelectionCheckboxProps) {
     return (
         <Checkbox
@@ -167,6 +181,48 @@ function TaskSelectionCheckbox({ checked, label, testId, onToggle, onClick }: Ta
                 checked ? "border-primary/55 bg-accent/55" : "",
             )}
         />
+    );
+}
+
+function TaskActionMenu({
+    task,
+    triggerTestId,
+    editTestId,
+    deleteTestId,
+    onEdit,
+    onDelete,
+}: TaskActionMenuProps) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 rounded-full text-muted-foreground transition-opacity hover:bg-muted hover:text-foreground"
+                    data-testid={triggerTestId}
+                    aria-label={`Task actions for ${task.name}`}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                    onClick={() => onEdit(task)}
+                    data-testid={editTestId}
+                >
+                    Edit task
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    onClick={() => onDelete(task)}
+                    className="text-destructive focus:text-destructive"
+                    data-testid={deleteTestId}
+                >
+                    Delete task
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 
@@ -313,21 +369,21 @@ function buildWeightedStarterComponents(options: {
     ];
 }
 
-function getStatusVariant(status: string): "success" | "info" | "error" | "secondary" {
+function getTaskStatusTintClass(status: string) {
     switch (status) {
         case "todo":
         case "pending":
         case "not_started":
-            return "secondary";
+            return "border-border/70 bg-muted/60 text-muted-foreground";
         case "in_progress":
-            return "info";
+            return "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300";
         case "blocked":
-            return "error";
+            return "border-rose-500/30 bg-rose-500/12 text-rose-700 dark:text-rose-300";
         case "done":
         case "completed":
-            return "success";
+            return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
         default:
-            return "secondary";
+            return "border-border/70 bg-muted/60 text-muted-foreground";
     }
 }
 
@@ -341,17 +397,17 @@ function getTaskScurveTitle(task: Task) {
     return `Expected ${formatTaskPercent(snapshot.expected)} · Actual ${formatTaskPercent(snapshot.actual)} · Variance ${formatTaskVariance(snapshot.variance)}`;
 }
 
-function getScheduleStatusVariant(status?: TaskScheduleStatus): "success" | "warning" | "info" | "outline" {
+function getScheduleStatusToneClass(status?: TaskScheduleStatus) {
     switch (status) {
         case "finished_early":
-            return "success";
+            return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
         case "overdue":
-            return "warning";
+            return "border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-300";
         case "on_time":
-            return "info";
+            return "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300";
         case "not_specified":
         default:
-            return "outline";
+            return "border-border/70 bg-muted/60 text-muted-foreground";
     }
 }
 
@@ -367,6 +423,54 @@ function getScheduleStatusLabel(status?: TaskScheduleStatus): string {
             return "Not specified";
         default:
             return "Unknown";
+    }
+}
+
+function getTaskHealthBarClass(health: TaskHealthStatus) {
+    switch (health) {
+        case "ahead":
+            return "bg-emerald-500";
+        case "on_track":
+            return "bg-sky-500";
+        case "at_risk":
+            return "bg-amber-500";
+        case "critical":
+            return "bg-rose-500";
+        case "needs_plan":
+        default:
+            return "bg-slate-400";
+    }
+}
+
+function getTaskHealthTintClass(health: TaskHealthStatus) {
+    switch (health) {
+        case "ahead":
+            return "bg-emerald-500/10 text-emerald-700 ring-emerald-500/15 dark:text-emerald-300";
+        case "on_track":
+            return "bg-sky-500/10 text-sky-700 ring-sky-500/15 dark:text-sky-300";
+        case "at_risk":
+            return "bg-amber-500/12 text-amber-700 ring-amber-500/20 dark:text-amber-300";
+        case "critical":
+            return "bg-rose-500/12 text-rose-700 ring-rose-500/20 dark:text-rose-300";
+        case "needs_plan":
+        default:
+            return "bg-slate-500/10 text-slate-700 ring-slate-500/15 dark:text-slate-300";
+    }
+}
+
+function getTaskHealthBorderClass(health: TaskHealthStatus) {
+    switch (health) {
+        case "ahead":
+            return "border-l-emerald-500";
+        case "on_track":
+            return "border-l-sky-500";
+        case "at_risk":
+            return "border-l-amber-500";
+        case "critical":
+            return "border-l-rose-500";
+        case "needs_plan":
+        default:
+            return "border-l-slate-400";
     }
 }
 
@@ -514,6 +618,8 @@ export function TasksPage() {
         setSearchParams(nextSearchParams, { replace: true });
     }, [searchParams, selectedProject, setSearchParams]);
     const [view, setView] = useState<"list" | "gantt" | "kanban">("list");
+    const isTabletOrMobile = useMedia("(max-width: 1023px)", false);
+    const isWideDesktop = useMedia("(min-width: 1440px)", false);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -700,14 +806,6 @@ export function TasksPage() {
         () => teamMembersForSummary.filter((member) => member.presence?.status === "online").length,
         [teamMembersForSummary],
     );
-    const recentlyActiveTeamMemberCount = useMemo(
-        () => teamMembersForSummary.filter((member) => isPresenceRecentlyActive(member.presence)).length,
-        [teamMembersForSummary],
-    );
-    const presenceRouteSummary = useMemo(
-        () => summarizePresenceRoutes(teamMembersForSummary.map((member) => member.presence)).slice(0, 2),
-        [teamMembersForSummary],
-    );
 
     const assigneeDirectory = useMemo(() => {
         const entries = new Map<string, { id: string; name?: string | null; email: string }>();
@@ -876,6 +974,16 @@ export function TasksPage() {
             active: healthStatusFilter === healthStatus,
         }));
     }, [healthStatusFilter, healthSummaryTasks]);
+    const healthSummaryTotalCount = useMemo(
+        () => healthSummaryItems.reduce((total, item) => total + item.count, 0),
+        [healthSummaryItems],
+    );
+    const healthSummaryExceptionCount = useMemo(
+        () => healthSummaryItems
+            .filter((item) => item.healthStatus === "critical" || item.healthStatus === "at_risk" || item.healthStatus === "needs_plan")
+            .reduce((total, item) => total + item.count, 0),
+        [healthSummaryItems],
+    );
     const selectionScopeLabel = useMemo(() => {
         if (view === "list") {
             return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
@@ -1001,9 +1109,6 @@ export function TasksPage() {
         statusFilter,
         view,
     ]);
-    const compactTeamSummaryText = teamMembersForSummary.length > 0
-        ? `${teamMembersForSummary.length} member${teamMembersForSummary.length === 1 ? "" : "s"} available for assignment`
-        : "No project members are available yet";
     const allowedResourceRoleIds = useMemo(() => {
         const scopes = Array.isArray(myProjectScopes) ? myProjectScopes : [];
         const selectedScope = scopes.find((scope) => scope.project_id === selectedProject);
@@ -1051,7 +1156,6 @@ export function TasksPage() {
     }, [filteredTasks]);
 
     // List view table scroll container (desktop).
-    const parentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (page > totalPages) {
@@ -1152,7 +1256,6 @@ export function TasksPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [createProgressMethod, setCreateProgressMethod] = useState<TaskProgressMethod>("manual_percent_legacy");
     const [createWeightedStarterTemplateEnabled, setCreateWeightedStarterTemplateEnabled] = useState(true);
-    const [quickCreateTitle, setQuickCreateTitle] = useState("");
     const createRef = useRef<HTMLInputElement | null>(null);
     const timeToTaskSessionIdRef = useRef<string | null>(null);
     const [timeToTaskSummary, setTimeToTaskSummary] = useState(() =>
@@ -1171,7 +1274,6 @@ export function TasksPage() {
     const [progressComponentDrafts, setProgressComponentDrafts] = useState<TaskProgressComponentDraft[]>([]);
 
     const createMutation = useTaskMutation(selectedProject);
-    const quickCreateMutation = useTaskMutation(selectedProject);
     const deleteMutation = useDeleteTask(selectedProject);
     const inlineUpdateMutation = useUpdateTask();
     const editUpdateMutation = useUpdateTask();
@@ -1308,50 +1410,6 @@ export function TasksPage() {
             view,
         });
     }, [beginTimeToTaskSession, createOpen, selectedProject, view]);
-
-    const handleQuickCreate = useCallback(async () => {
-        const normalizedTitle = quickCreateTitle.trim();
-        if (!normalizedTitle) {
-            toast.error("Task title is required");
-            return;
-        }
-        if (!selectedProject) {
-            toast.error("Select a project before creating tasks");
-            return;
-        }
-
-        const sessionId = timeToTaskSessionIdRef.current ?? beginTimeToTaskSession();
-        markTimeToTaskIntent(sessionId, {
-            projectId: selectedProject,
-            view,
-        });
-
-        try {
-            await quickCreateMutation.mutateAsync({
-                name: normalizedTitle,
-                status: "todo",
-                progress: 0,
-                progressMethod: "manual_percent_legacy",
-            });
-            completeTimeToTaskSession(sessionId, {
-                projectId: selectedProject,
-                view,
-                reason: "quick-create",
-            });
-            beginTimeToTaskSession();
-            refreshTimeToTaskSummary();
-            setQuickCreateTitle("");
-        } catch {
-            // Errors are handled by useTaskMutation toast messaging.
-        }
-    }, [
-        beginTimeToTaskSession,
-        quickCreateMutation,
-        quickCreateTitle,
-        refreshTimeToTaskSummary,
-        selectedProject,
-        view,
-    ]);
 
     const [ganttLocalOverrides, setGanttLocalOverrides] = useState<Record<string, Partial<Task>>>({});
     const ganttQueuedUpdatesRef = useRef<Map<string, GanttTask>>(new Map());
@@ -1873,179 +1931,204 @@ export function TasksPage() {
         }),
     ]), [handleDeleteWorkLog, handleStartEditWorkLog, isWorkLogSaving]);
 
-    const listColumns = useMemo<ColumnDef<Task, unknown>[]>(() => ([
-        taskListColumnHelper.display({
-            id: "selection",
-            header: () => (
-                <div className="flex items-center gap-2">
-                    <TaskSelectionCheckbox
-                        checked={allPageSelected}
-                        onToggle={toggleSelectAllOnPage}
-                        label="Select all tasks on current page"
-                        testId="tasks-select-all-page-checkbox"
-                    />
-                    <span>#</span>
-                </div>
-            ),
-            cell: (info) => {
-                const task = info.row.original;
-                return (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <TaskSelectionCheckbox
-                            checked={selectedTaskIdSet.has(task.id)}
-                            onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
-                            onClick={(event) => event.stopPropagation()}
-                            label={`Select task ${task.name}`}
-                            testId="tasks-row-select-checkbox"
-                        />
-                        <span>{((page - 1) * pageSize) + info.row.index + 1}</span>
-                    </div>
-                );
-            },
-        }),
-        taskListColumnHelper.accessor("name", {
-            header: "Task",
-            cell: (info) => {
-                const task = info.row.original;
-                return (
-                    <div className="space-y-1">
-                        <span className="font-medium">{info.getValue()}</span>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>Assignee: {getAssigneeLabel(task.assigneeId)}</span>
-                            <span aria-hidden="true">•</span>
-                            <span>Plan: {task.durationDays ? `${task.durationDays}d` : "—"}</span>
-                            <span aria-hidden="true">•</span>
-                            <span>{getProgressMethodLabel(task.progressMethod)}</span>
-                            {task.completedAtIsBackfilled ? (
-                                <>
-                                    <span aria-hidden="true">•</span>
-                                    <span title="Completion timestamp reconstructed by backend for legacy data">Backfilled completion</span>
-                                </>
-                            ) : null}
-                        </div>
-                    </div>
-                );
-            },
-        }),
-        taskListColumnHelper.accessor("status", {
-            header: "Status",
-            cell: (info) => (
-                <Badge variant={getStatusVariant(info.row.original.executionStatus ?? info.getValue())}>
-                    {getTaskStatusLabel(info.row.original.executionStatus ?? info.getValue())}
-                </Badge>
-            ),
-        }),
-        taskListColumnHelper.display({
-            id: "scheduleStatus",
-            header: "Schedule",
-            cell: (info) => {
-                const task = info.row.original;
-                return (
-                    <div className="flex flex-col items-start gap-1">
-                        <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
-                            {getScheduleStatusLabel(task.scheduleStatus)}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                            {task.dueDate ? `Due ${format(new Date(task.dueDate), "MMM d, yyyy")}` : "No due date"}
-                        </span>
-                    </div>
-                );
-            },
-        }),
-        taskListColumnHelper.display({
-            id: "expected",
-            header: () => <span title="Expected progress based on elapsed plan time">Expected</span>,
-            cell: (info) => {
-                const snapshot = getTaskScurveSnapshot(info.row.original);
-                return (
-                    <span className="font-medium text-foreground/90" title={getTaskScurveTitle(info.row.original)}>
-                        {formatTaskPercent(snapshot.expected)}
-                    </span>
-                );
-            },
-        }),
-        taskListColumnHelper.display({
-            id: "actual",
-            header: () => <span title="Actual recorded progress for the task">Actual</span>,
-            cell: (info) => {
-                const snapshot = getTaskScurveSnapshot(info.row.original);
-                return (
-                    <span className="font-medium text-foreground/90" title={getTaskScurveTitle(info.row.original)}>
-                        {formatTaskPercent(snapshot.actual)}
-                    </span>
-                );
-            },
-        }),
-        taskListColumnHelper.display({
-            id: "variance",
-            header: () => <span title="Actual minus expected progress">Variance</span>,
-            cell: (info) => {
-                const snapshot = getTaskScurveSnapshot(info.row.original);
-                return (
-                    <span
-                        className={cn(
-                            "font-medium",
-                            snapshot.variance === null
-                                ? "text-muted-foreground"
-                                : snapshot.variance >= 0
-                                    ? "text-success"
-                                    : "text-warning",
-                        )}
-                        title={getTaskScurveTitle(info.row.original)}
-                    >
-                        {formatTaskVariance(snapshot.variance)}
-                    </span>
-                );
-            },
-        }),
-        taskListColumnHelper.display({
-            id: "health",
-            header: () => <span title="Human-readable interpretation of schedule variance">Health</span>,
-            cell: (info) => {
-                const snapshot = getTaskScurveSnapshot(info.row.original);
-                return (
-                    <Badge
-                        variant={getTaskHealthVariant(snapshot.health)}
-                        title={getTaskScurveTitle(info.row.original)}
-                    >
-                        {getTaskHealthLabel(snapshot.health)}
-                    </Badge>
-                );
-            },
-        }),
-        taskListColumnHelper.display({
-            id: "actions",
-            header: "Actions",
-            cell: (info) => {
-                const task = info.row.original;
-                return (
+    const listColumns = useMemo<ColumnDef<Task, unknown>[]>(() => {
+        const baseColumns: ColumnDef<Task, unknown>[] = [
+            taskListColumnHelper.display({
+                id: "selection",
+                header: () => (
                     <div className="flex items-center gap-2">
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            data-testid="tasks-row-edit-button"
-                            onClick={() => openTaskEditor(task)}
-                        >
-                            Edit
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="destructive-outline"
-                            data-testid="tasks-row-delete-button"
-                            onClick={() => {
-                                setTaskToDelete(task);
-                                setConfirmOpen(true);
-                            }}
-                        >
-                            Delete
-                        </Button>
+                        <TaskSelectionCheckbox
+                            checked={allPageSelected}
+                            onToggle={toggleSelectAllOnPage}
+                            label="Select all tasks on current page"
+                            testId="tasks-select-all-page-checkbox"
+                        />
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">#</span>
                     </div>
-                );
-            },
-        }),
-    ]), [
+                ),
+                cell: (info) => {
+                    const task = info.row.original;
+                    return (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <TaskSelectionCheckbox
+                                checked={selectedTaskIdSet.has(task.id)}
+                                onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
+                                onClick={(event) => event.stopPropagation()}
+                                label={`Select task ${task.name}`}
+                                testId="tasks-row-select-checkbox"
+                            />
+                            <span className="text-xs">{((page - 1) * pageSize) + info.row.index + 1}</span>
+                        </div>
+                    );
+                },
+            }),
+            taskListColumnHelper.accessor("name", {
+                header: "Task",
+                cell: (info) => {
+                    const task = info.row.original;
+                    const assigneeLabel = getAssigneeLabel(task.assigneeId);
+                    return (
+                        <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        "shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium",
+                                        getTaskStatusTintClass(task.executionStatus ?? task.status),
+                                    )}
+                                >
+                                    {getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                </Badge>
+                                <span className="min-w-0 flex-1 truncate font-medium text-foreground" title={info.getValue()}>
+                                    {info.getValue()}
+                                </span>
+                                <span className="hidden max-w-[170px] truncate text-xs text-muted-foreground xl:inline" title={assigneeLabel}>
+                                    {assigneeLabel}
+                                </span>
+                                <span className="hidden rounded-full bg-muted/70 px-2 py-0.5 font-mono text-[10px] text-muted-foreground 2xl:inline-flex">
+                                    {task.id.slice(0, 8)}
+                                </span>
+                                {task.completedAtIsBackfilled ? (
+                                    <span
+                                        className="hidden text-[10px] text-muted-foreground 2xl:inline"
+                                        title="Completion timestamp reconstructed by backend for legacy data"
+                                    >
+                                        Backfilled
+                                    </span>
+                                ) : null}
+                            </div>
+                        </div>
+                    );
+                },
+            }),
+            taskListColumnHelper.display({
+                id: "progress",
+                header: "Progress",
+                cell: (info) => {
+                    const task = info.row.original;
+                    const snapshot = getTaskScurveSnapshot(task);
+                    const actualValue = Math.max(0, Math.min(snapshot.actual, 100));
+                    const expectedValue = snapshot.expected === null
+                        ? null
+                        : Math.max(0, Math.min(snapshot.expected, 100));
+
+                    return (
+                        <div className="flex min-w-[190px] items-center gap-3" title={getTaskScurveTitle(task)}>
+                            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/80">
+                                <div
+                                    className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(snapshot.health))}
+                                    style={{ width: `${actualValue}%` }}
+                                />
+                                {expectedValue !== null ? (
+                                    <span
+                                        className="absolute inset-y-[-2px] w-px rounded-full bg-background shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
+                                        style={{ left: `calc(${expectedValue}% - 1px)` }}
+                                        aria-hidden="true"
+                                    />
+                                ) : null}
+                            </div>
+                            <span className="w-11 shrink-0 text-right text-sm font-semibold text-foreground">
+                                {formatTaskPercent(snapshot.actual)}
+                            </span>
+                            {snapshot.expected === null ? (
+                                <span className="shrink-0 text-[11px] text-muted-foreground">Plan</span>
+                            ) : null}
+                            <span className="sr-only">
+                                Expected {formatTaskPercent(snapshot.expected)}. Actual {formatTaskPercent(snapshot.actual)}. Variance {formatTaskVariance(snapshot.variance)}. {getTaskHealthLabel(snapshot.health)}.
+                            </span>
+                        </div>
+                    );
+                },
+            }),
+            taskListColumnHelper.display({
+                id: "timeline",
+                header: "Timeline",
+                cell: (info) => {
+                    const task = info.row.original;
+                    const dueLabel = task.dueDate
+                        ? `Due ${format(new Date(task.dueDate), "MMM d")}`
+                        : "Open-ended";
+                    const planLabel = task.durationDays
+                        ? `${task.durationDays}d plan`
+                        : (task.startDate ? "Planned" : "No plan");
+                    const scheduleLabel = task.scheduleStatus && task.scheduleStatus !== "not_specified"
+                        ? getScheduleStatusLabel(task.scheduleStatus)
+                        : null;
+
+                    return (
+                        <div className="flex min-w-0 items-center gap-2 text-sm">
+                            <span className="shrink-0 font-medium text-foreground">{dueLabel}</span>
+                            <span className="shrink-0 text-muted-foreground">{planLabel}</span>
+                            {scheduleLabel ? (
+                                <span className="truncate text-[11px] text-muted-foreground">{scheduleLabel}</span>
+                            ) : null}
+                            <span className="sr-only">{scheduleLabel ?? "Not specified"}</span>
+                        </div>
+                    );
+                },
+            }),
+        ];
+
+        if (isWideDesktop) {
+            baseColumns.push(
+                taskListColumnHelper.display({
+                    id: "variance",
+                    header: "Variance vs plan",
+                    cell: (info) => {
+                        const snapshot = getTaskScurveSnapshot(info.row.original);
+                        return (
+                            <div>
+                                <span
+                                    className={cn(
+                                        "font-medium",
+                                        snapshot.variance === null
+                                            ? "text-muted-foreground"
+                                            : snapshot.variance >= 0
+                                                ? "text-emerald-700 dark:text-emerald-300"
+                                                : "text-amber-700 dark:text-amber-300",
+                                    )}
+                                    title={getTaskScurveTitle(info.row.original)}
+                                >
+                                    {formatTaskVariance(snapshot.variance)}
+                                </span>
+                            </div>
+                        );
+                    },
+                }),
+            );
+        }
+        baseColumns.push(
+            taskListColumnHelper.display({
+                id: "actions",
+                header: () => <div className="sr-only text-right">Actions</div>,
+                cell: (info) => {
+                    const task = info.row.original;
+                    return (
+                        <div className="flex justify-end">
+                            <div className="opacity-70 transition-opacity lg:opacity-20 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                                <TaskActionMenu
+                                    task={task}
+                                    triggerTestId="tasks-row-actions-trigger"
+                                    editTestId="tasks-row-edit-button"
+                                    deleteTestId="tasks-row-delete-button"
+                                    onEdit={openTaskEditor}
+                                    onDelete={(nextTask) => {
+                                        setTaskToDelete(nextTask);
+                                        setConfirmOpen(true);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    );
+                },
+            }),
+        );
+
+        return baseColumns;
+    }, [
         allPageSelected,
         getAssigneeLabel,
+        isWideDesktop,
         openTaskEditor,
         page,
         pageSize,
@@ -2062,27 +2145,12 @@ export function TasksPage() {
     });
     const listRows = listTable.getRowModel().rows;
     const listColumnCount = listTable.getVisibleLeafColumns().length || 1;
-    const rowVirtualizer = useVirtualizer({
-        count: listRows.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 53,
-        overscan: 5,
-        getItemKey: (index) => listRows[index]?.id ?? `task-row-${index}`,
-    });
-    const virtualRows = rowVirtualizer.getVirtualItems();
-    const firstVirtualRow = virtualRows[0];
-    const lastVirtualRow = virtualRows[virtualRows.length - 1];
     const hasMobileQuickControlOverrides = hasSecondaryTaskControls;
-    const mobileListQuickControls = view === "list" ? (
-        <Card className="border-border/70 bg-muted/20" data-testid="tasks-mobile-quick-controls">
-            <CardContent className="space-y-3 p-4">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium">Quick controls</p>
-                        <p className="text-xs text-muted-foreground">
-                            Sort and filter mobile tasks without reopening the crowded top toolbar.
-                        </p>
-                    </div>
+    const mobileListQuickControls = view === "list" && isTabletOrMobile ? (
+        <div className="rounded-xl border border-dashed border-border/70 bg-background/70 p-3" data-testid="tasks-mobile-quick-controls">
+            <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Quick controls</p>
                     <div className="flex flex-wrap justify-end gap-2">
                         <Badge variant="outline" className="shrink-0">
                             {activeSortLabel}
@@ -2149,15 +2217,12 @@ export function TasksPage() {
                         />
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-muted-foreground">
-                        Reset restores the default sort and clears the hidden advanced filters too.
-                    </p>
+                <div className="flex justify-end border-t border-border/70 pt-3">
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-10 w-full sm:w-auto"
+                        className="h-9 w-full sm:w-auto"
                         disabled={!hasMobileQuickControlOverrides}
                         onClick={() => resetSecondaryTaskControls()}
                         data-testid="tasks-mobile-quick-controls-reset-button"
@@ -2165,10 +2230,9 @@ export function TasksPage() {
                         Reset quick controls
                     </Button>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     ) : null;
-
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
         if (!selectedProject) return (
@@ -2307,114 +2371,135 @@ export function TasksPage() {
         // tasks present
         return (
             <div className="space-y-3">
-                <div className="md:hidden space-y-3">
+                <div className="space-y-3 lg:hidden">
                     {pagedTasks.map((task, index) => {
                         const taskSnapshot = getTaskScurveSnapshot(task);
+                        const actualValue = Math.max(0, Math.min(taskSnapshot.actual, 100));
+                        const expectedValue = taskSnapshot.expected === null
+                            ? null
+                            : Math.max(0, Math.min(taskSnapshot.expected, 100));
                         return (
-                            <Card key={task.id} className="border-border/70" data-testid="tasks-mobile-card">
-                                <CardContent className="p-4 space-y-3">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex items-start gap-2 min-w-0">
-                                        <TaskSelectionCheckbox
-                                            checked={selectedTaskIdSet.has(task.id)}
-                                            onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
-                                            label={`Select task ${task.name}`}
-                                            testId="tasks-row-select-checkbox"
+                            <Card
+                                key={task.id}
+                                className={cn(
+                                    "border-border/70 border-l-4 shadow-none transition-colors hover:bg-muted/20",
+                                    getTaskHealthBorderClass(taskSnapshot.health),
+                                )}
+                                data-testid="tasks-mobile-card"
+                            >
+                                <CardContent className="space-y-3 p-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex min-w-0 items-start gap-3">
+                                            <TaskSelectionCheckbox
+                                                checked={selectedTaskIdSet.has(task.id)}
+                                                onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
+                                                label={`Select task ${task.name}`}
+                                                testId="tasks-row-select-checkbox"
+                                            />
+                                            <div className="min-w-0 space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-semibold leading-tight line-clamp-1" title={task.name}>
+                                                        {task.name}
+                                                    </p>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={getTaskStatusTintClass(task.executionStatus ?? task.status)}
+                                                    >
+                                                        {getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                    <span>{getAssigneeLabel(task.assigneeId)}</span>
+                                                    <span aria-hidden="true">•</span>
+                                                    <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px]">
+                                                        {task.id.slice(0, 8)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <TaskActionMenu
+                                            task={task}
+                                            triggerTestId="tasks-mobile-actions-trigger"
+                                            editTestId="tasks-mobile-edit-button"
+                                            deleteTestId="tasks-mobile-delete-button"
+                                            onEdit={openTaskEditor}
+                                            onDelete={(nextTask) => {
+                                                setTaskToDelete(nextTask);
+                                                setConfirmOpen(true);
+                                            }}
                                         />
-                                        <div className="space-y-1 min-w-0">
-                                            <p className="text-xs text-muted-foreground">
-                                                #{((page - 1) * pageSize) + index + 1}
-                                            </p>
-                                            <p className="text-sm font-semibold leading-tight line-clamp-2" title={task.name}>
-                                                {task.name}
-                                            </p>
+                                    </div>
+
+                                    <div className="space-y-2" title={getTaskScurveTitle(task)}>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                <span>{task.dueDate ? `Due ${format(new Date(task.dueDate), "MMM d")}` : "Open-ended"}</span>
+                                                <span aria-hidden="true">•</span>
+                                                <span>{task.durationDays ? `${task.durationDays}d plan` : "No plan"}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold text-foreground">
+                                                {formatTaskPercent(taskSnapshot.actual)}
+                                            </span>
+                                        </div>
+                                        <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(taskSnapshot.health))}
+                                                style={{ width: `${actualValue}%` }}
+                                            />
+                                            {expectedValue !== null ? (
+                                                <span
+                                                    className="absolute inset-y-[-2px] w-px rounded-full bg-background shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
+                                                    style={{ left: `calc(${expectedValue}% - 1px)` }}
+                                                    aria-hidden="true"
+                                                />
+                                            ) : null}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset",
+                                                    getTaskHealthTintClass(taskSnapshot.health),
+                                                )}
+                                            >
+                                                {getTaskHealthLabel(taskSnapshot.health)}
+                                            </span>
+                                            {task.scheduleStatus && task.scheduleStatus !== "not_specified" ? (
+                                                <Badge variant="outline" className={getScheduleStatusToneClass(task.scheduleStatus)}>
+                                                    {getScheduleStatusLabel(task.scheduleStatus)}
+                                                </Badge>
+                                            ) : null}
+                                            <span className="text-xs text-muted-foreground">
+                                                {taskSnapshot.variance === null
+                                                    ? "Awaiting plan"
+                                                    : `Variance ${formatTaskVariance(taskSnapshot.variance)}`}
+                                            </span>
                                         </div>
                                     </div>
-                                    <Badge variant={getStatusVariant(task.executionStatus ?? task.status)}>
-                                        {getTaskStatusLabel(task.executionStatus ?? task.status)}
-                                    </Badge>
-                                </div>
 
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Badge variant={getScheduleStatusVariant(task.scheduleStatus)}>
-                                        {getScheduleStatusLabel(task.scheduleStatus)}
-                                    </Badge>
-                                    <Badge variant="outline" title={`Progress method: ${getProgressMethodLabel(task.progressMethod)}`}>
-                                        {getProgressMethodLabel(task.progressMethod)}
-                                    </Badge>
-                                    {task.completedAtIsBackfilled ? (
-                                        <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
-                                            Backfilled
-                                        </Badge>
-                                    ) : null}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-y-1 text-xs">
-                                    <span className="text-muted-foreground">Assignee</span>
-                                    <span className="text-right">{getAssigneeLabel(task.assigneeId)}</span>
-                                    <span className="text-muted-foreground">Plan</span>
-                                    <span className="text-right">{task.durationDays ? `${task.durationDays}d` : "—"}</span>
-                                    <span className="text-muted-foreground">Expected</span>
-                                    <span className="text-right">{formatTaskPercent(taskSnapshot.expected)}</span>
-                                    <span className="text-muted-foreground">Actual</span>
-                                    <span className="text-right">{formatTaskPercent(taskSnapshot.actual)}</span>
-                                    <span className="text-muted-foreground">Variance</span>
-                                    <span className="text-right">{formatTaskVariance(taskSnapshot.variance)}</span>
-                                    <span className="text-muted-foreground">Health</span>
-                                    <span className="flex justify-end">
-                                        <Badge
-                                            variant={getTaskHealthVariant(taskSnapshot.health)}
-                                            className="px-2 py-0"
-                                            title={getTaskScurveTitle(task)}
-                                        >
-                                            {getTaskHealthLabel(taskSnapshot.health)}
-                                        </Badge>
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 pt-1">
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-11"
-                                        data-testid="tasks-mobile-edit-button"
-                                        onClick={() => openTaskEditor(task)}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="destructive-outline"
-                                        className="h-11"
-                                        data-testid="tasks-mobile-delete-button"
-                                        onClick={() => {
-                                            setTaskToDelete(task);
-                                            setConfirmOpen(true);
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
-                                </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        {task.completedAtIsBackfilled ? (
+                                            <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
+                                                Backfilled
+                                            </Badge>
+                                        ) : null}
+                                        <span>#{((page - 1) * pageSize) + index + 1}</span>
+                                    </div>
                                 </CardContent>
                             </Card>
                         );
                     })}
                 </div>
 
-                <div
-                    ref={parentRef}
-                    className="hidden md:block"
-                    style={{
-                        height: `calc(100vh - 280px)`,
-                        overflow: "auto",
-                    }}
-                >
-                    <Table>
-                        <TableHeader className="sticky top-0 bg-background z-10">
+                <div className="hidden lg:block overflow-x-auto">
+                    <Table className="table-fixed">
+                        <TableHeader className="[&_tr]:border-0">
                             {listTable.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
+                                <TableRow key={headerGroup.id} className="border-0 bg-transparent hover:bg-transparent">
                                     {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id}>
+                                        <TableHead
+                                            key={header.id}
+                                            className="border-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                                        >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(header.column.columnDef.header, header.getContext())}
@@ -2424,49 +2509,29 @@ export function TasksPage() {
                             ))}
                         </TableHeader>
                         <TableBody>
-                            {virtualRows.length === 0 && (
-                                <TableRow key="no-tasks">
+                            {listRows.length === 0 && (
+                                <TableRow key="no-tasks" className="border-0 hover:bg-transparent">
                                     <TableCell colSpan={listColumnCount} className="h-24 text-center">
                                         No tasks found.
                                     </TableCell>
                                 </TableRow>
                             )}
-
-                            {firstVirtualRow ? (
-                                <TableRow key={`spacer-start-${firstVirtualRow.index}`} style={{ height: `${firstVirtualRow.start}px` }}>
-                                    <TableCell colSpan={listColumnCount} style={{ padding: 0 }} />
+                            {listRows.map((row) => (
+                                <TableRow
+                                    key={row.id}
+                                    onDoubleClick={() => openTaskEditor(row.original)}
+                                    className="group border-0 bg-transparent transition-colors odd:bg-muted/[0.14] hover:bg-muted/30"
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id} className="border-0 px-3 py-2.5 align-middle">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
                                 </TableRow>
-                            ) : null}
-
-                            {virtualRows.map((virtualItem) => {
-                                const row = listRows[virtualItem.index];
-                                if (!row) return null;
-                                return (
-                                    <TableRow
-                                        key={row.id}
-                                        data-index={virtualItem.index}
-                                        ref={rowVirtualizer.measureElement}
-                                        onDoubleClick={() => openTaskEditor(row.original)}
-                                        className="cursor-pointer hover:bg-surface-hover transition-colors"
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                );
-                            })}
-
-                            {lastVirtualRow ? (
-                                <TableRow key={`spacer-end-${lastVirtualRow.index}`} style={{ height: `${rowVirtualizer.getTotalSize() - lastVirtualRow.end}px` }}>
-                                    <TableCell colSpan={listColumnCount} style={{ padding: 0 }} />
-                                </TableRow>
-                            ) : null}
+                            ))}
                         </TableBody>
                     </Table>
                 </div>
-
                 <DataTablePagination
                     currentPage={page}
                     totalPages={totalPages}
@@ -2482,25 +2547,21 @@ export function TasksPage() {
     const isRateLimited = useNetworkStore((state) => state.isRateLimited);
 
     return (
-        <div className="space-y-6" data-testid="tasks-page">
-            <div className="space-y-1">
+        <div className="space-y-4" data-testid="tasks-page">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-                <p className="max-w-3xl text-muted-foreground leading-relaxed">
-                    Track execution status, assign work quickly, and keep the first actions obvious before the deeper filters and telemetry.
-                </p>
+                {selectedProject ? (
+                    <Badge variant="outline">
+                        {totalFilteredCount} item{totalFilteredCount === 1 ? "" : "s"} in view
+                    </Badge>
+                ) : null}
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <Card className="border-border/70 shadow-sm" data-testid="tasks-page-context-card">
-                    <CardHeader className="pb-3">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="space-y-1">
-                                <CardTitle>{currentProject?.name ?? "Select a project"}</CardTitle>
-                                <CardDescription>
-                                    Choose the working project first. Team visibility and remote updates follow this scope.
-                                </CardDescription>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2">
+            <Card className="overflow-hidden border-border/70 shadow-sm">
+                <CardContent className="space-y-3 p-3 sm:p-4">
+                    <section className="space-y-3" data-testid="tasks-page-context-card">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
                                 <Combobox
                                     options={projects?.map((p) => ({ label: p.name, value: p.id })) ?? []}
                                     value={selectedProject}
@@ -2510,11 +2571,127 @@ export function TasksPage() {
                                     searchPlaceholder="Search projects..."
                                     triggerTestId="tasks-project-combobox"
                                 />
+                                <div className="relative min-w-0 flex-1">
+                                    <Label htmlFor="tasks-search-input" className="sr-only">Search tasks</Label>
+                                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="tasks-search-input"
+                                        placeholder="Search tasks"
+                                        className="h-10 pl-9"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        maxLength={API_SEARCH_QUERY_MAX_LENGTH}
+                                        data-testid="tasks-search-input"
+                                    />
+                                </div>
+                                <div className="w-full sm:w-[190px]">
+                                    <Label className="sr-only">Status</Label>
+                                    <Combobox
+                                        value={statusFilter}
+                                        onChange={setStatusFilter}
+                                        options={[
+                                            { value: "all", label: "All Status" },
+                                            { value: "todo", label: "To Do" },
+                                            { value: "in_progress", label: "In Progress" },
+                                            { value: "blocked", label: "Blocked" },
+                                            { value: "done", label: "Done" },
+                                        ]}
+                                        placeholder="Status"
+                                        searchPlaceholder="Search status..."
+                                        className="w-full"
+                                        triggerTestId="tasks-filter-status-combobox"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2" data-testid="tasks-team-summary">
+                                {selectedProject ? (
+                                    <>
+                                        <TooltipProvider delayDuration={120}>
+                                            <div className="flex items-center">
+                                                {visibleTeamMembers.length > 0 ? (
+                                                    visibleTeamMembers.map((member, index) => (
+                                                        <Tooltip key={member.id}>
+                                                            <TooltipTrigger asChild>
+                                                                <div
+                                                                    className={cn("relative", index > 0 ? "-ml-2" : "")}
+                                                                    aria-label={member.label}
+                                                                    data-testid="tasks-team-avatar"
+                                                                >
+                                                                    <Avatar
+                                                                        className={cn(
+                                                                            member.presence?.status === "online"
+                                                                                ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
+                                                                                : undefined,
+                                                                        )}
+                                                                    >
+                                                                        <AvatarFallback>{member.initials}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span
+                                                                        className={cn(
+                                                                            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background",
+                                                                            member.presence?.status === "online"
+                                                                                ? "bg-emerald-500"
+                                                                                : "bg-muted-foreground/40",
+                                                                        )}
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <div className="space-y-1">
+                                                                    <p className="font-medium">{member.label}</p>
+                                                                    <p className="text-[11px] text-muted-foreground">{member.email}</p>
+                                                                    <p className="text-[11px] text-muted-foreground">
+                                                                        {getPresenceStatusLabel(member.presence)}
+                                                                    </p>
+                                                                    {member.presence?.route && getRealtimeRouteLabel(member.presence.route) ? (
+                                                                        <p className="text-[11px] text-muted-foreground">
+                                                                            Working in {getRealtimeRouteLabel(member.presence.route)}
+                                                                        </p>
+                                                                    ) : null}
+                                                                </div>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    ))
+                                                ) : (
+                                                    <Avatar
+                                                        className="border-dashed bg-muted/40 text-muted-foreground"
+                                                        data-testid="tasks-team-avatar-empty"
+                                                    >
+                                                        <AvatarFallback className="bg-muted/40 text-muted-foreground">0</AvatarFallback>
+                                                    </Avatar>
+                                                )}
+                                                {hiddenTeamMemberCount > 0 ? (
+                                                    <div
+                                                        className="-ml-2 flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-background px-2 text-xs font-semibold text-foreground ring-2 ring-background"
+                                                        data-testid="tasks-team-avatar-overflow"
+                                                        title={`${hiddenTeamMemberCount} more team member${hiddenTeamMemberCount === 1 ? "" : "s"}`}
+                                                    >
+                                                        +{hiddenTeamMemberCount}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </TooltipProvider>
+                                        <Badge variant="outline" data-testid="tasks-team-count-badge">
+                                            {teamMembersForSummary.length} member{teamMembersForSummary.length === 1 ? "" : "s"}
+                                        </Badge>
+                                        <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
+                                            {onlineTeamMemberCount} online
+                                        </Badge>
+                                        <Button asChild type="button" variant="ghost" size="sm" className="h-9 px-2">
+                                            <Link to={`/projects/${selectedProject}/settings?tab=members`}>Members</Link>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <span className="text-xs text-muted-foreground">Select a project to load the team.</span>
+                                )}
+
                                 <Button
                                     type="button"
                                     variant={selectedProjectRemoteChange ? "default" : "secondary"}
                                     className={cn(
-                                        "relative",
+                                        "relative h-10 px-3",
                                         selectedProjectRemoteChange
                                             ? "ring-2 ring-amber-400/70 ring-offset-2 ring-offset-background"
                                             : undefined,
@@ -2533,205 +2710,17 @@ export function TasksPage() {
                                         ? "Cooling down..."
                                         : (isRefetching ? "Refreshing…" : (selectedProjectRemoteChange ? "Refresh updates" : "Refresh"))}
                                 </Button>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-0">
-                        {selectedProject ? (
-                            <div className="space-y-3" data-testid="tasks-team-summary">
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium text-foreground">Team visibility</p>
-                                        <p className="text-sm text-muted-foreground">{compactTeamSummaryText}.</p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline" data-testid="tasks-team-count-badge">
-                                            {teamMembersForSummary.length} member{teamMembersForSummary.length === 1 ? "" : "s"}
-                                        </Badge>
-                                        <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
-                                            {onlineTeamMemberCount} online
-                                        </Badge>
-                                        {selectedProject ? (
-                                            <Button asChild type="button" variant="ghost" size="sm" className="h-8 px-2">
-                                                <Link to={`/projects/${selectedProject}/settings?tab=members`}>
-                                                    View members
-                                                </Link>
-                                            </Button>
-                                        ) : null}
-                                    </div>
-                                </div>
-                                <TooltipProvider delayDuration={120}>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <div className="flex items-center">
-                                            {visibleTeamMembers.length > 0 ? (
-                                                visibleTeamMembers.map((member, index) => (
-                                                    <Tooltip key={member.id}>
-                                                        <TooltipTrigger asChild>
-                                                            <div
-                                                                className={cn("relative", index > 0 ? "-ml-2" : "")}
-                                                                aria-label={member.label}
-                                                                data-testid="tasks-team-avatar"
-                                                            >
-                                                                <Avatar
-                                                                    className={cn(
-                                                                        member.presence?.status === "online"
-                                                                            ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
-                                                                            : undefined,
-                                                                    )}
-                                                                >
-                                                                    <AvatarFallback>{member.initials}</AvatarFallback>
-                                                                </Avatar>
-                                                                <span
-                                                                    className={cn(
-                                                                        "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background",
-                                                                        member.presence?.status === "online"
-                                                                            ? "bg-emerald-500"
-                                                                            : "bg-muted-foreground/40",
-                                                                    )}
-                                                                    aria-hidden="true"
-                                                                />
-                                                            </div>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <div className="space-y-1">
-                                                                <p className="font-medium">{member.label}</p>
-                                                                <p className="text-[11px] text-muted-foreground">{member.email}</p>
-                                                                <p className="text-[11px] text-muted-foreground">
-                                                                    {getPresenceStatusLabel(member.presence)}
-                                                                </p>
-                                                                {member.presence?.route && getRealtimeRouteLabel(member.presence.route) ? (
-                                                                    <p className="text-[11px] text-muted-foreground">
-                                                                        Working in {getRealtimeRouteLabel(member.presence.route)}
-                                                                    </p>
-                                                                ) : null}
-                                                            </div>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                ))
-                                            ) : (
-                                                <Avatar
-                                                    className="border-dashed bg-muted/40 text-muted-foreground"
-                                                    data-testid="tasks-team-avatar-empty"
-                                                >
-                                                    <AvatarFallback className="bg-muted/40 text-muted-foreground">0</AvatarFallback>
-                                                </Avatar>
-                                            )}
-                                            {hiddenTeamMemberCount > 0 ? (
-                                                <div
-                                                    className="-ml-2 flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-background px-2 text-xs font-semibold text-foreground ring-2 ring-background"
-                                                    data-testid="tasks-team-avatar-overflow"
-                                                    title={`${hiddenTeamMemberCount} more team member${hiddenTeamMemberCount === 1 ? "" : "s"}`}
-                                                >
-                                                    +{hiddenTeamMemberCount}
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                        {recentlyActiveTeamMemberCount > 0 ? (
-                                            <Badge variant="secondary">
-                                                {recentlyActiveTeamMemberCount} recently active
-                                            </Badge>
-                                        ) : null}
-                                        {presenceRouteSummary.map((routeSummary) => (
-                                            <Badge key={routeSummary.label} variant="outline">
-                                                {routeSummary.count} in {routeSummary.label}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </TooltipProvider>
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">
-                                Select a project to reveal members, presence, and assignee-ready context.
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
 
-                <Card className="border-border/70 shadow-sm" data-testid="tasks-page-primary-actions-card">
-                    <CardHeader className="pb-3">
-                        <CardTitle>Primary actions</CardTitle>
-                        <CardDescription>
-                            Quick add stays fastest. Full create keeps assignment and progress setup visible without crowding the first fold.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-0">
-                        <div className="space-y-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <Label htmlFor="tasks-quick-create-input" className="text-xs text-muted-foreground">
-                                    Quick add task
-                                </Label>
-                                <span className="text-[11px] text-muted-foreground">Press Enter to create instantly</span>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                                <Input
-                                    id="tasks-quick-create-input"
-                                    value={quickCreateTitle}
-                                    onChange={(event) => setQuickCreateTitle(event.target.value)}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter") {
-                                            event.preventDefault();
-                                            void handleQuickCreate();
-                                        }
-                                    }}
-                                    placeholder="Type title..."
-                                    data-testid="tasks-quick-create-input"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        void handleQuickCreate();
-                                    }}
-                                    disabled={!selectedProject || quickCreateMutation.isPending || !quickCreateTitle.trim()}
-                                    data-testid="tasks-quick-create-button"
-                                >
-                                    {quickCreateMutation.isPending ? "Adding…" : "Quick add"}
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_auto]">
-                            <div className="space-y-1">
-                                <Label htmlFor="tasks-search-input" className="text-xs text-muted-foreground">
-                                    Search tasks
-                                </Label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="tasks-search-input"
-                                        placeholder="Search tasks..."
-                                        className="h-10 pl-9"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        maxLength={API_SEARCH_QUERY_MAX_LENGTH}
-                                        data-testid="tasks-search-input"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">Status</Label>
-                                <Combobox
-                                    value={statusFilter}
-                                    onChange={setStatusFilter}
-                                    options={[
-                                        { value: "all", label: "All Status" },
-                                        { value: "todo", label: "To Do" },
-                                        { value: "in_progress", label: "In Progress" },
-                                        { value: "blocked", label: "Blocked" },
-                                        { value: "done", label: "Done" },
-                                    ]}
-                                    placeholder="Status"
-                                    searchPlaceholder="Search status..."
-                                    className="w-full"
-                                    triggerTestId="tasks-filter-status-combobox"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground">Create flow</Label>
                                 <Dialog open={createOpen} onOpenChange={handleCreateDialogOpenChange}>
-                        <DialogTrigger asChild>
-                            <Button type="button" data-testid="tasks-new-button">New task</Button>
-                        </DialogTrigger>
+                                    <Button
+                                        type="button"
+                                        className="h-10 gap-2"
+                                        data-testid="tasks-new-button"
+                                        onClick={() => handleCreateDialogOpenChange(true)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        <span>New task</span>
+                                    </Button>
                         <AppDialogContent
                             className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"
                             title="Create task"
@@ -3197,58 +3186,295 @@ export function TasksPage() {
                     </Dialog>
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card className="border-border/70 bg-muted/15 shadow-sm">
-                <CardContent className="space-y-4 p-4" data-testid="tasks-secondary-insights-card">
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                        <div className="space-y-2" data-testid="tasks-time-to-task-summary">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium text-foreground">Time to Task</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Keep this quieter by default. Expand only when you need friction evidence.
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant={showTimeToTaskInsights ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className="h-9 px-3"
-                                    onClick={() => setShowTimeToTaskInsights((prev) => !prev)}
-                                    data-testid="tasks-time-to-task-toggle-button"
-                                >
-                                    {showTimeToTaskInsights ? "Hide insights" : "Show insights"}
-                                </Button>
+                    </section>
+                    <section className="space-y-1 border-t border-border/70 pt-2" data-testid="tasks-page-primary-actions-card">
+                        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
+                                {visibleTaskScopeSummary.map((item) => (
+                                    <Badge key={item} variant="outline">{item}</Badge>
+                                ))}
+                                {activeAdvancedFilterCount > 0 ? (
+                                    <Badge variant="outline">Advanced: {activeAdvancedFilterCount}</Badge>
+                                ) : null}
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <span className="sr-only">
-                                    Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%. Passive exits: {timeToTaskSummary.passiveExitCount}.
-                                </span>
-                                <Badge variant="outline">
-                                    P50: {formatDurationMs(timeToTaskSummary.p50Ms)}
-                                </Badge>
-                                <Badge variant="outline">
-                                    Last: {formatDurationMs(timeToTaskSummary.lastMs)}
-                                </Badge>
-                                {showTimeToTaskInsights ? (
-                                    <>
-                                        <Badge variant="outline">
-                                            Intent completion: {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                {view === "list" ? (
+                                    <div className="hidden lg:block">
+                                        <Combobox
+                                            value={sortOption}
+                                            onChange={(value) => {
+                                                if (!value) return;
+                                                setSortOption(value as TaskListSortOptionValue);
+                                            }}
+                                            options={TASK_SORT_OPTIONS}
+                                            placeholder="Sort tasks"
+                                            searchPlaceholder="Search sort order..."
+                                            className="w-full lg:w-[220px]"
+                                            triggerTestId="tasks-sort-combobox"
+                                        />
+                                    </div>
+                                ) : null}
+                                <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant={hasAdvancedFilters || view !== "list" ? "secondary" : "outline"}
+                                            className="h-9 w-full justify-between gap-2 sm:w-auto"
+                                            data-testid="tasks-advanced-filters-toggle"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <SlidersHorizontal className="h-4 w-4" />
+                                                Advanced
+                                            </span>
+                                            {activeAdvancedFilterCount > 0 ? (
+                                                <Badge variant="outline" className="rounded-full px-2 py-0 text-[11px]">
+                                                    {activeAdvancedFilterCount}
+                                                </Badge>
+                                            ) : null}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="end"
+                                        className="w-[min(94vw,760px)] space-y-5 p-4"
+                                        data-testid="tasks-advanced-filters-panel"
+                                    >
+                                        <div className="space-y-3">
+                                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                                View mode
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Button
+                                                    variant={view === "list" ? "default" : "outline"}
+                                                    onClick={() => {
+                                                        setView("list");
+                                                        setIsAdvancedFiltersOpen(false);
+                                                    }}
+                                                    className="h-9"
+                                                    data-testid="tasks-view-list-button"
+                                                >
+                                                    <List className="mr-2 h-4 w-4" />
+                                                    List
+                                                </Button>
+                                                <Button
+                                                    variant={view === "kanban" ? "default" : "outline"}
+                                                    onClick={() => {
+                                                        setView("kanban");
+                                                        setIsAdvancedFiltersOpen(false);
+                                                    }}
+                                                    className="h-9"
+                                                    data-testid="tasks-view-board-button"
+                                                >
+                                                    <Kanban className="mr-2 h-4 w-4" />
+                                                    Board
+                                                </Button>
+                                                <Button
+                                                    variant={view === "gantt" ? "default" : "outline"}
+                                                    onClick={() => {
+                                                        setView("gantt");
+                                                        setIsAdvancedFiltersOpen(false);
+                                                    }}
+                                                    className="h-9"
+                                                    data-testid="tasks-view-gantt-button"
+                                                >
+                                                    <CalendarRange className="mr-2 h-4 w-4" />
+                                                    Gantt
+                                                </Button>
+                                            </div>
+                                            {view === "list" ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="h-9"
+                                                    onClick={() => toggleSelectAllFiltered(!allFilteredSelected)}
+                                                    disabled={pagedTasks.length === 0}
+                                                    data-testid="tasks-select-all-filtered-button"
+                                                >
+                                                    {allFilteredSelected ? "Unselect page" : `Select page (${pagedTasks.length})`}
+                                                </Button>
+                                            ) : null}
+                                        </div>
+                                        <div className="h-px bg-border" />
+                                        <div className="space-y-3">
+                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Assignee</Label>
+                                                    <Combobox
+                                                        value={assigneeFilter}
+                                                        onChange={setAssigneeFilter}
+                                                        options={assigneeFilterOptions}
+                                                        placeholder="Assignee"
+                                                        searchPlaceholder="Search assignee..."
+                                                        className="w-full"
+                                                        triggerTestId="tasks-filter-assignee-combobox"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Schedule status</Label>
+                                                    <Combobox
+                                                        value={scheduleStatusFilter}
+                                                        onChange={setScheduleStatusFilter}
+                                                        options={scheduleStatusFilterOptions}
+                                                        placeholder="Schedule status"
+                                                        searchPlaceholder="Search schedule status..."
+                                                        className="w-full"
+                                                        triggerTestId="tasks-filter-schedule-status-combobox"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Health</Label>
+                                                    <Combobox
+                                                        value={healthStatusFilter}
+                                                        onChange={setHealthStatusFilter}
+                                                        options={healthStatusFilterOptions}
+                                                        placeholder="Health"
+                                                        searchPlaceholder="Search health..."
+                                                        className="w-full"
+                                                        triggerTestId="tasks-filter-health-status-combobox"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Start from</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={startFromFilter}
+                                                        onChange={(event) => setStartFromFilter(event.target.value)}
+                                                        className="h-10"
+                                                        data-testid="tasks-filter-start-from-input"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Start to</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={startToFilter}
+                                                        onChange={(event) => setStartToFilter(event.target.value)}
+                                                        className="h-10"
+                                                        data-testid="tasks-filter-start-to-input"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Due from</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={dueFromFilter}
+                                                        onChange={(event) => setDueFromFilter(event.target.value)}
+                                                        className="h-10"
+                                                        data-testid="tasks-filter-due-from-input"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">Due to</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={dueToFilter}
+                                                        onChange={(event) => setDueToFilter(event.target.value)}
+                                                        className="h-10"
+                                                        data-testid="tasks-filter-due-to-input"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    className="h-9"
+                                                    onClick={() => resetSecondaryTaskControls({ closeAdvanced: true })}
+                                                    disabled={!hasSecondaryTaskControls}
+                                                    data-testid="tasks-clear-advanced-filters-button"
+                                                >
+                                                    Reset filters & sort
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+                        {hiddenAdvancedFilterSummary.length > 0 ? (
+                            <div
+                                className="rounded-md border border-dashed border-border/70 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground"
+                                data-testid="tasks-toolbar-hidden-filters-summary"
+                            >
+                                <span className="font-medium text-foreground">Hidden advanced filters:</span>{" "}
+                                {hiddenAdvancedFilterSummary.join(" • ")}
+                            </div>
+                        ) : null}
+                    </section>
+
+                    <section className="space-y-2 border-t border-border/70 pt-2" data-testid="tasks-secondary-insights-card">
+                        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="min-w-0 flex-1 space-y-1.5" data-testid="tasks-health-summary-strip">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"} className="rounded-full">
+                                            {healthSummaryExceptionCount} need attention
                                         </Badge>
-                                        <Badge variant="outline">
-                                            Intent samples: {timeToTaskSummary.intentSampleCount}
-                                        </Badge>
-                                        <Badge variant="outline">
-                                            Passive exits: {timeToTaskSummary.passiveExitCount}
-                                        </Badge>
+                                        <span className="hidden text-[11px] text-muted-foreground lg:inline" data-testid="tasks-health-summary-scope">
+                                            {healthSummaryScopeLabel}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                    {healthSummaryItems
+                                        .filter((item) => item.count > 0)
+                                        .map((item) => (
+                                            <div
+                                                key={item.healthStatus}
+                                                className={cn(getTaskHealthBarClass(item.healthStatus))}
+                                                style={{
+                                                    width: `${healthSummaryTotalCount === 0 ? 0 : (item.count / healthSummaryTotalCount) * 100}%`,
+                                                }}
+                                                title={`${item.label}: ${item.count}`}
+                                            />
+                                        ))}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {healthSummaryItems.map((item) => (
+                                        <Button
+                                            key={item.healthStatus}
+                                            type="button"
+                                            variant={item.active ? "secondary" : "outline"}
+                                            size="sm"
+                                            className="h-7 gap-2 rounded-full px-2.5"
+                                            onClick={() => {
+                                                setHealthStatusFilter((current) => (
+                                                    current === item.healthStatus ? "all" : item.healthStatus
+                                                ));
+                                            }}
+                                            data-testid="tasks-health-summary-chip"
+                                        >
+                                            <span>{item.label}</span>
+                                            <span>{item.count}</span>
+                                        </Button>
+                                    ))}
+                                    {healthStatusFilter !== "all" ? (
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="h-9 px-2"
+                                            className="h-7 rounded-full px-2.5"
+                                            onClick={() => setHealthStatusFilter("all")}
+                                            data-testid="tasks-health-summary-clear-button"
+                                        >
+                                            Clear
+                                        </Button>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 xl:justify-end" data-testid="tasks-time-to-task-summary">
+                                <Badge variant="outline">P50: {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
+                                <Badge variant="outline">Last: {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
+                                {showTimeToTaskInsights ? (
+                                    <>
+                                        <Badge variant="outline">Intent {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%</Badge>
+                                        <Badge variant="outline">Samples {timeToTaskSummary.intentSampleCount}</Badge>
+                                        <Badge variant="outline">Passive exits {timeToTaskSummary.passiveExitCount}</Badge>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2"
                                             onClick={() => {
                                                 clearTimeToTaskRecords(currentUserId);
                                                 if (timeToTaskSessionIdRef.current) {
@@ -3260,307 +3486,37 @@ export function TasksPage() {
                                             data-testid="tasks-time-to-task-reset-button"
                                             disabled={timeToTaskSummary.trackedSessionCount === 0}
                                         >
-                                            Reset metrics
+                                            Reset
                                         </Button>
                                     </>
                                 ) : null}
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium text-foreground">Secondary controls</p>
-                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="tasks-toolbar-summary-badges">
-                                        {visibleTaskScopeSummary.map((item) => (
-                                            <Badge key={item} variant="outline">{item}</Badge>
-                                        ))}
-                                        {activeAdvancedFilterCount > 0 ? (
-                                            <Badge variant="outline">Advanced: {activeAdvancedFilterCount}</Badge>
-                                        ) : (
-                                            <span className="text-[11px] text-muted-foreground">
-                                                Advanced holds assignee, schedule, health, date, and view controls.
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                                    {view === "list" ? (
-                                        <div className="hidden md:block">
-                                            <Combobox
-                                                value={sortOption}
-                                                onChange={(value) => {
-                                                    if (!value) return;
-                                                    setSortOption(value as TaskListSortOptionValue);
-                                                }}
-                                                options={TASK_SORT_OPTIONS}
-                                                placeholder="Sort tasks"
-                                                searchPlaceholder="Search sort order..."
-                                                className="w-full lg:w-[260px]"
-                                                triggerTestId="tasks-sort-combobox"
-                                            />
-                                        </div>
-                                    ) : null}
-                                    <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant={hasAdvancedFilters || view !== "list" ? "secondary" : "outline"}
-                                                className="h-10 w-full justify-between gap-2 lg:w-[220px]"
-                                                data-testid="tasks-advanced-filters-toggle"
-                                            >
-                                                <span className="flex items-center gap-2">
-                                                    <SlidersHorizontal className="h-4 w-4" />
-                                                    Advanced
-                                                </span>
-                                                {activeAdvancedFilterCount > 0 ? (
-                                                    <Badge variant="outline" className="rounded-full px-2 py-0 text-[11px]">
-                                                        {activeAdvancedFilterCount}
-                                                    </Badge>
-                                                ) : null}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            align="end"
-                                            className="w-[min(94vw,760px)] space-y-5 p-4"
-                                            data-testid="tasks-advanced-filters-panel"
-                                        >
-                                            <div className="space-y-3">
-                                                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                                    View mode
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <Button
-                                                        variant={view === "list" ? "default" : "outline"}
-                                                        onClick={() => {
-                                                            setView("list");
-                                                            setIsAdvancedFiltersOpen(false);
-                                                        }}
-                                                        className="h-9"
-                                                        data-testid="tasks-view-list-button"
-                                                    >
-                                                        <List className="mr-2 h-4 w-4" />
-                                                        List
-                                                    </Button>
-                                                    <Button
-                                                        variant={view === "kanban" ? "default" : "outline"}
-                                                        onClick={() => {
-                                                            setView("kanban");
-                                                            setIsAdvancedFiltersOpen(false);
-                                                        }}
-                                                        className="h-9"
-                                                        data-testid="tasks-view-board-button"
-                                                    >
-                                                        <Kanban className="mr-2 h-4 w-4" />
-                                                        Board
-                                                    </Button>
-                                                    <Button
-                                                        variant={view === "gantt" ? "default" : "outline"}
-                                                        onClick={() => {
-                                                            setView("gantt");
-                                                            setIsAdvancedFiltersOpen(false);
-                                                        }}
-                                                        className="h-9"
-                                                        data-testid="tasks-view-gantt-button"
-                                                    >
-                                                        <CalendarRange className="mr-2 h-4 w-4" />
-                                                        Gantt
-                                                    </Button>
-                                                </div>
-                                                {view === "list" ? (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="h-9"
-                                                        onClick={() => toggleSelectAllFiltered(!allFilteredSelected)}
-                                                        disabled={pagedTasks.length === 0}
-                                                        data-testid="tasks-select-all-filtered-button"
-                                                    >
-                                                        {allFilteredSelected ? "Unselect page" : `Select page (${pagedTasks.length})`}
-                                                    </Button>
-                                                ) : null}
-                                            </div>
-                                            <div className="h-px bg-border" />
-                                            <div className="space-y-3">
-                                                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                                    Filters
-                                                </div>
-                                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Assignee</Label>
-                                                        <Combobox
-                                                            value={assigneeFilter}
-                                                            onChange={setAssigneeFilter}
-                                                            options={assigneeFilterOptions}
-                                                            placeholder="Assignee"
-                                                            searchPlaceholder="Search assignee..."
-                                                            className="w-full"
-                                                            triggerTestId="tasks-filter-assignee-combobox"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Schedule status</Label>
-                                                        <Combobox
-                                                            value={scheduleStatusFilter}
-                                                            onChange={setScheduleStatusFilter}
-                                                            options={scheduleStatusFilterOptions}
-                                                            placeholder="Schedule status"
-                                                            searchPlaceholder="Search schedule status..."
-                                                            className="w-full"
-                                                            triggerTestId="tasks-filter-schedule-status-combobox"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Health</Label>
-                                                        <Combobox
-                                                            value={healthStatusFilter}
-                                                            onChange={setHealthStatusFilter}
-                                                            options={healthStatusFilterOptions}
-                                                            placeholder="Health"
-                                                            searchPlaceholder="Search health..."
-                                                            className="w-full"
-                                                            triggerTestId="tasks-filter-health-status-combobox"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Start from</Label>
-                                                        <Input
-                                                            type="date"
-                                                            value={startFromFilter}
-                                                            onChange={(event) => setStartFromFilter(event.target.value)}
-                                                            className="h-10"
-                                                            data-testid="tasks-filter-start-from-input"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Start to</Label>
-                                                        <Input
-                                                            type="date"
-                                                            value={startToFilter}
-                                                            onChange={(event) => setStartToFilter(event.target.value)}
-                                                            className="h-10"
-                                                            data-testid="tasks-filter-start-to-input"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Due from</Label>
-                                                        <Input
-                                                            type="date"
-                                                            value={dueFromFilter}
-                                                            onChange={(event) => setDueFromFilter(event.target.value)}
-                                                            className="h-10"
-                                                            data-testid="tasks-filter-due-from-input"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">Due to</Label>
-                                                        <Input
-                                                            type="date"
-                                                            value={dueToFilter}
-                                                            onChange={(event) => setDueToFilter(event.target.value)}
-                                                            className="h-10"
-                                                            data-testid="tasks-filter-due-to-input"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Use this panel for non-primary controls to keep the default toolbar focused.
-                                                    </p>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        className="h-10 w-full sm:w-auto"
-                                                        onClick={() => resetSecondaryTaskControls({ closeAdvanced: true })}
-                                                        disabled={!hasSecondaryTaskControls}
-                                                        data-testid="tasks-clear-advanced-filters-button"
-                                                    >
-                                                        Reset filters & sort
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </div>
-
-                            {hiddenAdvancedFilterSummary.length > 0 ? (
-                                <div
-                                    className="rounded-md border border-dashed border-border/70 bg-background/80 px-3 py-2 text-xs text-muted-foreground"
-                                    data-testid="tasks-toolbar-hidden-filters-summary"
+                                <Button
+                                    type="button"
+                                    variant={showTimeToTaskInsights ? "secondary" : "ghost"}
+                                    size="sm"
+                                    className="h-8 px-2"
+                                    onClick={() => setShowTimeToTaskInsights((prev) => !prev)}
+                                    data-testid="tasks-time-to-task-toggle-button"
                                 >
-                                    <span className="font-medium text-foreground">Hidden advanced filters:</span>{" "}
-                                    {hiddenAdvancedFilterSummary.join(" • ")}
-                                </div>
-                            ) : null}
-                        </div>
-                    </div>
-
-                    <div
-                        className="rounded-lg border border-border/70 bg-background/70 p-3"
-                        data-testid="tasks-health-summary-strip"
-                    >
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium">Health snapshot</p>
-                                <p
-                                    className="text-xs text-muted-foreground"
-                                    data-testid="tasks-health-summary-scope"
-                                >
-                                    Quick filter by task health. Counts reflect {healthSummaryScopeLabel.toLowerCase()}.
-                                </p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                                {healthSummaryItems.map((item) => (
-                                    <Button
-                                        key={item.healthStatus}
-                                        type="button"
-                                        variant={item.active ? "secondary" : "outline"}
-                                        size="sm"
-                                        className="h-10 gap-2"
-                                        onClick={() => {
-                                            setHealthStatusFilter((current) => (
-                                                current === item.healthStatus ? "all" : item.healthStatus
-                                            ));
-                                        }}
-                                        data-testid="tasks-health-summary-chip"
-                                    >
-                                        <Badge variant={getTaskHealthVariant(item.healthStatus)}>
-                                            {item.label}
-                                        </Badge>
-                                        <span>{item.count}</span>
-                                    </Button>
-                                ))}
-                                {healthStatusFilter !== "all" ? (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-10"
-                                        onClick={() => setHealthStatusFilter("all")}
-                                        data-testid="tasks-health-summary-clear-button"
-                                    >
-                                        Clear health filter
-                                    </Button>
-                                ) : null}
+                                    {showTimeToTaskInsights ? "Hide insights" : "Show insights"}
+                                </Button>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="md:hidden">
-                        {mobileListQuickControls}
-                    </div>
+                        <div className="lg:hidden">
+                            {mobileListQuickControls}
+                        </div>
+                    </section>
                 </CardContent>
             </Card>
 
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                    <CardTitle>{currentProject?.name ?? "Task view"}</CardTitle>
-                    <CardDescription>
-                        Server-backed execution view with list, board, and gantt modes.
-                    </CardDescription>
+            <Card className="border-border/70 shadow-sm">
+                <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <CardTitle>{currentProject?.name ?? "Execution grid"}</CardTitle>
+                        <Badge variant="outline">{currentViewLabel} view</Badge>
+                    </div>
                 </CardHeader>
-                <CardContent className="space-y-6 pt-4">
+                <CardContent className="space-y-4 pt-0">
                     {view === "list" && selectedTaskIds.length > 0 ? (
                         <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
                             <div className="text-sm text-foreground">

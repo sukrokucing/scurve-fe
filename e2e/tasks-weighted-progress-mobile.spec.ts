@@ -32,6 +32,13 @@ async function findMobileTaskCard(page: Page, title: string): Promise<Locator> {
     return card;
 }
 
+async function openMobileTaskAction(card: Locator, actionTestId: string) {
+    await card.getByTestId("tasks-mobile-actions-trigger").click();
+    const action = card.page().getByTestId(actionTestId).last();
+    await expect(action).toBeVisible({ timeout: 15_000 });
+    await action.click();
+}
+
 async function ensureProjectAvailable(
     page: Page,
     request: APIRequestContext,
@@ -114,7 +121,7 @@ test.describe("tasks weighted progress mobile", () => {
             const createdCard = await findMobileTaskCard(page, taskTitle);
             await expect(createdCard).toContainText("Weighted");
 
-            await createdCard.getByTestId("tasks-mobile-edit-button").click();
+            await openMobileTaskAction(createdCard, "tasks-mobile-edit-button");
             await expect(page.getByRole("heading", { name: "Edit task" })).toBeVisible({ timeout: 15_000 });
             await expect(page.getByTestId("tasks-weighted-progress-section")).toBeVisible();
             await expect(page.getByTestId("tasks-progress-component-row")).toHaveCount(3, { timeout: 15_000 });
@@ -126,12 +133,12 @@ test.describe("tasks weighted progress mobile", () => {
 
             await page.getByRole("button", { name: /^Cancel$/i }).click();
             const refreshedCard = await findMobileTaskCard(page, taskTitle);
-            await refreshedCard.getByTestId("tasks-mobile-edit-button").click();
+            await openMobileTaskAction(refreshedCard, "tasks-mobile-edit-button");
             await expect(page.getByTestId("tasks-progress-component-completion-input").nth(0)).toHaveValue("100", { timeout: 15_000 });
 
             await page.getByRole("button", { name: /^Cancel$/i }).click();
             const deletableCard = await findMobileTaskCard(page, taskTitle);
-            await deletableCard.getByTestId("tasks-mobile-delete-button").click();
+            await openMobileTaskAction(deletableCard, "tasks-mobile-delete-button");
             await page.getByTestId("tasks-delete-confirm-button").click();
             await expect(page.getByText(taskTitle)).toHaveCount(0, { timeout: 15_000 });
         } finally {

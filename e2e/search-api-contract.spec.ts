@@ -1272,9 +1272,9 @@ test("task work-log flows use backend create, update, and delete contracts", asy
     const capture = await installSearchContractMocks(page);
 
     await page.goto("/tasks", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("tasks-row-edit-button").first()).toBeVisible({ timeout: 15_000 });
-
-    await page.getByTestId("tasks-row-edit-button").first().click();
+    await expect(page.getByTestId("tasks-row-actions-trigger").first()).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("tasks-row-actions-trigger").first().click();
+    await page.getByTestId("tasks-row-edit-button").last().click();
     await expect(page.getByRole("heading", { name: "Edit task" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("tasks-work-log-section")).toBeVisible();
     await expect(page.getByTestId("tasks-work-log-row")).toHaveCount(1);

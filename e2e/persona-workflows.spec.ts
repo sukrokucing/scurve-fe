@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { getOrCreateAuthSessionForCredentials, seedAuthState, type AuthSession } from "./support/auth-session";
 
 const rawSuffix = (process.env.DEMO_PERSONA_SUFFIX ?? "")
@@ -36,11 +36,11 @@ async function loginAs(page: Page, session: AuthSession) {
 }
 
 async function ensureProjectSelected(page: Page): Promise<boolean> {
-    const quickCreateButton = await resolveQuickCreateButton(page);
-    const alreadyEnabled = await quickCreateButton.isEnabled().catch(() => false);
-    if (alreadyEnabled) return true;
+    const projectCombobox = page.getByTestId("tasks-project-combobox");
+    const currentLabel = (await projectCombobox.textContent().catch(() => "")) ?? "";
+    if (currentLabel.trim() && !/select project/i.test(currentLabel)) return true;
 
-    await page.getByTestId("tasks-project-combobox").click();
+    await projectCombobox.click();
     const firstProjectOption = page.locator("[cmdk-item]").first();
     if (await firstProjectOption.isVisible({ timeout: 5000 }).catch(() => false)) {
         await firstProjectOption.click();
@@ -57,26 +57,14 @@ async function openAdvancedPanel(page: Page) {
     await expect(panel).toBeVisible();
 }
 
-async function resolveQuickCreateInput(page: Page): Promise<Locator> {
-    const byTestId = page.getByTestId("tasks-quick-create-input");
-    if (await byTestId.isVisible({ timeout: 3000 }).catch(() => false)) {
-        return byTestId;
-    }
-
-    const byLabel = page.getByRole("textbox", { name: /Quick add task title, then press Enter/i });
-    await expect(byLabel).toBeVisible({ timeout: 15000 });
-    return byLabel;
-}
-
-async function resolveQuickCreateButton(page: Page): Promise<Locator> {
-    const byTestId = page.getByTestId("tasks-quick-create-button");
-    if (await byTestId.isVisible({ timeout: 3000 }).catch(() => false)) {
-        return byTestId;
-    }
-
-    const byRole = page.getByRole("button", { name: /^Quick add$/i });
-    await expect(byRole).toBeVisible({ timeout: 15000 });
-    return byRole;
+async function createTaskViaDialog(page: Page, title: string): Promise<void> {
+    await page.getByTestId("tasks-new-button").click();
+    const createDialog = page.getByRole("dialog", { name: "Create task" });
+    await expect(createDialog).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("tasks-create-title-input").fill(title);
+    await expect(page.getByTestId("tasks-create-submit-button")).toBeEnabled({ timeout: 10_000 });
+    await page.getByTestId("tasks-create-submit-button").click();
+    await expect(createDialog).toBeHidden({ timeout: 15_000 });
 }
 
 test.describe("persona workflow ergonomics", () => {
@@ -108,7 +96,7 @@ test.describe("persona workflow ergonomics", () => {
     });
 
     for (const persona of personas) {
-        test(`${persona.label} can quick-create and switch task modes`, async ({ page }) => {
+        test(`${persona.label} can create tasks and switch task modes`, async ({ page }) => {
             test.setTimeout(60_000);
             const sessionError = PERSONA_SESSION_ERRORS.get(persona.key);
             test.skip(Boolean(sessionError), sessionError ? `Session unavailable: ${sessionError}` : undefined);
@@ -119,18 +107,12 @@ test.describe("persona workflow ergonomics", () => {
             await loginAs(page, session);
 
             await page.goto("/tasks");
-            const quickCreateInput = await resolveQuickCreateInput(page);
-            const quickCreateButton = await resolveQuickCreateButton(page);
             const projectReady = await ensureProjectSelected(page);
-            if (!projectReady && !(await quickCreateButton.isEnabled().catch(() => false))) {
-                return;
-            }
+            test.skip(!projectReady, "No accessible project is available for persona workflow test.");
 
             const title = `Workflow ${persona.key} ${Date.now()}`;
-            await quickCreateInput.fill(title);
             const start = Date.now();
-            await quickCreateButton.click();
-            await expect(quickCreateInput).toHaveValue("", { timeout: 15_000 });
+            await createTaskViaDialog(page, title);
             const elapsedMs = Date.now() - start;
             expect(elapsedMs).toBeLessThan(15_000);
 

@@ -33,13 +33,21 @@ async function ensureTasksProjectSelected(page: Page) {
     const projectCombobox = page.getByTestId("tasks-project-combobox");
     if (!(await projectCombobox.isVisible().catch(() => false))) return;
 
-    const quickCreateButton = page.getByTestId("tasks-quick-create-button");
-    if (await quickCreateButton.isEnabled().catch(() => false)) return;
+    const currentLabel = (await projectCombobox.textContent().catch(() => "")) ?? "";
+    if (currentLabel.trim() && !/select project/i.test(currentLabel)) return;
 
     await projectCombobox.click();
     const firstProjectOption = page.locator("[cmdk-item]").first();
     if (await firstProjectOption.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstProjectOption.click();
+    }
+}
+
+async function openFirstProjectActions(page: Page) {
+    const actionToggle = page.getByTestId("projects-row-actions-toggle").first();
+    if (await actionToggle.isVisible().catch(() => false)) {
+        await actionToggle.click();
+        await expect(page.getByRole("menu").last()).toBeVisible();
     }
 }
 
@@ -62,7 +70,7 @@ test.describe("Business Flow Coverage", () => {
         await page.goto(FLOW_CATALOG[0].route);
         await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText("Total Projects")).toBeVisible();
-        await expect(page.getByText("Project Progress")).toBeVisible();
+        await expect(page.getByText("Project Progress", { exact: true })).toBeVisible();
     });
 
     test(`${FLOW_CATALOG[1].id} ${FLOW_CATALOG[1].title}`, async ({ page }) => {
@@ -74,19 +82,20 @@ test.describe("Business Flow Coverage", () => {
         await expect(createDialog).toBeVisible();
         await createDialog.getByRole("button", { name: "Close" }).click();
 
-        const editButtons = page.getByRole("button", { name: "Edit" });
-        if (await editButtons.count()) {
-            await editButtons.first().click();
+        const actionToggles = page.getByTestId("projects-row-actions-toggle");
+        if (await actionToggles.count()) {
+            await openFirstProjectActions(page);
+            await page.getByRole("menu").last().getByTestId("projects-row-compact-edit-button").click();
             const editDialog = page.getByRole("dialog", { name: "Edit project" });
             await expect(editDialog).toBeVisible();
             await editDialog.getByRole("button", { name: "Close" }).click();
         }
 
-        const dashboardLinks = page.getByTestId("projects-row-dashboard-link");
-        if (await dashboardLinks.count()) {
-            await dashboardLinks.first().click();
+        if (await actionToggles.count()) {
+            await openFirstProjectActions(page);
+            await page.getByRole("menu").last().getByTestId("projects-row-dashboard-link").click();
             await expect(page).toHaveURL(/\/projects\/.+\/dashboard/);
-            await expect(page.getByText("S-Curve Performance")).toBeVisible();
+            await expect(page.getByTestId("project-dashboard-metric-combobox")).toBeVisible();
         }
     });
 
@@ -94,12 +103,8 @@ test.describe("Business Flow Coverage", () => {
         await page.goto(FLOW_CATALOG[2].route);
         await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible({ timeout: 15_000 });
         await ensureTasksProjectSelected(page);
-        const quickCreateButton = page.getByTestId("tasks-quick-create-button");
-        if (!(await quickCreateButton.isEnabled().catch(() => false))) {
-            return;
-        }
 
-        await page.getByRole("button", { name: "New task" }).click();
+        await page.getByTestId("tasks-new-button").click();
         const createTaskDialog = page.getByRole("dialog", { name: "Create task" });
         await expect(createTaskDialog).toBeVisible();
 
@@ -198,7 +203,7 @@ test.describe("Business Flow Coverage", () => {
         await page.goto(FLOW_CATALOG[6].route);
         await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
 
-        await page.getByRole("textbox", { name: "Search by name or email..." }).fill("test@example.com");
+        await page.getByTestId("users-search-input").fill("test@example.com");
         const manageLinks = page.getByRole("link", { name: "Manage Access" });
         if (await manageLinks.count()) {
             await manageLinks.first().click();

@@ -1,5 +1,5 @@
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYTg1YWViZS01NjA3LTRkZDMtYmU0NS01OWJjYTI5ODQ0NmQiLCJleHAiOjE3NzMyMDI0NjcsImlhdCI6MTc3MzExNjA2N30.ijk-KXp8Ib6D3W_L8-E7gP5v6L-KGGpSi6af3o0tKC8",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYTg1YWViZS01NjA3LTRkZDMtYmU0NS01OWJjYTI5ODQ0NmQiLCJleHAiOjE3NzQ1MDU0NDcsImlhdCI6MTc3NDQxOTA0N30.rV_K3JVOejbYbj_0cTBehZ5nOB0cOm6K4poraQYzNvw",
   "user": {
     "id": "ba85aebe-5607-4dd3-be45-59bca298446d",
     "name": "Demo Data Analyst",
@@ -22,5 +22,5 @@
       "role_name": "data_analyst"
     }
   ],
-  "createdAt": "2026-03-10T04:14:27.323Z"
+  "createdAt": "2026-03-25T06:10:47.330Z"
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T06:39:18.463Z",
+  "generated_at": "2026-03-25T06:43:59.533Z",
   "base_url": "https://localhost:8800",
   "auth_source": "env-login",
   "auth_identity": "jimmy@dwp.co.id",
@@ -69,9 +69,9 @@
         "title": "[team-demo] Requirements baseline review",
         "assignee_email": "demo.system.analyst@example.com",
         "actual_progress_pct": 45,
-        "expected_progress_pct": 39.58,
-        "variance_pct": 5.42,
-        "health_status": "on_track",
+        "expected_progress_pct": 100,
+        "variance_pct": -55,
+        "health_status": "critical",
         "schedule_status": "on_time",
         "execution_status": "in_progress",
         "completed_at": null,
@@ -93,9 +93,9 @@
         "title": "[team-demo] Tasks responsive polish",
         "assignee_email": "demo.frontend.developer@example.com",
         "actual_progress_pct": 15,
-        "expected_progress_pct": 10.83,
-        "variance_pct": 4.17,
-        "health_status": "on_track",
+        "expected_progress_pct": 100,
+        "variance_pct": -85,
+        "health_status": "critical",
         "schedule_status": "on_time",
         "execution_status": "in_progress",
         "completed_at": null,
@@ -105,9 +105,9 @@
         "title": "[team-demo] Intern bugfix support bundle",
         "assignee_email": "demo.backend.intern@example.com",
         "actual_progress_pct": 100,
-        "expected_progress_pct": 27.07,
-        "variance_pct": 72.93,
-        "health_status": "ahead",
+        "expected_progress_pct": 100,
+        "variance_pct": 0,
+        "health_status": "on_track",
         "schedule_status": "finished_early",
         "execution_status": "completed",
         "completed_at": "2026-03-17T04:13:44.309934570Z",
@@ -127,17 +127,17 @@
       }
     ],
     "actual_schedule_counts": {
+      "not_specified": 16,
       "finished_early": 1,
       "overdue": 1,
-      "not_specified": 1,
       "on_time": 2
     },
     "task_status_counts": {
-      "total": 5,
+      "total": 20,
       "finished_early": 1,
       "overdue": 1,
       "on_time": 2,
-      "not_specified": 1
+      "not_specified": 16
     },
     "workload_distribution": [
       {
@@ -166,16 +166,16 @@
         "task_count": 1
       }
     ],
-    "overall_progress_pct": 45,
-    "assignment_coverage_pct": 100,
-    "due_date_coverage_pct": 80,
+    "overall_progress_pct": 11.84,
+    "assignment_coverage_pct": 25,
+    "due_date_coverage_pct": 20,
     "project_health": {
       "data_status": "ok",
       "metric_supported": true,
-      "planned_pct": 44.37,
-      "actual_pct": 45,
-      "variance_pct": 0.63,
-      "stage": "maturity",
+      "planned_pct": 100,
+      "actual_pct": 11.84,
+      "variance_pct": -88.16,
+      "stage": "lag",
       "rule_50_70_status": "insufficient_elapsed_time_data",
       "rule_50_70_pass": null
     }

@@ -19,6 +19,7 @@ import {
 } from "@/api/queries/projects";
 import { useTasksByProject } from "@/api/queries/tasks";
 import type { ApiSCurveMetric } from "@/api/openapiClient";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import type { Task } from "@/types/domain";
@@ -411,32 +412,52 @@ export const ProjectDashboard = () => {
     const assignmentCoverage = Math.round(dashboard.assignment_coverage_pct);
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6 p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold tracking-tight">{dashboard.project.name} Dashboard</h1>
-                    <p className="text-muted-foreground">{dashboard.project.description || "Project progress and performance overview."}</p>
-                </div>
-                <div className="w-full max-w-[220px] space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">S-curve metric</p>
-                    <Combobox
-                        value={metric}
-                        onChange={(value) => setMetric(value as ApiSCurveMetric)}
-                        options={METRIC_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-                        placeholder="Select metric"
-                        searchPlaceholder="Search metric..."
-                        triggerTestId="project-dashboard-metric-combobox"
-                    />
-                </div>
+        <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
+            <Card className="border-border/70 shadow-sm">
+                <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Project dashboard</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="text-3xl font-bold tracking-tight">{dashboard.project.name}</h1>
+                                <Badge variant="outline">Stage {stageLabel}</Badge>
+                            </div>
+                            <p className="max-w-2xl text-sm text-muted-foreground">
+                                {dashboard.project.description || "Project progress, execution health, and S-curve performance in one place."}
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline">Due coverage {dueDateCoverage}%</Badge>
+                            <Badge variant="outline">Assignment {assignmentCoverage}%</Badge>
+                            <Badge variant="outline">{ruleStatusLabel}</Badge>
+                        </div>
+                    </div>
+                    <div className="w-full max-w-[220px] space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">S-curve metric</p>
+                        <Combobox
+                            value={metric}
+                            onChange={(value) => setMetric(value as ApiSCurveMetric)}
+                            options={METRIC_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                            placeholder="Select metric"
+                            searchPlaceholder="Search metric..."
+                            triggerTestId="project-dashboard-metric-combobox"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-1">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">Execution health</h2>
+                <p className="text-sm text-muted-foreground">Overall completion, schedule coverage, and team load.</p>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.1fr)]">
-                <Card className="overflow-hidden border-border/70">
+                <Card className="overflow-hidden border-border/70 shadow-sm">
                     <CardHeader className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Overall progress</CardTitle>
-                                <CardDescription>Persistent completion signal for the project.</CardDescription>
+                                <CardDescription>Project completion signal.</CardDescription>
                             </div>
                             <Target className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -464,9 +485,7 @@ export const ProjectDashboard = () => {
                                     style={{ width: `${Math.max(0, Math.min(100, overallProgress ?? 0))}%` }}
                                 />
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Uses progress S-curve health when available, then falls back to average task progress.
-                            </p>
+                            <p className="text-xs text-muted-foreground">Falls back to average task progress when needed.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
@@ -481,18 +500,15 @@ export const ProjectDashboard = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="border-border/70">
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader>
                         <CardTitle>Schedule status</CardTitle>
-                        <CardDescription>
-                            Backend-managed schedule health across all tasks. Due date coverage: {dueDateCoverage}%.
-                        </CardDescription>
+                        <CardDescription>Due coverage {dueDateCoverage}%</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {taskCompletionSummary.completedWithoutActualTimestamp > 0 ? (
                             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                                 {taskCompletionSummary.completedWithoutActualTimestamp} completed task(s) are still missing `completed_at`.
-                                Those are likely legacy rows; backend may have backfilled timing from history.
                             </div>
                         ) : null}
                         {isTasksLoading ? (
@@ -532,12 +548,12 @@ export const ProjectDashboard = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="border-border/70">
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader>
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Workload distribution</CardTitle>
-                                <CardDescription>Task count for each project member.</CardDescription>
+                                <CardDescription>Task count per project member.</CardDescription>
                             </div>
                             <Users2 className="h-5 w-5 text-muted-foreground" />
                         </div>
@@ -620,8 +636,13 @@ export const ProjectDashboard = () => {
                 </Card>
             </div>
 
+            <div className="space-y-1">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">Project pulse</h2>
+                <p className="text-sm text-muted-foreground">Actual, planned, variance, and governance for the selected metric.</p>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Actual ({metric})</CardTitle>
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -633,7 +654,7 @@ export const ProjectDashboard = () => {
                         <p className="text-xs text-muted-foreground">{metricCopy.actualDescription}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Planned ({metric})</CardTitle>
                         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -645,7 +666,7 @@ export const ProjectDashboard = () => {
                         <p className="text-xs text-muted-foreground">{metricCopy.plannedDescription}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Variance</CardTitle>
                         {variance === null ? (
@@ -670,7 +691,7 @@ export const ProjectDashboard = () => {
                         <p className="text-xs text-muted-foreground">{metricCopy.varianceDescription}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border-border/70 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Governance</CardTitle>
                         <div className={cn(
@@ -695,12 +716,15 @@ export const ProjectDashboard = () => {
                 </Card>
             </div>
 
-                <Card className="col-span-4">
+            <div className="space-y-1">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">S-curve governance</h2>
+                <p className="text-sm text-muted-foreground">{metricCopy.chartDescription}</p>
+            </div>
+
+                <Card className="col-span-4 border-border/70 shadow-sm">
                     <CardHeader>
                         <CardTitle>S-Curve Performance</CardTitle>
-                        <CardDescription>
-                            {metricCopy.chartDescription}
-                        </CardDescription>
+                        <CardDescription>Planned and actual {metric} over time.</CardDescription>
                     </CardHeader>
                 <CardContent className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
