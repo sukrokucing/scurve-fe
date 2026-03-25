@@ -59,6 +59,31 @@ function getMutationErrorMessage(err: unknown, action: string) {
     return `Failed to ${action} project`;
 }
 
+function getStageLabel(stage: string | null | undefined) {
+    if (!stage) return "N/A";
+    if (stage === "lag") return "Lag";
+    if (stage === "log") return "Log";
+    if (stage === "maturity") return "Maturity";
+    if (stage === "decline") return "Decline";
+    return stage;
+}
+
+function getStageVariant(stage: string | null | undefined): "outline" | "secondary" | "success" | "warning" | "error" {
+    if (stage === "maturity") return "success";
+    if (stage === "log") return "secondary";
+    if (stage === "lag") return "warning";
+    if (stage === "decline") return "error";
+    return "outline";
+}
+
+function getDataStatusLabel(dataStatus: string | null | undefined) {
+    if (!dataStatus) return "Waiting for project health data";
+    if (dataStatus === "ok") return "Health data available";
+    if (dataStatus === "insufficient_data") return "Insufficient data for a reliable reading";
+    if (dataStatus === "unsupported_metric") return "Current metric is unsupported";
+    return dataStatus.replace(/_/g, " ");
+}
+
 export function ProjectsPage() {
     const navigate = useNavigate();
     const { data: projects, isLoading, refetch, isRefetching, error } = useProjectsQuery();
@@ -252,12 +277,10 @@ export function ProjectsPage() {
     );
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-                    <p className="text-muted-foreground">Monitor progress and manage milestones.</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="space-y-6" data-testid="projects-page">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant={onlinePresenceCount > 0 ? "success" : "outline"}>
                             {onlinePresenceCount} online
                         </Badge>
@@ -275,8 +298,15 @@ export function ProjectsPage() {
                             </Badge>
                         ))}
                     </div>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+                        <p className="max-w-3xl text-muted-foreground">
+                            Create a project, move straight into Project Settings to configure members and resource rates,
+                            then use the dashboard for monitoring and governance.
+                        </p>
+                    </div>
                     {latestRemoteChangeSummary ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                             Latest live update: {latestRemoteChangeSummary}
                             {latestRemoteChangeAt
                                 ? ` · ${formatDistanceToNowStrict(new Date(latestRemoteChangeAt), { addSuffix: true })}`
@@ -284,7 +314,7 @@ export function ProjectsPage() {
                         </p>
                     ) : null}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Button
                         type="button"
                         variant={remoteChangeCount > 0 ? "default" : "secondary"}
@@ -556,41 +586,70 @@ export function ProjectsPage() {
                     </Dialog>
                 </div>
             </div>
-            <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border-primary/20 bg-primary/5 shadow-sm" data-testid="projects-page-setup-card">
+                <CardContent className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">Setup-first workflow</p>
+                        <p className="text-sm text-muted-foreground">
+                            New projects should open in <span className="font-medium text-foreground">Project Settings</span> first so
+                            team membership, rates, and health rules are ready before the dashboard becomes the source of truth.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline">Settings first</Badge>
+                        <Badge variant="outline">Dashboard after setup</Badge>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-sm transition-shadow hover:shadow-md" data-testid="projects-page-table-card">
                 <CardHeader>
                     <CardTitle>Workspace projects</CardTitle>
-                    <CardDescription>Fetched from the S-Curve backend in real-time.</CardDescription>
+                    <CardDescription>
+                        Scan project identity, health, and actual progress first. Actions stay in a dedicated trailing area.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <Input
-                            value={projectQuery}
-                            onChange={(event) => setProjectQuery(event.target.value)}
-                            placeholder="Search projects by name, description, stage, or data status…"
-                            className="sm:max-w-md"
-                            data-testid="projects-search-input"
-                            aria-label="Search projects"
-                        />
-                        {projectQuery.length > 0 ? (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => setProjectQuery("")}
-                            >
-                                Clear
-                            </Button>
-                        ) : null}
-                    </div>
-                    <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="projects-filter-summary">
-                        {trimmedProjectQuery ? (
-                            <>
-                                <Badge variant="outline">Search: {trimmedProjectQuery}</Badge>
-                                <Badge variant="outline">{filteredRows.length} match(es)</Badge>
-                                <span>Filtering name, description, stage, and data status.</span>
-                            </>
-                        ) : (
-                            <span>Search filters projects by name, description, stage, and data status.</span>
-                        )}
+                    <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="space-y-2">
+                            <div className="max-w-md">
+                                <label htmlFor="projects-search-input" className="mb-1 block text-xs font-medium text-muted-foreground">
+                                    Search projects
+                                </label>
+                                <Input
+                                    id="projects-search-input"
+                                    value={projectQuery}
+                                    onChange={(event) => setProjectQuery(event.target.value)}
+                                    placeholder="Search by name, description, stage, or data status…"
+                                    className="sm:max-w-md"
+                                    data-testid="projects-search-input"
+                                    aria-label="Search projects"
+                                />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="projects-filter-summary">
+                                {trimmedProjectQuery ? (
+                                    <>
+                                        <Badge variant="outline">Search: {trimmedProjectQuery}</Badge>
+                                        <Badge variant="outline">{filteredRows.length} match(es)</Badge>
+                                        <span>Filtering name, description, stage, and data status.</span>
+                                    </>
+                                ) : (
+                                    <span>Search filters project identity plus S-curve readiness signals.</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{rows.length} project{rows.length === 1 ? "" : "s"}</Badge>
+                            {projectQuery.length > 0 ? (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setProjectQuery("")}
+                                >
+                                    Clear
+                                </Button>
+                            ) : null}
+                        </div>
                     </div>
                     {error ? (
                         <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -670,58 +729,84 @@ function VirtualizedProjectsTable({
         return "N/A";
     }, [projectSummaryById]);
 
-    const formatStage = useCallback((projectId: string) => {
-        const stage = projectSummaryById.get(projectId)?.stage;
-        if (!stage) return "N/A";
-        if (stage === "lag") return "Lag";
-        if (stage === "log") return "Log";
-        if (stage === "maturity") return "Maturity";
-        if (stage === "decline") return "Decline";
-        return stage;
+    const getProjectSummary = useCallback((projectId: string) => {
+        return projectSummaryById.get(projectId) ?? null;
     }, [projectSummaryById]);
+
     const columns = useMemo<ColumnDef<Project, unknown>[]>(() => ([
-        projectColumnHelper.accessor("name", {
-            header: "Name",
-            cell: (info) => <span className="font-medium">{info.getValue()}</span>,
-        }),
-        projectColumnHelper.accessor("description", {
-            header: "Description",
-            cell: (info) => info.getValue() || "—",
+        projectColumnHelper.display({
+            id: "project",
+            header: "Project",
+            cell: (info) => (
+                <div className="space-y-1">
+                    <span className="font-medium">{info.row.original.name}</span>
+                    <p className="max-w-xl text-sm text-muted-foreground">
+                        {info.row.original.description?.trim() || "No project description yet."}
+                    </p>
+                </div>
+            ),
         }),
         projectColumnHelper.display({
-            id: "stage",
-            header: "S-Curve Stage",
-            cell: (info) => formatStage(info.row.original.id),
+            id: "health",
+            header: "Health",
+            cell: (info) => {
+                const summary = getProjectSummary(info.row.original.id);
+                return (
+                    <div className="space-y-1">
+                        <Badge variant={getStageVariant(summary?.stage)}>
+                            {getStageLabel(summary?.stage)}
+                        </Badge>
+                        <p className="max-w-[220px] text-xs text-muted-foreground">
+                            {getDataStatusLabel(summary?.dataStatus)}
+                        </p>
+                    </div>
+                );
+            },
         }),
         projectColumnHelper.display({
             id: "actualProgress",
             header: () => <div className="text-right">Actual Progress</div>,
             cell: (info) => {
                 const project = info.row.original;
+                const summary = getProjectSummary(project.id);
+                return (
+                    <div className="space-y-1 text-right">
+                        <p className="text-base font-semibold text-foreground">{formatActualProgress(project.id)}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {summary?.metricSupported === false || summary?.dataStatus === "unsupported_metric"
+                                ? "Metric unavailable"
+                                : summary?.dataStatus === "insufficient_data"
+                                    ? "Waiting for more timeline data"
+                                    : "Live portfolio reading"}
+                        </p>
+                    </div>
+                );
+            },
+        }),
+        projectColumnHelper.display({
+            id: "actions",
+            header: () => <div className="text-right">Actions</div>,
+            cell: (info) => {
+                const project = info.row.original;
                 return (
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span className="mr-4">{formatActualProgress(project.id)}</span>
                         <Button
                             size="sm"
                             variant="outline"
                             asChild
+                            data-testid="projects-row-settings-link"
                         >
-                            <Link
-                                to={`/projects/${project.id}/settings`}
-                                data-testid="projects-row-settings-link"
-                            >
+                            <Link to={`/projects/${project.id}/settings`}>
                                 Settings
                             </Link>
                         </Button>
                         <Button
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
                             asChild
+                            data-testid="projects-row-dashboard-link"
                         >
-                            <Link
-                                to={`/projects/${project.id}/dashboard`}
-                                data-testid="projects-row-dashboard-link"
-                            >
+                            <Link to={`/projects/${project.id}/dashboard`}>
                                 Dashboard
                             </Link>
                         </Button>
@@ -762,7 +847,7 @@ function VirtualizedProjectsTable({
                 );
             },
         }),
-    ]), [editForm, formatActualProgress, formatStage, setConfirmOpen, setEditing, setProjectToDelete]);
+    ]), [editForm, formatActualProgress, getProjectSummary, setConfirmOpen, setEditing, setProjectToDelete]);
 
     return (
         <div

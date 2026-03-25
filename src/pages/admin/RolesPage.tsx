@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash2, Loader2, Shield, Settings, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, Shield, Settings, Check, KeyRound, Layers3 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -38,17 +38,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AppDataTable } from "@/components/ui/app-data-table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import {
     useAssignPermissionToRoleMutation,
     useCreateRoleMutation,
     useDeleteRoleMutation,
     usePermissionsQuery,
+    useRevokePermissionFromRoleMutation,
     useRolePermissionsQuery,
     useRolesQuery,
 } from "@/api/queries/rbac";
 
-import type { Role } from "@/api/rbac";
+import type { Permission, Role } from "@/api/rbac";
 
 const roleColumnHelper = createColumnHelper<Role>();
 
@@ -76,21 +79,81 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
     const { data: allPerms } = usePermissionsQuery({ enabled: open });
 
     const assignMutation = useAssignPermissionToRoleMutation(role?.id);
+    const revokeMutation = useRevokePermissionFromRoleMutation(role?.id);
+    const [permissionSearch, setPermissionSearch] = useState("");
+    const [permissionToRevoke, setPermissionToRevoke] = useState<Permission | null>(null);
+    const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
 
     const form = useForm<AssignPermValues>({
         resolver: zodResolver(assignPermSchema),
     });
 
+    // Filter available perms
+    const assignedIds = useMemo(() => new Set((rolePerms ?? []).map((permission) => permission.id)), [rolePerms]);
+    const availablePerms = useMemo(
+        () => allPerms?.filter((permission) => !assignedIds.has(permission.id)) ?? [],
+        [allPerms, assignedIds],
+    );
+    const assignedPermissions = useMemo(() => rolePerms ?? [], [rolePerms]);
+    const normalizedPermissionSearch = permissionSearch.trim().toLowerCase();
+    const filteredAssignedPermissions = useMemo(() => {
+        if (!normalizedPermissionSearch) {
+            return assignedPermissions;
+        }
+
+        return assignedPermissions.filter((permission) => {
+            const haystack = `${permission.name} ${permission.description ?? ""}`.toLowerCase();
+            return haystack.includes(normalizedPermissionSearch);
+        });
+    }, [assignedPermissions, normalizedPermissionSearch]);
+    const groupedAssignedPermissions = useMemo(() => {
+        const groups = new Map<string, typeof filteredAssignedPermissions>();
+
+        for (const permission of filteredAssignedPermissions) {
+            const category = permission.name.split(".")[0] || "general";
+            const current = groups.get(category) ?? [];
+            groups.set(category, [...current, permission]);
+        }
+
+        return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
+    }, [filteredAssignedPermissions]);
+
+    const handleDialogOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) {
+            form.reset();
+            setPermissionSearch("");
+            setPermissionToRevoke(null);
+            setRevokeConfirmOpen(false);
+        }
+        onOpenChange(nextOpen);
+    };
+
+    const handleRequestRevoke = (permission: Permission) => {
+        setPermissionToRevoke(permission);
+        setRevokeConfirmOpen(true);
+    };
+
+    const handleConfirmRevoke = () => {
+        if (!permissionToRevoke) return;
+        revokeMutation.mutate(permissionToRevoke.id, {
+            onSuccess: () => {
+                toast.success("Permission removed");
+                setRevokeConfirmOpen(false);
+                setPermissionToRevoke(null);
+            },
+            onError: (error) => {
+                toast.error("Failed to remove permission");
+                console.error(error);
+            },
+        });
+    };
+
     if (!role) return null;
 
-    // Filter available perms
-    const assignedIds = new Set(rolePerms?.map(p => p.id));
-    const availablePerms = allPerms?.filter(p => !assignedIds.has(p.id)) || [];
-
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <AppDialogContent
-                className="max-w-2xl"
+                className="max-h-[88vh] overflow-y-auto sm:max-w-4xl"
                 title={(
                     <span className="flex items-center gap-2">
                         <Shield className="h-5 w-5" />
@@ -99,77 +162,229 @@ const RoleDetailsDialog = ({ role, open, onOpenChange }: { role: Role | null; op
                 )}
                 description={role.description || "No role description provided."}
             >
+                <div className="grid gap-4 py-4">
+                    <Card className="border-border/70 shadow-sm" data-testid="roles-details-overview-card">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Role overview</CardTitle>
+                            <CardDescription>
+                                Use this dialog for focused role-level permission changes. Use Access Policy when you need wider grant or revoke sweeps across many roles or resources.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3 pt-0">
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                <Badge variant="outline">{assignedPermissions.length} assigned</Badge>
+                                <Badge variant="outline">{availablePerms.length} available</Badge>
+                                <Badge variant="outline">Created {format(new Date(role.created_at), "MMM d, yyyy")}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {role.description || "Add a short description later so other admins can tell when to use this role without opening the full permission list."}
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <div className="grid gap-6 py-4">
-                    {/* Assign Form */}
-                    <div className="flex items-end gap-2 p-4 bg-muted/50 rounded-lg">
-                        <Form {...form}>
-                            <form
-                                onSubmit={form.handleSubmit((values) => {
-                                    assignMutation.mutate(values.permissionId, {
-                                        onSuccess: () => {
-                                            toast.success("Permission assigned");
-                                            form.reset();
-                                        },
-                                        onError: (err) => {
-                                            toast.error("Failed to assign permission");
-                                            console.error(err);
-                                        },
-                                    });
-                                })}
-                                className="flex-1 flex gap-2"
-                            >
-                                <FormField
-                                    control={form.control}
-                                    name="permissionId"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1 space-y-0">
-                                            <Combobox
-                                                options={availablePerms.map(p => ({ value: p.id, label: p.name }))}
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                placeholder="Add Permission..."
-                                                searchPlaceholder="Search permissions..."
-                                                emptyText={availablePerms.length === 0 ? "No unassigned permissions" : "No permission found."}
-                                            />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button
-                                    type="submit"
-                                    disabled={assignMutation.isPending}
-                                    size="icon"
-                                    aria-label="Assign selected permission"
-                                    title="Assign selected permission"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </form>
-                        </Form>
-                    </div>
-
-                    {/* Permissions List */}
-                    <div className="space-y-2">
-                        <h3 className="text-sm font-medium leading-none">Assigned Permissions</h3>
-                        <ScrollArea className="h-[200px] rounded-md border p-4">
-                            {loadingPerms ? (
-                                <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
-                            ) : !rolePerms || rolePerms.length === 0 ? (
-                                <p className="py-4 text-sm text-muted-foreground">No permissions assigned.</p>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {rolePerms.map(perm => (
-                                        <div key={perm.id} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/40">
-                                            <Check className="h-3 w-3 text-success" />
-                                            <span className="font-mono">{perm.name}</span>
-                                        </div>
-                                    ))}
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                        <Card className="border-border/70 shadow-sm" data-testid="roles-details-assign-card">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base">Add permission</CardTitle>
+                                <CardDescription>
+                                    Pick one permission at a time so the role stays intentional and easy to review later.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4 pt-0">
+                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                    <Badge variant="outline">{availablePerms.length} ready to add</Badge>
+                                    <Badge variant="outline">Permission changes stay role-scoped</Badge>
                                 </div>
-                            )}
-                        </ScrollArea>
+                                <Form {...form}>
+                                    <form
+                                        onSubmit={form.handleSubmit((values) => {
+                                            assignMutation.mutate(values.permissionId, {
+                                                onSuccess: () => {
+                                                    toast.success("Permission assigned");
+                                                    form.reset();
+                                                },
+                                                onError: (err) => {
+                                                    toast.error("Failed to assign permission");
+                                                    console.error(err);
+                                                },
+                                            });
+                                        })}
+                                        className="flex flex-col gap-3"
+                                    >
+                                        <FormField
+                                            control={form.control}
+                                            name="permissionId"
+                                            render={({ field }) => (
+                                                <FormItem className="space-y-2">
+                                                    <FormLabel>Select permission</FormLabel>
+                                                    <FormControl>
+                                                        <Combobox
+                                                            options={availablePerms.map((permission) => ({ value: permission.id, label: permission.name }))}
+                                                            value={field.value}
+                                                            onChange={field.onChange}
+                                                            placeholder="Add Permission..."
+                                                            searchPlaceholder="Search permissions..."
+                                                            emptyText={availablePerms.length === 0 ? "No unassigned permissions" : "No permission found."}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <Button
+                                            type="submit"
+                                            disabled={assignMutation.isPending}
+                                            aria-label="Assign selected permission"
+                                            title="Assign selected permission"
+                                            data-testid="roles-details-assign-permission-button"
+                                        >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Assign permission
+                                        </Button>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-border/70 shadow-sm" data-testid="roles-details-permissions-card">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base">Assigned permissions</CardTitle>
+                                <CardDescription>
+                                    Review the current grants by domain so you can spot overly broad roles before changing them. Remove a grant here when the role has become too broad for its intent.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4 pt-0">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                        <Badge variant="outline">{filteredAssignedPermissions.length} shown</Badge>
+                                        <Badge variant="outline">{groupedAssignedPermissions.length} domain{groupedAssignedPermissions.length === 1 ? "" : "s"}</Badge>
+                                    </div>
+                                    <Input
+                                        value={permissionSearch}
+                                        onChange={(event) => setPermissionSearch(event.target.value)}
+                                        placeholder="Filter assigned permissions..."
+                                        className="sm:max-w-xs"
+                                        data-testid="roles-details-permission-search-input"
+                                    />
+                                </div>
+                                <ScrollArea className="h-[280px] rounded-md border bg-muted/10 p-4">
+                                    {loadingPerms ? (
+                                        <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                                    ) : assignedPermissions.length === 0 ? (
+                                        <p className="py-4 text-sm text-muted-foreground">No permissions assigned.</p>
+                                    ) : filteredAssignedPermissions.length === 0 ? (
+                                        <p className="py-4 text-sm text-muted-foreground">No assigned permissions match this filter.</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {groupedAssignedPermissions.map(([group, permissions]) => (
+                                                <div key={group} className="space-y-2" data-testid="roles-details-permission-group">
+                                                    <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            {group.replace(/[_-]/g, " ")}
+                                                        </p>
+                                                        <Badge variant="outline">{permissions.length}</Badge>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {permissions.map((permission) => (
+                                                            <div
+                                                                key={permission.id}
+                                                                className="rounded-lg border border-border/60 bg-background/90 p-3"
+                                                                data-testid="roles-details-permission-row"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <span className="mt-0.5 rounded-full bg-success/10 p-1 text-success">
+                                                                            <Check className="h-3.5 w-3.5" />
+                                                                        </span>
+                                                                        <div className="space-y-1">
+                                                                            <p className="font-mono text-sm">{permission.name}</p>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {permission.description || "No permission description provided."}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="text-muted-foreground hover:text-destructive"
+                                                                        data-testid="roles-details-permission-revoke-button"
+                                                                        aria-label={`Remove permission ${permission.name}`}
+                                                                        title={`Remove permission ${permission.name}`}
+                                                                        onClick={() => handleRequestRevoke(permission)}
+                                                                        disabled={revokeMutation.isPending}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </AppDialogContent>
+            <AlertDialog
+                open={revokeConfirmOpen}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setPermissionToRevoke(null);
+                    }
+                    setRevokeConfirmOpen(nextOpen);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove permission</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`Remove "${permissionToRevoke?.name ?? ""}" from role "${role.name}"?`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4 text-sm" data-testid="roles-details-revoke-summary">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="secondary">{role.name}</Badge>
+                            <Badge variant="outline">{assignedPermissions.length} assigned permission{assignedPermissions.length === 1 ? "" : "s"}</Badge>
+                        </div>
+                        <p className="text-muted-foreground">
+                            {permissionToRevoke?.description || "No permission description provided."}
+                        </p>
+                        <p className="text-muted-foreground">
+                            Removing this grant can immediately reduce what every user with this role can do. Review the role roster again after the change if this permission was part of a broader workflow.
+                        </p>
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => {
+                                    setRevokeConfirmOpen(false);
+                                    setPermissionToRevoke(null);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={handleConfirmRevoke}
+                                disabled={revokeMutation.isPending || !permissionToRevoke}
+                                data-testid="roles-details-revoke-confirm-button"
+                            >
+                                {revokeMutation.isPending ? "Removing..." : "Remove permission"}
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 };
@@ -286,97 +501,144 @@ export const RolesPage = () => {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
+        <div className="space-y-8" data-testid="roles-page">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
                         <Shield className="h-6 w-6 text-primary" />
                         Roles
                     </h1>
-                    <p className="text-muted-foreground">Manage system roles and permissions.</p>
+                    <p className="max-w-3xl text-muted-foreground">
+                        Define role intent first, then manage permissions from the role details view so the main list stays easy to scan and compare.
+                    </p>
                 </div>
-
-                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button data-testid="roles-create-button">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create Role
-                        </Button>
-                    </DialogTrigger>
-                    <AppDialogContent
-                        className="sm:max-w-[425px]"
-                        title="Create New Role"
-                        description="Define a new role to assign permissions to users."
-                    >
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Role Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="e.g. Project Manager"
-                                                    data-testid="roles-create-name-input"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Description</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Describe what this role allows..."
-                                                    className="resize-none"
-                                                    data-testid="roles-create-description-input"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <DialogFooter>
-                                    <Button
-                                        type="submit"
-                                        disabled={createMutation.isPending}
-                                        data-testid="roles-create-submit-button"
-                                    >
-                                        {createMutation.isPending && (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        )}
-                                        Create Role
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </Form>
-                    </AppDialogContent>
-                </Dialog>
             </div>
 
-            <div className="rounded-md border bg-card">
-                <AppDataTable
-                    data={roles ?? []}
-                    columns={columns}
-                    getRowId={(row) => row.id}
-                    emptyRow={(
-                        <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                No roles found. Create one to get started.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <Card className="border-border/70 shadow-sm" data-testid="roles-page-intro-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Keep the roster readable</CardTitle>
+                        <CardDescription>
+                            Use the main list to compare role names and intent. Open role details only when you need to add permissions or inspect the full grant set.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                        <Badge variant="outline">
+                            <Layers3 className="mr-1 h-3 w-3" />
+                            Compare role intent first
+                        </Badge>
+                        <Badge variant="outline">
+                            <KeyRound className="mr-1 h-3 w-3" />
+                            Configure permissions in details
+                        </Badge>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm" data-testid="roles-page-primary-actions-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Primary action</CardTitle>
+                        <CardDescription>
+                            Create new roles here, then manage their permissions from the role details dialog to keep one change surface at a time.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3 pt-0 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline">{roles?.length ?? 0} role{(roles?.length ?? 0) === 1 ? "" : "s"}</Badge>
+                            <Badge variant="outline">Permissions stay role-scoped</Badge>
+                        </div>
+                        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                            <DialogTrigger asChild>
+                                <Button data-testid="roles-create-button">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create Role
+                                </Button>
+                            </DialogTrigger>
+                            <AppDialogContent
+                                className="sm:max-w-[425px]"
+                                title="Create New Role"
+                                description="Define a new role to assign permissions to users."
+                            >
+                                <Form {...form}>
+                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="name"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Role Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="e.g. Project Manager"
+                                                            data-testid="roles-create-name-input"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Description</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Describe what this role allows..."
+                                                            className="resize-none"
+                                                            data-testid="roles-create-description-input"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <DialogFooter>
+                                            <Button
+                                                type="submit"
+                                                disabled={createMutation.isPending}
+                                                data-testid="roles-create-submit-button"
+                                            >
+                                                {createMutation.isPending && (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                )}
+                                                Create Role
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </Form>
+                            </AppDialogContent>
+                        </Dialog>
+                    </CardContent>
+                </Card>
             </div>
+
+            <Card className="border-border/70 shadow-sm" data-testid="roles-page-table-card">
+                <CardHeader>
+                    <CardTitle>Role roster</CardTitle>
+                    <CardDescription>
+                        Scan role identity first, then use the trailing actions to inspect permissions or remove a role when needed.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    <div className="rounded-md border bg-card">
+                        <AppDataTable
+                            data={roles ?? []}
+                            columns={columns}
+                            getRowId={(row) => row.id}
+                            emptyRow={(
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                        No roles found. Create one to get started.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
 
             <RoleDetailsDialog
                 role={selectedRole}

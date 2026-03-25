@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { Users, Search, ShieldCheck, Mail, Calendar, ArrowRight, Loader2 } from "lucide-react";
+import { Users, Search, ShieldCheck, Mail, Calendar, ArrowRight, Loader2, UserRoundSearch, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -97,59 +97,110 @@ export const UsersPage = () => {
     ]), []);
 
     return (
-        <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-8" data-testid="users-page">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
                         <Users className="h-6 w-6 text-primary" />
                         User Management
                     </h1>
-                    <p className="text-muted-foreground">
-                        View and manage system users and their access levels.
+                    <p className="max-w-3xl text-muted-foreground">
+                        Search people quickly, confirm identity at a glance, and move into access management only when you need to change permissions.
                     </p>
                 </div>
             </div>
 
-            <Card>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+                <Card className="border-border/70 shadow-sm" data-testid="users-page-intro-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Start with the user, then manage access</CardTitle>
+                        <CardDescription>
+                            This page works best when support or admins need to identify the right person first, then branch into access details only when necessary.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                        <Badge variant="outline">
+                            <UserRoundSearch className="mr-1 h-3 w-3" />
+                            Search by name or email
+                        </Badge>
+                        <Badge variant="outline">
+                            <KeyRound className="mr-1 h-3 w-3" />
+                            Open access only when needed
+                        </Badge>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm" data-testid="users-page-scope-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Current scope</CardTitle>
+                        <CardDescription>
+                            Keep the list narrow when you know who you are looking for. Leaving search blank keeps the full workspace roster visible.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                        <Badge variant="outline">{data?.total ?? 0} total user{(data?.total ?? 0) === 1 ? "" : "s"}</Badge>
+                        {searchQuery ? <Badge variant="outline">Search active</Badge> : <Badge variant="outline">Full roster</Badge>}
+                        {searchQuery ? (
+                            <Badge variant="secondary">{users.length} shown</Badge>
+                        ) : null}
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card className="border-border/70 shadow-sm" data-testid="users-page-table-card">
                 <CardHeader>
                     <CardTitle>All Users</CardTitle>
                     <CardDescription>
-                        {data?.total ?? 0} users found in the system.
+                        Review the current roster first. The access action stays in the trailing area so identity information stays easier to scan.
                     </CardDescription>
-                    <div className="mt-4 relative max-w-sm">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by name or email..."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            maxLength={API_SEARCH_QUERY_MAX_LENGTH}
-                            className="pl-8"
-                            data-testid="users-search-input"
-                        />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="users-filter-summary">
-                        {searchQuery ? (
-                            <>
-                                <Badge variant="outline">Search: {searchQuery}</Badge>
-                                <Badge variant="outline">{users.length} match(es)</Badge>
-                                <span>Filtering user name and email.</span>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2"
-                                    onClick={() => setSearchInput("")}
-                                    data-testid="users-clear-search-button"
-                                >
-                                    Clear search
-                                </Button>
-                            </>
-                        ) : (
-                            <span>Search filters users by name and email.</span>
-                        )}
-                    </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4 pt-0">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="space-y-2">
+                            <div className="max-w-sm">
+                                <label htmlFor="users-search-input" className="mb-1 block text-xs font-medium text-muted-foreground">
+                                    Search users
+                                </label>
+                                <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="users-search-input"
+                                        placeholder="Search by name or email..."
+                                        value={searchInput}
+                                        onChange={(e) => setSearchInput(e.target.value)}
+                                        maxLength={API_SEARCH_QUERY_MAX_LENGTH}
+                                        className="pl-8"
+                                        data-testid="users-search-input"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="users-filter-summary">
+                                {searchQuery ? (
+                                    <>
+                                        <Badge variant="outline">Search: {searchQuery}</Badge>
+                                        <Badge variant="outline">{users.length} match(es)</Badge>
+                                        <span>Filtering user name and email.</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2"
+                                            onClick={() => setSearchInput("")}
+                                            data-testid="users-clear-search-button"
+                                        >
+                                            Clear search
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <span>Search filters users by name and email.</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline">{users.length} visible</Badge>
+                            <Badge variant="outline">Access actions stay on the right</Badge>
+                        </div>
+                    </div>
                     <div className="rounded-md border">
                         <AppDataTable
                             data={users}

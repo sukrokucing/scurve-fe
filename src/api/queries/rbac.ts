@@ -156,6 +156,21 @@ export function useAssignPermissionToRoleMutation(roleId?: string) {
     });
 }
 
+export function useRevokePermissionFromRoleMutation(roleId?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (permissionId: string) => {
+            if (!roleId) throw new Error("roleId is required");
+            return rbacApi.revokePermissionFromRole(roleId, permissionId);
+        },
+        onSuccess: () => {
+            if (!roleId) return;
+            queryClient.invalidateQueries({ queryKey: rbacKeys.rolePermissions(roleId) });
+            queryClient.invalidateQueries({ queryKey: rbacKeys.rolesWithPermissions });
+        },
+    });
+}
+
 export function useAssignRoleToUserMutation(userId?: string) {
     const queryClient = useQueryClient();
     return useMutation({

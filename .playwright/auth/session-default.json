@@ -1,5 +1,5 @@
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjQ4ZDk2YS03NjVlLTRmYWUtOTk3Ny05NjkxMTBjZmZiODYiLCJleHAiOjE3NzM3NDMxNTgsImlhdCI6MTc3MzY1Njc1OH0.VUZsp-uUM088JTOm7SrbKMVv-z5VOImT_c8hKmKuIEM",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjQ4ZDk2YS03NjVlLTRmYWUtOTk3Ny05NjkxMTBjZmZiODYiLCJleHAiOjE3NzQ0OTg3MjQsImlhdCI6MTc3NDQxMjMyNH0.hr3DXh7A-yT4Syy7S70M82NL9APzVKSu3J6K2UVPixI",
   "user": {
     "id": "a248d96a-765e-4fae-9977-969110cffb86",
     "name": "Jimmy",
@@ -92,5 +92,5 @@
       "role_name": "super_admin"
     }
   ],
-  "createdAt": "2026-03-16T10:25:58.687Z"
+  "createdAt": "2026-03-25T04:18:44.730Z"
 }

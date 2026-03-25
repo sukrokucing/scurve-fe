@@ -62,6 +62,13 @@ export const HierarchyExplorer = () => {
         }
         return summary;
     }, [normalizedSearchQuery, selectedRole, selectedUser]);
+    const currentExplorerStepLabel = selectedRole
+        ? "Review permissions"
+        : selectedUser
+            ? "Choose a role"
+            : "Select a user";
+    const selectedUserRoleCount = selectedUser ? (userRoles?.length ?? 0) : 0;
+    const selectedRolePermissionCount = selectedRole ? (rolePermissions?.length ?? 0) : 0;
 
     const handleClearSearch = () => setSearchQuery("");
 
@@ -85,12 +92,45 @@ export const HierarchyExplorer = () => {
     );
 
     return (
-        <div className="rounded-lg border bg-card shadow-sm h-auto md:h-[600px] flex overflow-hidden flex-col md:flex-row text-foreground">
+        <div className="rounded-lg border bg-card shadow-sm h-auto md:h-[600px] overflow-hidden text-foreground">
+            <div className="border-b bg-background px-3 py-3" data-testid="access-flow-overview">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">Trace one user at a time</p>
+                        <p className="text-xs text-muted-foreground">
+                            Search for a user, inspect their assigned roles, then review the permissions granted by the selected role.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline">{usersData?.total ?? users.length} user(s) in scope</Badge>
+                        <Badge variant="secondary">{currentExplorerStepLabel}</Badge>
+                        {selectedUser ? <Badge variant="outline">{selectedUserRoleCount} role(s)</Badge> : null}
+                        {selectedRole ? <Badge variant="outline">{selectedRolePermissionCount} permission(s)</Badge> : null}
+                    </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="access-flow-selected-summary">
+                    {selectedUser ? (
+                        <Badge variant="outline">User: {selectedUser.name}</Badge>
+                    ) : (
+                        <Badge variant="outline">No user selected</Badge>
+                    )}
+                    {selectedRole ? (
+                        <Badge variant="outline">Role: {selectedRole.name}</Badge>
+                    ) : (
+                        <Badge variant="outline">No role selected</Badge>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex h-auto flex-col overflow-hidden md:h-[600px] md:flex-row">
             {/* --- Column 1: Users --- */}
             <div className="flex flex-col bg-card border-b md:border-b-0 md:flex-1 md:min-w-[300px] md:border-r">
-                <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
-                    Users
+                <div className="border-b bg-muted/20 p-3">
+                    <div className="flex items-center gap-2 font-medium">
+                        <UserIcon className="h-4 w-4" />
+                        Users
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Search and select the user whose access path you want to inspect.</p>
                 </div>
                 {/* Search Input */}
                 <div className="p-2 border-b">
@@ -247,9 +287,12 @@ export const HierarchyExplorer = () => {
 
             {/* --- Column 2: Roles --- */}
             <div className="flex flex-col bg-card/50 border-b md:border-b-0 md:flex-1 md:min-w-[300px] md:border-r">
-                <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Assigned Roles
+                <div className="border-b bg-muted/20 p-3">
+                    <div className="flex items-center gap-2 font-medium">
+                        <Shield className="h-4 w-4" />
+                        Assigned Roles
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Pick one role to see the exact permission set it contributes.</p>
                 </div>
                 {!selectedUser ? (
                     <ColumnEmpty msg="Select a user to view roles" />
@@ -293,9 +336,12 @@ export const HierarchyExplorer = () => {
 
             {/* --- Column 3: Permissions --- */}
             <div className="flex flex-col bg-card/30 md:flex-1 md:min-w-[300px]">
-                <div className="p-3 border-b bg-muted/20 font-medium flex items-center gap-2">
-                    <Lock className="h-4 w-4" />
-                    Role Permissions
+                <div className="border-b bg-muted/20 p-3">
+                    <div className="flex items-center gap-2 font-medium">
+                        <Lock className="h-4 w-4" />
+                        Role Permissions
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Review the resulting grants and descriptions from the selected role.</p>
                 </div>
                 {!selectedRole ? (
                     <ColumnEmpty msg="Select a role to view permissions" />
@@ -327,6 +373,7 @@ export const HierarchyExplorer = () => {
                         )}
                     </ScrollArea>
                 )}
+            </div>
             </div>
         </div>
     );

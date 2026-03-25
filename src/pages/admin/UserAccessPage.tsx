@@ -4,7 +4,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Trash2, Plus, User as UserIcon, Loader2, Check } from "lucide-react";
+import { Trash2, Plus, User as UserIcon, Loader2, Check, ShieldCheck, KeyRound, ScanSearch } from "lucide-react";
 
 import { toast } from "sonner";
 
@@ -95,6 +95,7 @@ export const UserAccessPage = () => {
     const form = useForm<AssignRoleValues>({
         resolver: zodResolver(assignRoleSchema),
     });
+    const selectedAssignRoleId = form.watch("roleId");
 
     const onSubmit = (values: AssignRoleValues) => {
         assignRoleMutation.mutate(values.roleId, {
@@ -140,38 +141,84 @@ export const UserAccessPage = () => {
         }),
     ]))[0];
 
-    if (!userId) return <div>Invalid User ID</div>;
-
     // Filter roles that act like "available" roles (not already assigned)
-    const assignedRoleIds = new Set(userRoles?.map(r => r.id));
-    const availableRoles = allRoles?.filter(r => !assignedRoleIds.has(r.id)) || [];
+    const assignedRoleIds = useMemo(
+        () => new Set((userRoles ?? []).map((role) => role.id)),
+        [userRoles],
+    );
+    const availableRoles = useMemo(
+        () => allRoles?.filter((role) => !assignedRoleIds.has(role.id)) ?? [],
+        [allRoles, assignedRoleIds],
+    );
+    const selectedAssignableRole = useMemo(
+        () => availableRoles.find((role) => role.id === selectedAssignRoleId) ?? null,
+        [availableRoles, selectedAssignRoleId],
+    );
+
+    if (!userId) return <div>Invalid User ID</div>;
 
     if (isLoading) {
         return <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
     }
 
     return (
-        <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+        <div className="space-y-8" data-testid="user-access-page">
+            <div className="space-y-3">
+                <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
                     <UserIcon className="h-6 w-6 text-primary" />
                     User Access Management
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">
-                    Review assigned roles and effective permissions for this user account.
+                <p className="max-w-3xl text-muted-foreground">
+                    Review one user’s assigned roles and final effective permissions together, so access changes stay easier to explain and verify.
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                    <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
-                    {selectedUser?.email ? <Badge variant="outline">{selectedUser.email}</Badge> : null}
-                    <Badge variant="outline" className="font-mono text-xs">
-                        ID: {userId}
-                    </Badge>
-                </div>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+                <Card className="border-border/70 shadow-sm" data-testid="user-access-page-intro-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Work from identity to access outcome</CardTitle>
+                        <CardDescription>
+                            Confirm the user first, then review assigned roles, and finally verify the computed permission result before making changes.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                        <Badge variant="outline">
+                            <ScanSearch className="mr-1 h-3 w-3" />
+                            Confirm identity first
+                        </Badge>
+                        <Badge variant="outline">
+                            <ShieldCheck className="mr-1 h-3 w-3" />
+                            Review assigned roles
+                        </Badge>
+                        <Badge variant="outline">
+                            <KeyRound className="mr-1 h-3 w-3" />
+                            Verify effective access
+                        </Badge>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm" data-testid="user-access-page-identity-card">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Current user scope</CardTitle>
+                        <CardDescription>
+                            This panel keeps the user context visible while you grant or revoke roles.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-sm">
+                        <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
+                        {selectedUser?.email ? <Badge variant="outline">{selectedUser.email}</Badge> : null}
+                        <Badge variant="outline">{userRoles?.length ?? 0} assigned role{(userRoles?.length ?? 0) === 1 ? "" : "s"}</Badge>
+                        <Badge variant="outline">{effectivePerms?.permissions?.length ?? 0} effective permission{(effectivePerms?.permissions?.length ?? 0) === 1 ? "" : "s"}</Badge>
+                        <Badge variant="outline" className="font-mono text-xs">
+                            ID: {userId}
+                        </Badge>
+                    </CardContent>
+                </Card>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* --- Assigned Roles --- */}
-                <Card>
+                <Card className="border-border/70 shadow-sm" data-testid="user-access-page-roles-section">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <div className="space-y-1">
                             <CardTitle>Assigned Roles</CardTitle>
@@ -179,17 +226,33 @@ export const UserAccessPage = () => {
                         </div>
                         <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
                         <DialogTrigger asChild>
-                            <Button size="sm">
+                            <Button size="sm" data-testid="user-access-assign-role-button">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Assign Role
                             </Button>
                         </DialogTrigger>
                             <AppDialogContent
+                                className="sm:max-w-xl"
                                 title="Assign Role"
                                 description="Select a role to grant to this user."
                             >
-                                <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <div className="space-y-4">
+                                    <Card className="border-border/70 shadow-sm" data-testid="user-access-assign-role-dialog-overview">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-base">Grant role with context</CardTitle>
+                                            <CardDescription>
+                                                Confirm the target user and role count here first, then assign one role at a time so access changes stay easy to explain.
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                                            <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
+                                            {selectedUser?.email ? <Badge variant="outline">{selectedUser.email}</Badge> : null}
+                                            <Badge variant="outline">{userRoles?.length ?? 0} assigned</Badge>
+                                            <Badge variant="outline">{availableRoles.length} available</Badge>
+                                        </CardContent>
+                                    </Card>
+                                    <Form {...form}>
+                                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                         <FormField
                                             control={form.control}
                                             name="roleId"
@@ -208,6 +271,31 @@ export const UserAccessPage = () => {
                                                 </FormItem>
                                             )}
                                         />
+                                        <Card className="border-border/70 shadow-sm" data-testid="user-access-assign-role-preview">
+                                            <CardHeader className="pb-3">
+                                                <CardTitle className="text-base">Selected role preview</CardTitle>
+                                                <CardDescription>
+                                                    Review the role intent before saving so you do not assign a broad role by mistake.
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="space-y-2 pt-0 text-sm">
+                                                {selectedAssignableRole ? (
+                                                    <>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <Badge variant="secondary">{selectedAssignableRole.name}</Badge>
+                                                            <Badge variant="outline">Assigned to {selectedUser?.name ?? "this user"}</Badge>
+                                                        </div>
+                                                        <p className="text-muted-foreground">
+                                                            {selectedAssignableRole.description || "No role description provided."}
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-muted-foreground">
+                                                        Choose a role above to review its intent before assigning it.
+                                                    </p>
+                                                )}
+                                            </CardContent>
+                                        </Card>
                                         <DialogFooter>
                                             <Button type="submit" disabled={assignRoleMutation.isPending}>
                                                 Assign
@@ -215,6 +303,7 @@ export const UserAccessPage = () => {
                                         </DialogFooter>
                                     </form>
                                 </Form>
+                                </div>
                             </AppDialogContent>
                         </Dialog>
                     </CardHeader>
@@ -224,15 +313,19 @@ export const UserAccessPage = () => {
                                 <p className="text-sm text-muted-foreground">No roles assigned.</p>
                             ) : (
                                 userRoles.map(role => (
-                                    <div key={role.id} className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="flex flex-col space-y-1">
-                                            <span className="font-medium">{role.name}</span>
-                                            <span className="text-xs text-muted-foreground">{role.description}</span>
+                                    <div key={role.id} className="flex items-center justify-between rounded-lg border p-3 shadow-sm" data-testid="user-access-role-card">
+                                        <div className="flex flex-col space-y-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="font-medium">{role.name}</span>
+                                                <Badge variant="outline">Role</Badge>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">{role.description || "No role description provided."}</span>
                                         </div>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="text-muted-foreground hover:text-destructive"
+                                            data-testid="user-access-role-revoke-button"
                                             onClick={() => {
                                                 setRevokeRole(role);
                                                 setRevokeConfirmOpen(true);
@@ -248,7 +341,7 @@ export const UserAccessPage = () => {
                 </Card>
 
                 {/* --- Effective Permissions --- */}
-                <Card>
+                <Card className="border-border/70 shadow-sm" data-testid="user-access-page-permissions-section">
                     <CardHeader>
                         <CardTitle>Effective Permissions</CardTitle>
                         <CardDescription>
@@ -287,6 +380,19 @@ export const UserAccessPage = () => {
                             {`Revoke role "${revokeRole?.name ?? ""}" from this user?`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4 text-sm" data-testid="user-access-revoke-role-summary">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
+                            <Badge variant="outline">{userRoles?.length ?? 0} assigned role{(userRoles?.length ?? 0) === 1 ? "" : "s"}</Badge>
+                            <Badge variant="outline">{effectivePerms?.permissions?.length ?? 0} effective permission{(effectivePerms?.permissions?.length ?? 0) === 1 ? "" : "s"}</Badge>
+                        </div>
+                        <p className="text-muted-foreground">
+                            {revokeRole?.description || "No role description provided."}
+                        </p>
+                        <p className="text-muted-foreground">
+                            Effective access may shrink immediately after this change. Use the permissions table to verify the final outcome once the revoke completes.
+                        </p>
+                    </div>
                     <AlertDialogFooter>
                         <AlertDialogCancel asChild>
                             <Button

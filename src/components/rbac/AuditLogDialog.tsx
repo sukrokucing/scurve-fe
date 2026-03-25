@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuditLogsQuery } from "@/api/queries/rbac";
 import { rbacApi } from "@/api/rbac";
 import { useUsersLookupQuery } from "@/api/queries/users";
@@ -157,147 +158,180 @@ export function AuditLogDialog() {
                 title="System Audit Log"
                 description="View the history of security and access control changes."
             >
+                <div className="space-y-4 py-4">
+                    <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-intro-card">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Review change history with scope first</CardTitle>
+                            <CardDescription>
+                                Narrow the log by action, actor, target user, or date before scanning details. Pagination stays server-driven so the history remains consistent.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
+                            <Badge variant="outline">Page {page} of {totalPages}</Badge>
+                            <Badge variant="outline">{logs.length} row{logs.length === 1 ? "" : "s"} loaded</Badge>
+                            {hasActiveFilters ? <Badge variant="secondary">Filters active</Badge> : <Badge variant="outline">No filters applied</Badge>}
+                        </CardContent>
+                    </Card>
 
-                <div className="flex flex-col gap-3 py-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                        <Combobox
-                            value={actionFilter}
-                            onChange={(v) => { setActionFilter(v); setPage(1); }}
-                            className="w-full md:w-[200px]"
-                            placeholder="Filter by action"
-                            options={[
-                                { value: "all", label: "All Actions" },
-                                { value: "role.assign", label: "Role Assigned" },
-                                { value: "role.revoke", label: "Role Revoked" },
-                                { value: "permission.grant", label: "Permission Granted" },
-                                { value: "permission.revoke", label: "Permission Revoked" },
-                                { value: "role.create", label: "Role Created" },
-                                { value: "role.delete", label: "Role Deleted" },
-                                { value: "user.create", label: "User Created" },
-                                { value: "user.delete", label: "User Deleted" },
-                            ]}
-                            triggerTestId="policy-audit-log-action-filter-combobox"
-                        />
-                        <Combobox
-                            value={actorUserId}
-                            onChange={(value) => { setActorUserId(value || "all"); setPage(1); }}
-                            className="w-full md:w-[240px]"
-                            placeholder="Filter by actor"
-                            searchPlaceholder="Search actors..."
-                            options={userOptions}
-                            isLoading={loadingUsersLookup}
-                            triggerTestId="policy-audit-log-actor-filter-combobox"
-                            triggerAriaLabel="Filter audit log by actor"
-                        />
-                        <Combobox
-                            value={targetUserId}
-                            onChange={(value) => { setTargetUserId(value || "all"); setPage(1); }}
-                            className="w-full md:w-[240px]"
-                            placeholder="Filter by target user"
-                            searchPlaceholder="Search target users..."
-                            options={userOptions}
-                            isLoading={loadingUsersLookup}
-                            triggerTestId="policy-audit-log-target-filter-combobox"
-                            triggerAriaLabel="Filter audit log by target user"
-                        />
-                        <div className="grid w-full gap-3 sm:grid-cols-2 md:max-w-[360px]">
-                            <Input
-                                type="date"
-                                value={fromDate}
-                                onChange={(event) => {
-                                    setFromDate(event.target.value);
-                                    setPage(1);
-                                }}
-                                data-testid="policy-audit-log-from-input"
-                                aria-label="Filter audit log from date"
-                            />
-                            <Input
-                                type="date"
-                                value={toDate}
-                                onChange={(event) => {
-                                    setToDate(event.target.value);
-                                    setPage(1);
-                                }}
-                                data-testid="policy-audit-log-to-input"
-                                aria-label="Filter audit log to date"
-                            />
-                        </div>
-                    </div>
-                    <div
-                        className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
-                        data-testid="policy-audit-log-filter-summary"
-                    >
-                        {hasActiveFilters ? (
-                            <>
-                                {activeFilters.map((filter) => (
-                                    <Badge key={filter} variant="outline">
-                                        {filter}
-                                    </Badge>
-                                ))}
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2"
-                                    onClick={resetFilters}
-                                    data-testid="policy-audit-log-reset-filters-button"
-                                >
-                                    Reset filters
-                                </Button>
-                            </>
-                        ) : (
-                            <span>Filter audit history by action, actor, target user, or date range. Pagination stays server-driven.</span>
-                        )}
-                    </div>
-                </div>
+                    <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-filters-card">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Filters</CardTitle>
+                            <CardDescription>
+                                Keep the result set narrow enough to review quickly, then reset when you are ready to widen the audit scope again.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 pt-0">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                <Combobox
+                                    value={actionFilter}
+                                    onChange={(v) => { setActionFilter(v); setPage(1); }}
+                                    className="w-full md:w-[200px]"
+                                    placeholder="Filter by action"
+                                    options={[
+                                        { value: "all", label: "All Actions" },
+                                        { value: "role.assign", label: "Role Assigned" },
+                                        { value: "role.revoke", label: "Role Revoked" },
+                                        { value: "permission.grant", label: "Permission Granted" },
+                                        { value: "permission.revoke", label: "Permission Revoked" },
+                                        { value: "role.create", label: "Role Created" },
+                                        { value: "role.delete", label: "Role Deleted" },
+                                        { value: "user.create", label: "User Created" },
+                                        { value: "user.delete", label: "User Deleted" },
+                                    ]}
+                                    triggerTestId="policy-audit-log-action-filter-combobox"
+                                />
+                                <Combobox
+                                    value={actorUserId}
+                                    onChange={(value) => { setActorUserId(value || "all"); setPage(1); }}
+                                    className="w-full md:w-[240px]"
+                                    placeholder="Filter by actor"
+                                    searchPlaceholder="Search actors..."
+                                    options={userOptions}
+                                    isLoading={loadingUsersLookup}
+                                    triggerTestId="policy-audit-log-actor-filter-combobox"
+                                    triggerAriaLabel="Filter audit log by actor"
+                                />
+                                <Combobox
+                                    value={targetUserId}
+                                    onChange={(value) => { setTargetUserId(value || "all"); setPage(1); }}
+                                    className="w-full md:w-[240px]"
+                                    placeholder="Filter by target user"
+                                    searchPlaceholder="Search target users..."
+                                    options={userOptions}
+                                    isLoading={loadingUsersLookup}
+                                    triggerTestId="policy-audit-log-target-filter-combobox"
+                                    triggerAriaLabel="Filter audit log by target user"
+                                />
+                                <div className="grid w-full gap-3 sm:grid-cols-2 md:max-w-[360px]">
+                                    <Input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={(event) => {
+                                            setFromDate(event.target.value);
+                                            setPage(1);
+                                        }}
+                                        data-testid="policy-audit-log-from-input"
+                                        aria-label="Filter audit log from date"
+                                    />
+                                    <Input
+                                        type="date"
+                                        value={toDate}
+                                        onChange={(event) => {
+                                            setToDate(event.target.value);
+                                            setPage(1);
+                                        }}
+                                        data-testid="policy-audit-log-to-input"
+                                        aria-label="Filter audit log to date"
+                                    />
+                                </div>
+                            </div>
+                            <div
+                                className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                                data-testid="policy-audit-log-filter-summary"
+                            >
+                                {hasActiveFilters ? (
+                                    <>
+                                        {activeFilters.map((filter) => (
+                                            <Badge key={filter} variant="outline">
+                                                {filter}
+                                            </Badge>
+                                        ))}
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2"
+                                            onClick={resetFilters}
+                                            data-testid="policy-audit-log-reset-filters-button"
+                                        >
+                                            Reset filters
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <span>Filter audit history by action, actor, target user, or date range.</span>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                <ScrollArea className="flex-1 rounded-md border">
-                    <AppDataTable
-                        data={logs}
-                        columns={columns}
-                        getRowId={(row) => row.id}
-                        isLoading={isLoading}
-                        loadingRow={(
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
-                                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        emptyRow={(
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                    No audit logs found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    />
-                </ScrollArea>
+                    <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-results-section">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Results</CardTitle>
+                            <CardDescription>
+                                Review the timestamp, actor, target, and details together before moving to the next page.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-0">
+                            <ScrollArea className="flex-1 rounded-md border">
+                                <AppDataTable
+                                    data={logs}
+                                    columns={columns}
+                                    getRowId={(row) => row.id}
+                                    isLoading={isLoading}
+                                    loadingRow={(
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    emptyRow={(
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                                No audit logs found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                />
+                            </ScrollArea>
 
-                <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">
-                        Page {page} of {totalPages}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1 || isLoading}
-                            data-testid="policy-audit-log-prev-button"
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages || isLoading}
-                            data-testid="policy-audit-log-next-button"
-                        >
-                            Next
-                        </Button>
-                    </div>
+                            <div className="flex items-center justify-between border-t pt-4">
+                                <div className="text-sm text-muted-foreground">
+                                    Page {page} of {totalPages}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1 || isLoading}
+                                        data-testid="policy-audit-log-prev-button"
+                                    >
+                                        Previous
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page === totalPages || isLoading}
+                                        data-testid="policy-audit-log-next-button"
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </AppDialogContent>
         </Dialog>

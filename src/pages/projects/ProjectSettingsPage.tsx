@@ -845,16 +845,17 @@ function MembersTab({
         }),
         memberColumnHelper.accessor("access_role_name", {
             header: "Access Role",
+            cell: (info) => <Badge variant="outline">{info.getValue()}</Badge>,
         }),
         memberColumnHelper.accessor("resource_roles", {
             header: "Resource Roles",
             cell: (info) => (
                 <div className="flex flex-wrap gap-1">
-                    {info.getValue().map((role) => (
+                    {info.getValue().length > 0 ? info.getValue().map((role) => (
                         <Badge key={`${info.row.original.user_id}-${role.id}`} variant="secondary">
                             {role.name}
                         </Badge>
-                    ))}
+                    )) : <span className="text-xs text-muted-foreground">No resource roles</span>}
                 </div>
             ),
         }),
@@ -885,104 +886,129 @@ function MembersTab({
                 <h2 className="text-lg font-medium">Members</h2>
             </div>
 
-            <div className="rounded-lg border p-4">
-                <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">User</label>
-                        <Combobox
-                            options={userOptions}
-                            value={memberUserId}
-                            onChange={setMemberUserId}
-                            disabled={!canManageSettings}
-                            placeholder="Select user"
-                            searchPlaceholder="Search users..."
-                            triggerTestId="project-settings-add-member-user-combobox"
-                            isLoading={isUsersLoading}
-                        />
+            <Card className="border-border/80">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Add or update project membership</CardTitle>
+                    <CardDescription>
+                        Choose the person, then define their access role and resource-role coverage before saving.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">User</label>
+                            <Combobox
+                                options={userOptions}
+                                value={memberUserId}
+                                onChange={setMemberUserId}
+                                disabled={!canManageSettings}
+                                placeholder="Select user"
+                                searchPlaceholder="Search users..."
+                                triggerTestId="project-settings-add-member-user-combobox"
+                                isLoading={isUsersLoading}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Access role</label>
+                            <Combobox
+                                options={accessRoleOptions}
+                                value={memberAccessRoleId}
+                                onChange={setMemberAccessRoleId}
+                                disabled={!canManageSettings}
+                                placeholder="Select access role"
+                                searchPlaceholder="Search access roles..."
+                                triggerTestId="project-settings-add-member-access-role-combobox"
+                                isLoading={isAccessRolesLoading}
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Access role</label>
-                        <Combobox
-                            options={accessRoleOptions}
-                            value={memberAccessRoleId}
-                            onChange={setMemberAccessRoleId}
-                            disabled={!canManageSettings}
-                            placeholder="Select access role"
-                            searchPlaceholder="Search access roles..."
-                            triggerTestId="project-settings-add-member-access-role-combobox"
-                            isLoading={isAccessRolesLoading}
-                        />
+                    <div className="space-y-2 rounded-lg border border-dashed border-border/70 bg-muted/20 p-3">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium">Resource roles</p>
+                            <p className="text-xs text-muted-foreground">
+                                Keep these lightweight: assign only the roles this member should log work against in the project.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {resourceRoleOptions.map((role) => {
+                                const selected = memberResourceRoleIds.includes(role.value);
+                                return (
+                                    <Button
+                                        key={role.value}
+                                        type="button"
+                                        size="sm"
+                                        variant={selected ? "default" : "outline"}
+                                        className="h-8"
+                                        onClick={() => {
+                                            setMemberResourceRoleIds((previous) => {
+                                                if (previous.includes(role.value)) {
+                                                    return previous.filter((item) => item !== role.value);
+                                                }
+                                                return [...previous, role.value];
+                                            });
+                                        }}
+                                        data-testid="project-settings-add-member-resource-role-toggle"
+                                    >
+                                        {role.label}
+                                    </Button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-                <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Resource roles</p>
-                    <div className="flex flex-wrap gap-2">
-                        {resourceRoleOptions.map((role) => {
-                            const selected = memberResourceRoleIds.includes(role.value);
-                            return (
-                                <Button
-                                    key={role.value}
-                                    type="button"
-                                    size="sm"
-                                    variant={selected ? "default" : "outline"}
-                                    onClick={() => {
-                                        setMemberResourceRoleIds((previous) => {
-                                            if (previous.includes(role.value)) {
-                                                return previous.filter((item) => item !== role.value);
-                                            }
-                                            return [...previous, role.value];
-                                        });
-                                    }}
-                                    data-testid="project-settings-add-member-resource-role-toggle"
-                                >
-                                    {role.label}
-                                </Button>
-                            );
-                        })}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-muted-foreground">
+                            Members appear in Tasks assignee selection and workload summaries after they are added here.
+                        </p>
+                        <Button
+                            type="button"
+                            onClick={onAddMember}
+                            disabled={!canManageSettings || addMemberPending}
+                            data-testid="project-settings-add-member-submit"
+                        >
+                            {addMemberPending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Add Member"
+                            )}
+                        </Button>
                     </div>
-                </div>
-                <div className="mt-4">
-                    <Button
-                        type="button"
-                        onClick={onAddMember}
-                        disabled={!canManageSettings || addMemberPending}
-                        data-testid="project-settings-add-member-submit"
-                    >
-                        {addMemberPending ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Add Member"
-                        )}
-                    </Button>
-                </div>
-            </div>
+                </CardContent>
+            </Card>
 
-            <div className="rounded-md border">
-                <AppDataTable
-                    data={projectMembers}
-                    columns={memberColumns}
-                    getRowId={(row) => row.user_id}
-                    isLoading={isMembersLoading}
-                    loadingRow={(
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                Loading members...
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    emptyRow={(
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                No project members found.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    getRowProps={(row) => ({ "data-testid": row.original.user_id ? "project-settings-member-row" : undefined })}
-                />
-            </div>
+            <Card className="border-border/80">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Current members</CardTitle>
+                    <CardDescription>
+                        Review access and resource-role coverage in one table before changing dashboard or task ownership behavior.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AppDataTable
+                        data={projectMembers}
+                        columns={memberColumns}
+                        getRowId={(row) => row.user_id}
+                        isLoading={isMembersLoading}
+                        loadingRow={(
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    Loading members...
+                                </TableCell>
+                            </TableRow>
+                        )}
+                        emptyRow={(
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    No project members found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                        getRowProps={(row) => ({ "data-testid": row.original.user_id ? "project-settings-member-row" : undefined })}
+                    />
+                </CardContent>
+            </Card>
         </section>
     );
 }
@@ -1065,95 +1091,114 @@ function ResourceRatesTab({
                 <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
                 <h2 className="text-lg font-medium">Project Resource Rates</h2>
             </div>
-            <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-3">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Resource role</label>
-                    <Combobox
-                        options={rateRoleOptions}
-                        value={rateResourceRoleId}
-                        onChange={setRateResourceRoleId}
-                        disabled={!canManageSettings}
-                        placeholder="Select resource role"
-                        searchPlaceholder="Search resource roles..."
-                        triggerTestId="project-settings-rate-role-combobox"
-                        isLoading={isRatesLoading}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Hourly rate</label>
-                    <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                            {getCurrencySymbol(rateCurrency)}
-                        </span>
-                        <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            placeholder="0.00"
-                            value={rateHourly}
+            <Card className="border-border/80">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Set or update a project override</CardTitle>
+                    <CardDescription>
+                        Use this when a project rate should differ from the global resource-role default.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Resource role</label>
+                        <Combobox
+                            options={rateRoleOptions}
+                            value={rateResourceRoleId}
+                            onChange={setRateResourceRoleId}
                             disabled={!canManageSettings}
-                            onChange={(event) => setRateHourly(event.target.value)}
-                            inputMode="decimal"
-                            className="pl-10"
-                            data-testid="project-settings-rate-hourly-input"
+                            placeholder="Select resource role"
+                            searchPlaceholder="Search resource roles..."
+                            triggerTestId="project-settings-rate-role-combobox"
+                            isLoading={isRatesLoading}
                         />
                     </div>
-                    <p className="text-xs text-muted-foreground">Enter amount in {rateCurrency || "USD"}.</p>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Currency</label>
-                    <Combobox
-                        options={rateCurrencyOptions}
-                        value={rateCurrency}
-                        onChange={(nextValue) => setRateCurrency(nextValue.toUpperCase())}
-                        disabled={!canManageSettings}
-                        placeholder="Select currency"
-                        searchPlaceholder="Search currencies..."
-                        triggerTestId="project-settings-rate-currency-combobox"
-                    />
-                </div>
-                <div className="md:col-span-3">
-                    <Button
-                        type="button"
-                        onClick={onSaveRate}
-                        disabled={!canManageSettings || upsertRatePending}
-                        data-testid="project-settings-rate-save-button"
-                    >
-                        {upsertRatePending ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save Override"
-                        )}
-                    </Button>
-                </div>
-            </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Hourly rate</label>
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                {getCurrencySymbol(rateCurrency)}
+                            </span>
+                            <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                placeholder="0.00"
+                                value={rateHourly}
+                                disabled={!canManageSettings}
+                                onChange={(event) => setRateHourly(event.target.value)}
+                                inputMode="decimal"
+                                className="pl-10"
+                                data-testid="project-settings-rate-hourly-input"
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Enter amount in {rateCurrency || "USD"}.</p>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Currency</label>
+                        <Combobox
+                            options={rateCurrencyOptions}
+                            value={rateCurrency}
+                            onChange={(nextValue) => setRateCurrency(nextValue.toUpperCase())}
+                            disabled={!canManageSettings}
+                            placeholder="Select currency"
+                            searchPlaceholder="Search currencies..."
+                            triggerTestId="project-settings-rate-currency-combobox"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2 md:col-span-3 md:flex-row md:items-center md:justify-between">
+                        <p className="text-xs text-muted-foreground">
+                            The table below shows effective rates. Overrides are highlighted so defaults stay easy to compare.
+                        </p>
+                        <Button
+                            type="button"
+                            onClick={onSaveRate}
+                            disabled={!canManageSettings || upsertRatePending}
+                            data-testid="project-settings-rate-save-button"
+                        >
+                            {upsertRatePending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save Override"
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
-            <div className="rounded-md border">
-                <AppDataTable
-                    data={projectResourceRoleRates}
-                    columns={rateColumns}
-                    getRowId={(row) => row.resource_role_id}
-                    isLoading={isRatesLoading}
-                    loadingRow={(
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                Loading project rates...
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    emptyRow={(
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                No project resource roles found.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    getRowProps={(row) => ({ "data-testid": row.original.resource_role_id ? "project-settings-rate-row" : undefined })}
-                />
-            </div>
+            <Card className="border-border/80">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Effective rates</CardTitle>
+                    <CardDescription>
+                        Compare the project override state against defaults before using dashboard cost and work-log metrics.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AppDataTable
+                        data={projectResourceRoleRates}
+                        columns={rateColumns}
+                        getRowId={(row) => row.resource_role_id}
+                        isLoading={isRatesLoading}
+                        loadingRow={(
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    Loading project rates...
+                                </TableCell>
+                            </TableRow>
+                        )}
+                        emptyRow={(
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    No project resource roles found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                        getRowProps={(row) => ({ "data-testid": row.original.resource_role_id ? "project-settings-rate-row" : undefined })}
+                    />
+                </CardContent>
+            </Card>
         </section>
     );
 }
@@ -1202,6 +1247,9 @@ function TaskHealthTab({
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                        Negative variance means actual progress is trailing plan. Positive variance means work is ahead of plan.
+                    </div>
                     {isTaskHealthRulesLoading ? (
                         <div className="space-y-2">
                             <Skeleton className="h-14 w-full" />
@@ -1319,53 +1367,61 @@ function GeneralTab({
     return (
         <section className="space-y-4" data-testid="project-settings-general-section">
             <h2 className="text-lg font-medium">General</h2>
-            <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium">Project name</label>
-                    <Input
-                        value={generalName}
-                        disabled={!canManageSettings}
-                        onChange={(event) => setGeneralName(event.target.value)}
-                        data-testid="project-settings-general-name-input"
-                    />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Input
-                        value={generalDescription}
-                        disabled={!canManageSettings}
-                        onChange={(event) => setGeneralDescription(event.target.value)}
-                        data-testid="project-settings-general-description-input"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Theme color</label>
-                    <Input
-                        value={generalThemeColor}
-                        disabled={!canManageSettings}
-                        onChange={(event) => setGeneralThemeColor(event.target.value)}
-                        placeholder={DEFAULT_PROJECT_THEME_COLOR}
-                        data-testid="project-settings-general-theme-input"
-                    />
-                </div>
-                <div className="flex items-end">
-                    <Button
-                        type="button"
-                        onClick={onSaveGeneral}
-                        disabled={!canManageSettings || updateProjectPending}
-                        data-testid="project-settings-general-save-button"
-                    >
-                        {updateProjectPending ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save General"
-                        )}
-                    </Button>
-                </div>
-            </div>
+            <Card className="border-border/80">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-base">Project metadata</CardTitle>
+                    <CardDescription>
+                        Keep the basic identity clean here so the project table and dashboard stay readable.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium">Project name</label>
+                        <Input
+                            value={generalName}
+                            disabled={!canManageSettings}
+                            onChange={(event) => setGeneralName(event.target.value)}
+                            data-testid="project-settings-general-name-input"
+                        />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-medium">Description</label>
+                        <Input
+                            value={generalDescription}
+                            disabled={!canManageSettings}
+                            onChange={(event) => setGeneralDescription(event.target.value)}
+                            data-testid="project-settings-general-description-input"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Theme color</label>
+                        <Input
+                            value={generalThemeColor}
+                            disabled={!canManageSettings}
+                            onChange={(event) => setGeneralThemeColor(event.target.value)}
+                            placeholder={DEFAULT_PROJECT_THEME_COLOR}
+                            data-testid="project-settings-general-theme-input"
+                        />
+                    </div>
+                    <div className="flex items-end">
+                        <Button
+                            type="button"
+                            onClick={onSaveGeneral}
+                            disabled={!canManageSettings || updateProjectPending}
+                            data-testid="project-settings-general-save-button"
+                        >
+                            {updateProjectPending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save General"
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </section>
     );
 }

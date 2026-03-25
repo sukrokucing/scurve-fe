@@ -29,6 +29,10 @@ type SearchContractCapture = {
         roleId: string;
         body: { permission_id: string };
     }>;
+    rolePermissionRevokes: Array<{
+        roleId: string;
+        permissionId: string;
+    }>;
     userRoleAssignments: Array<{
         userId: string;
         body: { role_id: string };
@@ -94,6 +98,7 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
         roleCreates: [],
         roleDeletes: [],
         rolePermissionAssignments: [],
+        rolePermissionRevokes: [],
         userRoleAssignments: [],
         userRoleRevokes: [],
         workLogCreates: [],
@@ -246,7 +251,7 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
             description: "Contract-backed task for query and work-log coverage",
             status: "blocked",
             project_id: "project-search-contract",
-            assignee: "assignee-1",
+            assignee: "user-1",
             start_date: "2026-02-01T00:00:00Z",
             end_date: "2026-02-05T00:00:00Z",
             due_date: "2026-02-05T00:00:00Z",
@@ -454,7 +459,7 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
         if (/^\/api\/projects\/[^/]+\/assignees$/.test(pathname) && method === "GET") {
             return json([
                 {
-                    id: "assignee-1",
+                    id: "user-1",
                     name: "Alex Analyst",
                     email: "alex.analyst@example.com",
                 },
@@ -754,6 +759,18 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
             return route.fulfill({ status: 204, body: "" });
         }
 
+        if (/^\/api\/rbac\/roles\/[^/]+\/permissions\/[^/]+$/.test(pathname) && method === "DELETE") {
+            const pathSegments = pathname.split("/");
+            const roleId = pathSegments.at(-3) ?? "";
+            const permissionId = pathSegments.at(-1) ?? "";
+            capture.rolePermissionRevokes.push({ roleId, permissionId });
+            rolePermissionsById = {
+                ...rolePermissionsById,
+                [roleId]: (rolePermissionsById[roleId] ?? []).filter((permission) => permission.id !== permissionId),
+            };
+            return route.fulfill({ status: 204, body: "" });
+        }
+
         if (pathname === "/api/telemetry/events" && method === "POST") {
             return route.fulfill({ status: 204, body: "" });
         }
@@ -826,7 +843,7 @@ test("tasks search/filter UI uses backend task query contract params", async ({ 
         q: "Alpha%_ task",
         status: "blocked",
         health_status: "critical",
-        assignee_id: "assignee-1",
+        assignee_id: "user-1",
         start_from: "2026-01-01",
         start_to: "2026-01-31",
         due_from: "2026-02-01",
@@ -910,7 +927,7 @@ test("projects search summary exposes active filter state", async ({ page }) => 
     await page.goto("/projects", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("projects-search-input")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("projects-filter-summary")).toContainText(
-        "Search filters projects by name, description, stage, and data status.",
+        "Search filters project identity plus S-curve readiness signals.",
     );
 
     await page.getByTestId("projects-search-input").fill("contract");
@@ -932,7 +949,8 @@ test("policy filter summary exposes active matrix scope", async ({ page }) => {
     await page.getByTestId("rbac-resource-filter-combobox").click();
     await page.getByRole("option", { name: "project" }).click();
     await page.getByTestId("rbac-permission-search-input").fill("update");
-    await page.getByTestId("rbac-assigned-only-toggle").click();
+    await page.getByTestId("rbac-assigned-only-toggle").focus();
+    await page.getByTestId("rbac-assigned-only-toggle").press("Enter");
 
     await expect(page.getByTestId("rbac-filter-summary")).toContainText("Role: project_admin");
     await expect(page.getByTestId("rbac-filter-summary")).toContainText("Resource: project");
@@ -1007,7 +1025,7 @@ test("audit log dialog uses backend paging and filter params", async ({ page }) 
     });
 
     await expect(page.getByTestId("policy-audit-log-filter-summary")).toContainText(
-        "Filter audit history by action, actor, target user, or date range. Pagination stays server-driven.",
+        "Filter audit history by action, actor, target user, or date range.",
     );
 
     await page.getByTestId("policy-audit-log-action-filter-combobox").click();
@@ -1047,14 +1065,17 @@ test("audit log dialog uses backend paging and filter params", async ({ page }) 
         to: normalizeDateOnlyToApiDateTime("2026-03-17", "end") ?? null,
     });
 
-    await page.getByTestId("policy-audit-log-next-button").click();
+    await page.getByTestId("policy-audit-log-next-button").scrollIntoViewIfNeeded();
+    await page.getByTestId("policy-audit-log-next-button").evaluate((button: HTMLButtonElement) => button.click());
     await expect.poll(() => capture.auditLogQueries.at(-1)?.get("page")).toBe("2");
 
+    await page.getByTestId("policy-audit-log-reset-filters-button").scrollIntoViewIfNeeded();
     await page.getByTestId("policy-audit-log-reset-filters-button").click();
     await expect(page.getByTestId("policy-audit-log-filter-summary")).toContainText(
-        "Filter audit history by action, actor, target user, or date range. Pagination stays server-driven.",
+        "Filter audit history by action, actor, target user, or date range.",
     );
-    await page.getByTestId("policy-audit-log-next-button").click();
+    await page.getByTestId("policy-audit-log-next-button").scrollIntoViewIfNeeded();
+    await page.getByTestId("policy-audit-log-next-button").evaluate((button: HTMLButtonElement) => button.click());
 
     await expect.poll(() => {
         const latest = capture.auditLogQueries.at(-1);
@@ -1148,7 +1169,7 @@ test("project settings members and resource-rate flows use backend payload contr
     await expect(backendRateRow).toContainText("$70.00");
 });
 
-test("roles admin flows use backend create, permission-assign, and delete contracts", async ({ page }) => {
+test("roles admin flows use backend create, permission-assign, revoke, and delete contracts", async ({ page }) => {
     const capture = await installSearchContractMocks(page);
 
     await page.goto("/settings/roles", { waitUntil: "domcontentloaded" });
@@ -1170,6 +1191,11 @@ test("roles admin flows use backend create, permission-assign, and delete contra
     await qaLeadRow.getByTestId("roles-row-name-button").click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("qa_lead");
+    await expect(dialog.getByTestId("roles-details-overview-card")).toBeVisible();
+    await expect(dialog.getByTestId("roles-details-assign-card")).toBeVisible();
+    await expect(dialog.getByTestId("roles-details-permissions-card")).toBeVisible();
+    await expect(dialog.getByTestId("roles-details-permission-search-input")).toBeVisible();
+    await expect(dialog).toContainText("0 assigned");
 
     await dialog.getByRole("combobox").click();
     await page.getByRole("option", { name: "task.view" }).click();
@@ -1183,6 +1209,18 @@ test("roles admin flows use backend create, permission-assign, and delete contra
     });
 
     await expect(dialog).toContainText("task.view");
+    await dialog.getByTestId("roles-details-permission-search-input").fill("task");
+    await expect(dialog.getByTestId("roles-details-permission-row")).toHaveCount(1);
+    await dialog.getByTestId("roles-details-permission-revoke-button").click();
+    await expect(page.getByTestId("roles-details-revoke-summary")).toContainText("Removing this grant can immediately reduce");
+    await page.getByTestId("roles-details-revoke-confirm-button").click();
+
+    await expect.poll(() => capture.rolePermissionRevokes.at(-1) ?? null).toEqual({
+        roleId: "role-qa-lead",
+        permissionId: "perm-task-view",
+    });
+
+    await expect(dialog.getByTestId("roles-details-permission-row")).toHaveCount(0);
     await dialog.getByRole("button", { name: /close/i }).click();
 
     await qaLeadRow.getByTestId("roles-row-delete-button").click();
@@ -1199,10 +1237,13 @@ test("user access flows use backend assign and revoke role contracts", async ({ 
     await expect(page.getByText("User Access Management")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Role: system_analyst")).toBeVisible();
 
-    await page.getByRole("button", { name: /assign role/i }).click();
+    await page.getByTestId("user-access-assign-role-button").click();
     const dialog = page.getByRole("dialog");
+    await expect(dialog.getByTestId("user-access-assign-role-dialog-overview")).toBeVisible();
+    await expect(dialog.getByTestId("user-access-assign-role-preview")).toContainText("Choose a role above");
     await dialog.getByRole("combobox").click();
     await page.getByRole("option", { name: "project_admin" }).click();
+    await expect(dialog.getByTestId("user-access-assign-role-preview")).toContainText("project_admin");
     await dialog.getByRole("button", { name: "Assign" }).click();
 
     await expect.poll(() => capture.userRoleAssignments.at(-1) ?? null).toEqual({
@@ -1212,10 +1253,11 @@ test("user access flows use backend assign and revoke role contracts", async ({ 
         },
     });
 
-    const projectAdminRoleCard = page.locator("div.rounded-lg.border.p-3.shadow-sm").filter({ hasText: /project_admin/i }).first();
+    const projectAdminRoleCard = page.getByTestId("user-access-role-card").filter({ hasText: /project_admin/i }).first();
     await expect(projectAdminRoleCard).toBeVisible();
 
-    await projectAdminRoleCard.getByRole("button").click();
+    await projectAdminRoleCard.getByTestId("user-access-role-revoke-button").click();
+    await expect(page.getByTestId("user-access-revoke-role-summary")).toContainText("Effective access may shrink immediately");
     await page.getByTestId("user-access-revoke-role-confirm-button").click();
 
     await expect.poll(() => capture.userRoleRevokes.at(-1) ?? null).toEqual({
@@ -1223,7 +1265,7 @@ test("user access flows use backend assign and revoke role contracts", async ({ 
         roleId: "role-admin",
     });
 
-    await expect(page.locator("div.rounded-lg.border.p-3.shadow-sm").filter({ hasText: /project_admin/i })).toHaveCount(0);
+    await expect(page.getByTestId("user-access-role-card").filter({ hasText: /project_admin/i })).toHaveCount(0);
 });
 
 test("task work-log flows use backend create, update, and delete contracts", async ({ page }) => {
@@ -1329,7 +1371,7 @@ test("tasks mobile quick controls expose backend sort and filter options", async
         sort_dir: "asc",
         health_status: "critical",
         schedule_status: "overdue",
-        assignee_id: "assignee-1",
+        assignee_id: "user-1",
         due_from: "2026-02-01",
     });
 

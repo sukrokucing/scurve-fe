@@ -491,91 +491,121 @@ export const PermissionMatrix = () => {
 
     return (
         <div className="rounded-md border bg-card shadow-sm overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-3" data-testid="rbac-controls-bar">
-                <Button
-                    type="button"
-                    variant={editMode ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => setEditMode((prev) => !prev)}
-                    data-testid="rbac-edit-mode-toggle"
-                >
-                    {editMode ? "Exit edit mode" : "Edit permissions"}
-                </Button>
-                {editMode ? (
-                    <>
-                        <Button
-                            type="button"
-                            variant={allowGrant ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => setAllowGrant((prev) => !prev)}
-                            data-testid="rbac-grant-toggle"
-                        >
-                            Allow grants
-                        </Button>
-                        <Button
-                            type="button"
-                            variant={allowRevoke ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => setAllowRevoke((prev) => !prev)}
-                            data-testid="rbac-revoke-toggle"
-                        >
-                            Allow revokes
-                        </Button>
-                    </>
-                ) : (
-                    <Badge variant="outline" className="h-8 px-2 text-[11px]">
-                        Review mode
-                    </Badge>
-                )}
-                <Combobox
-                    value={roleFilter}
-                    onChange={setRoleFilter}
-                    options={roleOptions}
-                    className="w-full sm:w-[170px]"
-                    placeholder="All roles"
-                    searchPlaceholder="Search roles..."
-                    triggerAriaLabel="Filter roles"
-                    triggerTestId="rbac-role-filter-combobox"
-                />
-                <Combobox
-                    value={resourceFilter}
-                    onChange={setResourceFilter}
-                    options={resourceOptions}
-                    className="w-full sm:w-[190px]"
-                    placeholder="All resources"
-                    searchPlaceholder="Search resources..."
-                    triggerAriaLabel="Filter resources"
-                    triggerTestId="rbac-resource-filter-combobox"
-                />
-                <Input
-                    value={permissionQueryInput}
-                    onChange={(event) => setPermissionQueryInput(event.target.value)}
-                    placeholder="Search permissions..."
-                    className="h-11 w-full sm:w-[240px]"
-                    data-testid="rbac-permission-search-input"
-                />
-                <Button
-                    type="button"
-                    variant={assignedOnly ? "secondary" : "outline"}
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => setAssignedOnly((prev) => !prev)}
-                    data-testid="rbac-assigned-only-toggle"
-                >
-                    Assigned only
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => setShowQuickStart((prev) => !prev)}
-                    data-testid="rbac-toggle-help-button"
-                >
-                    {showQuickStart ? "Hide guide" : "Show guide"}
-                </Button>
-                <div className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
-                    {filteredRoles.length} role(s) • {totalVisiblePermissions} permission(s) • {totalVisibleCells} cell(s)
+            <div className="border-b bg-background px-3 py-3" data-testid="rbac-scope-overview">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">Keep permission work scoped</p>
+                        <p className="text-xs text-muted-foreground">
+                            Pick the role and resource context first, then enter edit mode only when you are ready to grant or revoke visible permissions.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant={editMode ? "secondary" : "outline"}>
+                            {editMode ? "Edit mode" : "Review mode"}
+                        </Badge>
+                        <Badge variant="outline">{filteredRoles.length} role(s)</Badge>
+                        <Badge variant="outline">{visibleResources.length} resource(s)</Badge>
+                        <Badge variant="outline">{totalVisiblePermissions} permission(s)</Badge>
+                        <Badge variant="outline">{totalVisibleCells} cell(s)</Badge>
+                    </div>
+                </div>
+            </div>
+
+            <div className="border-b bg-muted/20 px-3 py-3" data-testid="rbac-controls-panel">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div className="space-y-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Scope</div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[170px_190px_minmax(0,1fr)_auto]">
+                            <Combobox
+                                value={roleFilter}
+                                onChange={setRoleFilter}
+                                options={roleOptions}
+                                className="w-full"
+                                placeholder="All roles"
+                                searchPlaceholder="Search roles..."
+                                triggerAriaLabel="Filter roles"
+                                triggerTestId="rbac-role-filter-combobox"
+                            />
+                            <Combobox
+                                value={resourceFilter}
+                                onChange={setResourceFilter}
+                                options={resourceOptions}
+                                className="w-full"
+                                placeholder="All resources"
+                                searchPlaceholder="Search resources..."
+                                triggerAriaLabel="Filter resources"
+                                triggerTestId="rbac-resource-filter-combobox"
+                            />
+                            <Input
+                                value={permissionQueryInput}
+                                onChange={(event) => setPermissionQueryInput(event.target.value)}
+                                placeholder="Search permissions..."
+                                className="h-11 w-full"
+                                data-testid="rbac-permission-search-input"
+                            />
+                            <Button
+                                type="button"
+                                variant={assignedOnly ? "secondary" : "outline"}
+                                size="sm"
+                                className="h-11 w-full xl:w-auto"
+                                onClick={() => setAssignedOnly((prev) => !prev)}
+                                data-testid="rbac-assigned-only-toggle"
+                            >
+                                Assigned only
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Change mode</div>
+                            <span className="text-[11px] text-muted-foreground">
+                                Bulk actions only apply to currently visible permissions.
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                type="button"
+                                variant={editMode ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => setEditMode((prev) => !prev)}
+                                data-testid="rbac-edit-mode-toggle"
+                            >
+                                {editMode ? "Exit edit mode" : "Edit permissions"}
+                            </Button>
+                            {editMode ? (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant={allowGrant ? "secondary" : "outline"}
+                                        size="sm"
+                                        onClick={() => setAllowGrant((prev) => !prev)}
+                                        data-testid="rbac-grant-toggle"
+                                    >
+                                        Allow grants
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={allowRevoke ? "secondary" : "outline"}
+                                        size="sm"
+                                        onClick={() => setAllowRevoke((prev) => !prev)}
+                                        data-testid="rbac-revoke-toggle"
+                                    >
+                                        Allow revokes
+                                    </Button>
+                                </>
+                            ) : null}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowQuickStart((prev) => !prev)}
+                                data-testid="rbac-toggle-help-button"
+                            >
+                                {showQuickStart ? "Hide guide" : "Show guide"}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div className="border-t bg-muted/20 px-3 py-2 text-xs text-muted-foreground" data-testid="rbac-filter-summary">
@@ -646,6 +676,37 @@ export const PermissionMatrix = () => {
                     Tip: filter to one role, then enable edit mode to make precise grant/revoke changes with less noise.
                 </div>
             )}
+
+            {!isMobileViewport && summaryRole && resourceSummaries.length > 0 ? (
+                <div className="border-b bg-muted/10 px-3 py-3" data-testid="rbac-resource-summary">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">Visible resource coverage</p>
+                            <p className="text-xs text-muted-foreground">
+                                Focused on role <span className="font-medium text-foreground">{summaryRole.name}</span>. Use this summary before opening the full matrix.
+                            </p>
+                        </div>
+                        <Badge variant="outline">{resourceSummaries.length} resource group(s)</Badge>
+                    </div>
+                    <div className="mt-3 grid gap-2 lg:grid-cols-3">
+                        {resourceSummaries.slice(0, 6).map((summary) => (
+                            <div key={summary.resource} className="space-y-1 rounded-md border bg-background px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm font-medium capitalize">{summary.resource}</span>
+                                    <Badge variant="outline" className="text-[11px]">
+                                        {typeof summary.assignedCount === "number"
+                                            ? `${summary.assignedCount}/${summary.totalPermissions}`
+                                            : `${summary.totalPermissions}`}
+                                    </Badge>
+                                </div>
+                                <p className="line-clamp-1 text-xs text-muted-foreground" title={summary.preview.join(", ")}>
+                                    {summary.preview.join(", ") || "No visible permissions"}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
 
             {isMobileViewport && !showAdvancedMatrix ? (
                 <div className="space-y-3 border-b bg-background px-3 py-3" data-testid="rbac-mobile-basic-mode">

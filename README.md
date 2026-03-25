@@ -102,8 +102,11 @@ App default URL: `http://localhost:3001`
 - `npm run seed:demo-personas`: seed example personas + projects + tasks + dashboard consistency report
 - `npm run seed:dashboard-demo`: seed one fresh dashboard trial project with plan + task progress history
 - `npm run test:e2e`: run all Playwright E2E tests
+- `npm run test:e2e:menu`: run menu hierarchy + shell regressions on chromium
 - `npm run test:e2e:persona`: run persona workflow ergonomics checks
-- `npm run test:e2e:critical`: smoke + runtime perf probes (chromium)
+- `npm run test:e2e:roles-live`: run a live-auth role details dialog smoke on chromium
+- `npm run test:e2e:user-access-live`: run a live-auth user access assign/revoke smoke on chromium
+- `npm run test:e2e:critical`: smoke + menu shell + runtime perf probes (chromium)
 - `npm run qa:be-update:20260311`: run FE QA checklist for BE contract update (March 11, 2026)
 - `npm run audit:ui && npm run audit:perf:strict`: full audit gate
 - `npm run generate:schemas && npm run generate:theme`: regenerate API+Zod schemas + theme tokens
@@ -112,7 +115,7 @@ App default URL: `http://localhost:3001`
 
 - `npm run dev`, `npm run preview`, `npm run build`, `npm run lint`, `npm run typecheck`
 - `npm run seed:demo-personas`, `npm run seed:dashboard-demo`
-- `npm run test:e2e`, `npm run test:e2e:persona`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
+- `npm run test:e2e`, `npm run test:e2e:menu`, `npm run test:e2e:persona`, `npm run test:e2e:roles-live`, `npm run test:e2e:user-access-live`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
 - `npm run generate:e2e:scenario`, `npm run test:e2e:scenario`
 - `npm run sync:openapi`, `npm run generate:types`, `npm run generate:types:remote`, `npm run generate:zod`, `npm run generate:schemas`, `npm run generate:schemas:remote`
 - `npm run generate:theme`, `npm run check:theme`
@@ -142,6 +145,41 @@ Notes:
 - `generate:types` is now local/deterministic (`src/openapi.json`) so CI and local output stay aligned.
 - Use `generate:types:remote` only when you need direct URL-based type generation.
 - One-shot backend refresh + regen: `npm run generate:schemas:remote`.
+
+## Authenticated E2E Suites
+
+Some higher-signal suites depend on an authenticated browser session:
+
+- `npm run test:e2e:menu`
+- `npm run test:e2e:critical`
+- `npm run test:e2e:project-settings`
+- `npm run test:e2e:projects-mobile`
+- `npm run test:e2e:roles-live`
+- `npm run test:e2e:user-access-live`
+- `npm run test:e2e:tasks-health`
+
+Recommended env setup:
+
+```env
+PLAYWRIGHT_AUTH_TOKEN=...
+```
+
+Fallback auth setup:
+
+```env
+PLAYWRIGHT_USERNAME=...
+PLAYWRIGHT_PASSWORD=...
+PLAYWRIGHT_USER_ID=...
+PLAYWRIGHT_USER_NAME=...
+PLAYWRIGHT_USER_EMAIL=...
+```
+
+Notes:
+
+- `PLAYWRIGHT_AUTH_TOKEN` is the preferred CI path because it avoids extra login churn.
+- `TEST_EMAIL` and `TEST_PASSWORD` are still fallback keys for generated scenarios and helper scripts, not the primary auth path for the runtime app.
+- GitHub Actions only runs the authenticated critical suite when the needed secrets are present.
+- `test:e2e:menu` and `test:e2e:critical` run with `--workers=1` intentionally because these routes share auth-heavy state and are more stable serially.
 
 ### Backend Contract Notes (March 11, 2026)
 

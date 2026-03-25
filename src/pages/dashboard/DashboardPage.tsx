@@ -113,16 +113,24 @@ export function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-1">
                     <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                    <p className="text-muted-foreground">Overview of delivery performance and S-curve governance.</p>
+                    <p className="max-w-3xl text-muted-foreground">
+                        Start with the portfolio summary, then move into S-curve governance and project progress signals.
+                    </p>
                 </div>
                 <Button asChild>
                     <Link to="/projects">View All Projects</Link>
                 </Button>
             </div>
 
+            <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Portfolio Summary</h3>
+                    <p className="text-xs text-muted-foreground">Current scope across accessible projects</p>
+                </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="glass shadow-sm transition-shadow hover:shadow-md" data-testid="dashboard-kpi-total-projects">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -163,17 +171,21 @@ export function DashboardPage() {
                         <div className="text-2xl font-bold" data-testid="dashboard-kpi-scurve-pass-rate-value">
                             {governanceSummary.passRate !== null
                                 ? `${governanceSummary.passRate}%`
-                                : "N/A"}
+                                : "Not ready"}
                         </div>
                         <p className="text-xs text-muted-foreground" data-testid="dashboard-kpi-scurve-pass-rate-note">
                             {governanceSummary.supportedRuleCount > 0
                                 ? `${governanceSummary.passCount}/${governanceSummary.supportedRuleCount} projects passed`
-                                : "No supported rule checks yet"}
+                                : "Awaiting supported rule evaluations"}
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
+            <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">S-Curve Governance</h3>
+                <p className="text-xs text-muted-foreground">Use progress signals and access coverage together when prioritizing attention.</p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-4 min-w-0 glass">
                     <CardHeader>
@@ -223,7 +235,7 @@ export function DashboardPage() {
                             </ChartContainer>
                         ) : (
                             <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                                No project progress data available yet
+                                Project progress data will appear here once portfolio summary values are available.
                             </div>
                         )}
                     </CardContent>
