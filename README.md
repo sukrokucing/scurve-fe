@@ -153,6 +153,7 @@ Some higher-signal suites depend on an authenticated browser session:
 - `npm run test:e2e:menu`
 - `npm run test:e2e:critical`
 - `npm run test:e2e:project-settings`
+- `npm run test:e2e:project-dialogs-live`
 - `npm run test:e2e:projects-mobile`
 - `npm run test:e2e:roles-live`
 - `npm run test:e2e:user-access-live`

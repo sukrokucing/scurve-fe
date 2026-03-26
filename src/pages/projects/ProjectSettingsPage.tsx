@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CircleDollarSign, Loader2, Settings2, ShieldAlert, TrendingUp, Users } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, Loader2, RotateCcw, Settings2, ShieldAlert, Trash2, TrendingUp, Users } from "lucide-react";
 
 import { type ApiProjectMember, type ApiProjectResourceRoleRate } from "@/api/openapiClient";
 import { useRolesWithPermissionsQuery } from "@/api/queries/rbac";
@@ -835,44 +835,75 @@ function MembersTab({
     const memberColumns = useMemo<ColumnDef<ApiProjectMember, unknown>[]>(() => ([
         memberColumnHelper.display({
             id: "member",
-            header: "Name",
+            header: "Member",
+            meta: {
+                headerClassName: "w-[34%] min-w-[220px]",
+                cellClassName: "align-middle py-3",
+            },
             cell: (info) => (
-                <div className="flex flex-col">
+                <div className="min-w-0 space-y-0.5">
                     <span className="font-medium">{info.row.original.user_name}</span>
-                    <span className="text-xs text-muted-foreground">{info.row.original.user_email}</span>
+                    <span className="truncate text-xs text-muted-foreground">{info.row.original.user_email}</span>
                 </div>
             ),
         }),
         memberColumnHelper.accessor("access_role_name", {
-            header: "Access Role",
-            cell: (info) => <Badge variant="outline">{info.getValue()}</Badge>,
+            header: "Access",
+            meta: {
+                headerClassName: "w-[18%] min-w-[132px]",
+                cellClassName: "align-middle py-3",
+            },
+            cell: (info) => <Badge variant="outline" className="text-[11px]">{info.getValue()}</Badge>,
         }),
         memberColumnHelper.accessor("resource_roles", {
-            header: "Resource Roles",
-            cell: (info) => (
-                <div className="flex flex-wrap gap-1">
-                    {info.getValue().length > 0 ? info.getValue().map((role) => (
-                        <Badge key={`${info.row.original.user_id}-${role.id}`} variant="secondary">
-                            {role.name}
-                        </Badge>
-                    )) : <span className="text-xs text-muted-foreground">No resource roles</span>}
-                </div>
-            ),
+            header: "Coverage",
+            meta: {
+                headerClassName: "w-[38%] min-w-[220px]",
+                cellClassName: "align-middle py-3",
+            },
+            cell: (info) => {
+                const roles = info.getValue();
+                if (roles.length === 0) {
+                    return <span className="text-sm text-muted-foreground">—</span>;
+                }
+
+                const visibleRoles = roles.slice(0, 2).map((role) => role.name);
+                const remainingCount = roles.length - visibleRoles.length;
+                const fullLabel = roles.map((role) => role.name).join(", ");
+
+                return (
+                    <div className="flex items-center gap-2" title={fullLabel}>
+                        <span className="truncate text-sm text-foreground">{visibleRoles.join(", ")}</span>
+                        {remainingCount > 0 ? (
+                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                                +{remainingCount}
+                            </Badge>
+                        ) : null}
+                    </div>
+                );
+            },
         }),
         memberColumnHelper.display({
             id: "actions",
-            header: () => <div className="text-right">Action</div>,
+            header: () => <span className="sr-only">Action</span>,
+            meta: {
+                headerClassName: "w-[72px] text-right",
+                cellClassName: "align-middle py-2 text-right",
+            },
             cell: (info) => (
                 <div className="text-right">
                     <Button
                         type="button"
-                        size="sm"
-                        variant="destructive-outline"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         disabled={!canManageSettings || removeMemberPending}
                         onClick={() => onRemoveMember(info.row.original.user_id)}
+                        aria-label={`Remove ${info.row.original.user_name} from project`}
+                        title="Remove member"
                         data-testid="project-settings-member-remove-button"
                     >
-                        Remove
+                        <Trash2 className="h-4 w-4" />
                     </Button>
                 </div>
             ),
@@ -890,7 +921,7 @@ function MembersTab({
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-base">Add or update project membership</CardTitle>
                     <CardDescription>
-                        Choose the person, then define their access role and resource-role coverage before saving.
+                        Pick the person, access level, and work-log coverage before saving.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -926,7 +957,7 @@ function MembersTab({
                         <div className="space-y-1">
                             <p className="text-sm font-medium">Resource roles</p>
                             <p className="text-xs text-muted-foreground">
-                                Keep these lightweight: assign only the roles this member should log work against in the project.
+                                Only assign roles this member should log work against.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -957,7 +988,7 @@ function MembersTab({
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-xs text-muted-foreground">
-                            Members appear in Tasks assignee selection and workload summaries after they are added here.
+                            Added members appear in Tasks assignee and workload views.
                         </p>
                         <Button
                             type="button"
@@ -982,7 +1013,7 @@ function MembersTab({
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-base">Current members</CardTitle>
                     <CardDescription>
-                        Review access and resource-role coverage in one table before changing dashboard or task ownership behavior.
+                        Scan access and coverage quickly before changing ownership or dashboard behavior.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -991,6 +1022,8 @@ function MembersTab({
                         columns={memberColumns}
                         getRowId={(row) => row.user_id}
                         isLoading={isMembersLoading}
+                        className="text-sm"
+                        rowClassName="hover:bg-muted/25"
                         loadingRow={(
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center text-muted-foreground">
@@ -1051,34 +1084,53 @@ function ResourceRatesTab({
     const rateColumns = useMemo<ColumnDef<ApiProjectResourceRoleRate, unknown>[]>(() => ([
         resourceRateColumnHelper.accessor("resource_role_name", {
             header: "Resource Role",
+            meta: {
+                headerClassName: "w-[40%] min-w-[220px]",
+                cellClassName: "align-middle py-3 font-medium",
+            },
         }),
         resourceRateColumnHelper.display({
             id: "hourly_rate",
-            header: "Hourly Rate",
+            header: () => <div className="text-right">Effective rate</div>,
+            meta: {
+                headerClassName: "w-[26%] min-w-[150px] text-right",
+                cellClassName: "align-middle py-3 text-right font-medium tabular-nums",
+            },
             cell: (info) => formatCurrencyAmount(info.row.original.hourly_rate, info.row.original.currency),
         }),
         resourceRateColumnHelper.accessor("is_override", {
-            header: "Type",
+            header: "Source",
+            meta: {
+                headerClassName: "w-[18%] min-w-[120px]",
+                cellClassName: "align-middle py-3",
+            },
             cell: (info) => (
-                <Badge variant={info.getValue() ? "default" : "secondary"}>
+                <Badge variant={info.getValue() ? "default" : "secondary"} className="text-[11px]">
                     {info.getValue() ? "Override" : "Default"}
                 </Badge>
             ),
         }),
         resourceRateColumnHelper.display({
             id: "actions",
-            header: () => <div className="text-right">Action</div>,
+            header: () => <span className="sr-only">Action</span>,
+            meta: {
+                headerClassName: "w-[72px] text-right",
+                cellClassName: "align-middle py-2 text-right",
+            },
             cell: (info) => (
                 <div className="text-right">
                     <Button
                         type="button"
-                        size="sm"
-                        variant="outline"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         disabled={!canManageSettings || !info.row.original.is_override || clearRatePending}
                         onClick={() => onResetRate(info.row.original.resource_role_id)}
+                        aria-label={`Reset rate for ${info.row.original.resource_role_name}`}
+                        title="Reset override"
                         data-testid="project-settings-rate-reset-button"
                     >
-                        Reset
+                        <RotateCcw className="h-4 w-4" />
                     </Button>
                 </div>
             ),
@@ -1095,7 +1147,7 @@ function ResourceRatesTab({
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-base">Set or update a project override</CardTitle>
                     <CardDescription>
-                        Use this when a project rate should differ from the global resource-role default.
+                        Use an override only when the project rate must differ from the default.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
@@ -1147,7 +1199,7 @@ function ResourceRatesTab({
                     </div>
                     <div className="flex flex-col gap-2 md:col-span-3 md:flex-row md:items-center md:justify-between">
                         <p className="text-xs text-muted-foreground">
-                            The table below shows effective rates. Overrides are highlighted so defaults stay easy to compare.
+                            Effective rates stay below so overrides remain easy to compare.
                         </p>
                         <Button
                             type="button"
@@ -1172,7 +1224,7 @@ function ResourceRatesTab({
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-base">Effective rates</CardTitle>
                     <CardDescription>
-                        Compare the project override state against defaults before using dashboard cost and work-log metrics.
+                        Compare overrides against defaults before relying on hours or cost metrics.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1181,6 +1233,8 @@ function ResourceRatesTab({
                         columns={rateColumns}
                         getRowId={(row) => row.resource_role_id}
                         isLoading={isRatesLoading}
+                        className="text-sm"
+                        rowClassName="hover:bg-muted/25"
                         loadingRow={(
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center text-muted-foreground">

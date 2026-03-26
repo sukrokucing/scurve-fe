@@ -95,6 +95,7 @@ import { useRealtimeStore } from "@/store/realtimeStore";
 import {
     getPresenceStatusLabel,
     getRealtimeRouteLabel,
+    isPresenceRecentlyActive,
 } from "@/lib/realtimePresentation";
 import { cn } from "@/lib/utils";
 import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
@@ -294,18 +295,16 @@ function getCompactTaskStatusLabel(status: Task["executionStatus"] | Task["statu
     }
 }
 
-function getTaskListWidthClass(columnId: string) {
+function getTaskListWidthClass(columnId: string, isLaptopDensity = false) {
     switch (columnId) {
         case "selection":
             return "w-[72px]";
         case "name":
-            return "w-[39%] min-w-[320px]";
+            return isLaptopDensity ? "w-[46%] min-w-[300px]" : "w-[43%] min-w-[340px]";
         case "progress":
-            return "w-[21%] min-w-[180px]";
+            return isLaptopDensity ? "w-[22%] min-w-[168px]" : "w-[27%] min-w-[220px]";
         case "timeline":
-            return "w-[19%] min-w-[190px]";
-        case "variance":
-            return "w-[120px]";
+            return isLaptopDensity ? "w-[16%] min-w-[132px]" : "w-[18%] min-w-[150px]";
         case "actions":
             return "w-[64px]";
         default:
@@ -469,9 +468,9 @@ function getTaskHealthBarClass(health: TaskHealthStatus) {
         case "on_track":
             return "bg-sky-500";
         case "at_risk":
-            return "bg-amber-500";
+            return "bg-orange-500";
         case "critical":
-            return "bg-rose-500";
+            return "bg-red-500";
         case "needs_plan":
         default:
             return "bg-slate-400";
@@ -485,9 +484,9 @@ function getTaskHealthTintClass(health: TaskHealthStatus) {
         case "on_track":
             return "bg-sky-500/10 text-sky-700 ring-sky-500/15 dark:text-sky-300";
         case "at_risk":
-            return "bg-amber-500/12 text-amber-700 ring-amber-500/20 dark:text-amber-300";
+            return "bg-orange-500/12 text-orange-700 ring-orange-500/20 dark:text-orange-300";
         case "critical":
-            return "bg-rose-500/12 text-rose-700 ring-rose-500/20 dark:text-rose-300";
+            return "bg-red-500/12 text-red-700 ring-red-500/20 dark:text-red-300";
         case "needs_plan":
         default:
             return "bg-slate-500/10 text-slate-700 ring-slate-500/15 dark:text-slate-300";
@@ -501,9 +500,9 @@ function getTaskHealthBorderClass(health: TaskHealthStatus) {
         case "on_track":
             return "border-l-sky-500";
         case "at_risk":
-            return "border-l-amber-500";
+            return "border-l-orange-500";
         case "critical":
-            return "border-l-rose-500";
+            return "border-l-red-500";
         case "needs_plan":
         default:
             return "border-l-slate-400";
@@ -603,6 +602,7 @@ const TASK_SORT_OPTIONS: { value: TaskListSortOptionValue; label: string }[] = [
     { value: "health_status:desc", label: "Health status: Z to A" },
 ];
 const TASK_HEALTH_SUMMARY_ORDER: TaskHealthStatus[] = ["ahead", "on_track", "at_risk", "critical", "needs_plan"];
+const TASK_HEALTH_EXCEPTION_SET = new Set<TaskHealthStatus>(["critical", "at_risk", "needs_plan"]);
 
 function parseTaskSortOption(value: string): { sortBy: TaskListSortField; sortDir: TaskListSortDirection } {
     const [rawSortBy, rawSortDir] = value.split(":");
@@ -655,7 +655,7 @@ export function TasksPage() {
     }, [searchParams, selectedProject, setSearchParams]);
     const [view, setView] = useState<"list" | "gantt" | "kanban">("list");
     const isTabletOrMobile = useMedia("(max-width: 1023px)", false);
-    const isWideDesktop = useMedia("(min-width: 1440px)", false);
+    const isLaptopDensity = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -831,10 +831,20 @@ export function TasksPage() {
                 initials: getTeamMemberInitials(member.name, member.email),
                 presence: presenceByUserId.get(member.id) ?? null,
             }))
-            .sort((left, right) => left.label.localeCompare(right.label));
+            .sort((left, right) => {
+                const leftOnline = left.presence?.status === "online" ? 1 : 0;
+                const rightOnline = right.presence?.status === "online" ? 1 : 0;
+                if (leftOnline !== rightOnline) return rightOnline - leftOnline;
+
+                const leftRecent = isPresenceRecentlyActive(left.presence) ? 1 : 0;
+                const rightRecent = isPresenceRecentlyActive(right.presence) ? 1 : 0;
+                if (leftRecent !== rightRecent) return rightRecent - leftRecent;
+
+                return left.label.localeCompare(right.label);
+            });
     }, [assignableUsers, projectMemberList, selectedProjectPresence]);
     const visibleTeamMembers = useMemo(
-        () => teamMembersForSummary.slice(0, 5),
+        () => teamMembersForSummary.slice(0, 4),
         [teamMembersForSummary],
     );
     const hiddenTeamMemberCount = Math.max(teamMembersForSummary.length - visibleTeamMembers.length, 0);
@@ -1010,16 +1020,43 @@ export function TasksPage() {
             active: healthStatusFilter === healthStatus,
         }));
     }, [healthStatusFilter, healthSummaryTasks]);
+    const healthSummaryLegendItems = useMemo(
+        () => healthSummaryItems.filter((item) => item.count > 0),
+        [healthSummaryItems],
+    );
+    const visibleHealthSummaryItems = useMemo(() => {
+        const availableItems = healthSummaryItems.filter((item) => item.count > 0 || item.active);
+
+        if (!isLaptopDensity) {
+            return availableItems;
+        }
+
+        const exceptionItems = availableItems.filter((item) => TASK_HEALTH_EXCEPTION_SET.has(item.healthStatus));
+        const activeStableItems = availableItems.filter((item) => item.active && !TASK_HEALTH_EXCEPTION_SET.has(item.healthStatus));
+
+        if (exceptionItems.length > 0) {
+            const includedStates = new Set(exceptionItems.map((item) => item.healthStatus));
+            return [
+                ...exceptionItems,
+                ...activeStableItems.filter((item) => !includedStates.has(item.healthStatus)),
+            ];
+        }
+
+        return availableItems.slice(0, 2);
+    }, [healthSummaryItems, isLaptopDensity]);
     const healthSummaryTotalCount = useMemo(
         () => healthSummaryItems.reduce((total, item) => total + item.count, 0),
         [healthSummaryItems],
     );
     const healthSummaryExceptionCount = useMemo(
         () => healthSummaryItems
-            .filter((item) => item.healthStatus === "critical" || item.healthStatus === "at_risk" || item.healthStatus === "needs_plan")
+            .filter((item) => TASK_HEALTH_EXCEPTION_SET.has(item.healthStatus))
             .reduce((total, item) => total + item.count, 0),
         [healthSummaryItems],
     );
+    const isHealthSummaryAllClear = healthSummaryExceptionCount === 0
+        && healthStatusFilter === "all"
+        && healthSummaryTotalCount > 0;
     const selectionScopeLabel = useMemo(() => {
         if (view === "list") {
             return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
@@ -2079,7 +2116,10 @@ export function TasksPage() {
                         : Math.max(0, Math.min(snapshot.expected, 100));
 
                     return (
-                        <div className="flex min-w-[165px] items-center gap-2.5" title={getTaskScurveTitle(task)}>
+                        <div
+                            className={cn("flex items-center gap-2.5", isLaptopDensity ? "min-w-[160px]" : "min-w-[180px]")}
+                            title={getTaskScurveTitle(task)}
+                        >
                             <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/70">
                                 <div
                                     className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(snapshot.health))}
@@ -2093,9 +2133,23 @@ export function TasksPage() {
                                     />
                                 ) : null}
                             </div>
-                            <span className="w-10 shrink-0 text-right text-sm font-semibold text-foreground tabular-nums">
-                                {formatTaskPercent(snapshot.actual)}
-                            </span>
+                            <div className="flex shrink-0 items-center gap-1">
+                                <span className="w-10 text-right text-sm font-semibold text-foreground tabular-nums">
+                                    {formatTaskPercent(snapshot.actual)}
+                                </span>
+                                {!isLaptopDensity && snapshot.variance !== null ? (
+                                    <span
+                                        className={cn(
+                                            "text-[11px] font-medium tabular-nums",
+                                            snapshot.variance >= 0
+                                                ? "text-emerald-700 dark:text-emerald-300"
+                                                : "text-red-700 dark:text-red-300",
+                                        )}
+                                    >
+                                        {formatTaskVariance(snapshot.variance)}
+                                    </span>
+                                ) : null}
+                            </div>
                             <span className="sr-only">
                                 Expected {formatTaskPercent(snapshot.expected)}. Actual {formatTaskPercent(snapshot.actual)}. Variance {formatTaskVariance(snapshot.variance)}. {getTaskHealthLabel(snapshot.health)}.
                             </span>
@@ -2110,7 +2164,7 @@ export function TasksPage() {
                     const task = info.row.original;
                     const dueLabel = task.dueDate
                         ? `Due ${format(new Date(task.dueDate), "MMM d")}`
-                        : "No due date";
+                        : null;
                     const planLabel = task.durationDays
                         ? `${task.durationDays}d`
                         : null;
@@ -2120,7 +2174,9 @@ export function TasksPage() {
 
                     return (
                         <div className="flex min-w-0 items-center gap-2 text-sm">
-                            <span className="shrink-0 font-medium text-foreground">{dueLabel}</span>
+                            {dueLabel ? (
+                                <span className="shrink-0 font-medium text-foreground">{dueLabel}</span>
+                            ) : null}
                             {planLabel ? <span className="shrink-0 text-muted-foreground">{planLabel}</span> : null}
                             {scheduleLabel ? (
                                 <span
@@ -2132,41 +2188,17 @@ export function TasksPage() {
                                     {scheduleLabel}
                                 </span>
                             ) : null}
-                            <span className="sr-only">{scheduleLabel ?? "Schedule not specified"}</span>
+                            {!dueLabel && !planLabel && !scheduleLabel ? (
+                                <span className="text-muted-foreground/40">—</span>
+                            ) : null}
+                            <span className="sr-only">
+                                {dueLabel ?? "No due date"}. {planLabel ?? "No plan"}. {scheduleLabel ?? "Not specified"}.
+                            </span>
                         </div>
                     );
                 },
             }),
         ];
-
-        if (isWideDesktop) {
-            baseColumns.push(
-                taskListColumnHelper.display({
-                    id: "variance",
-                    header: "Variance",
-                    cell: (info) => {
-                        const snapshot = getTaskScurveSnapshot(info.row.original);
-                        return (
-                            <div className="text-sm tabular-nums">
-                                <span
-                                    className={cn(
-                                        "font-medium",
-                                        snapshot.variance === null
-                                            ? "text-muted-foreground"
-                                        : snapshot.variance >= 0
-                                            ? "text-emerald-700 dark:text-emerald-300"
-                                            : "text-amber-700 dark:text-amber-300",
-                                    )}
-                                    title={getTaskScurveTitle(info.row.original)}
-                                >
-                                    {formatTaskVariance(snapshot.variance)}
-                                </span>
-                            </div>
-                        );
-                    },
-                }),
-            );
-        }
         baseColumns.push(
             taskListColumnHelper.display({
                 id: "actions",
@@ -2198,7 +2230,7 @@ export function TasksPage() {
     }, [
         allPageSelected,
         getAssigneeLabel,
-        isWideDesktop,
+        isLaptopDensity,
         openTaskEditor,
         page,
         pageSize,
@@ -2503,9 +2535,12 @@ export function TasksPage() {
                                     <div className="space-y-2" title={getTaskScurveTitle(task)}>
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                <span>{task.dueDate ? `Due ${format(new Date(task.dueDate), "MMM d")}` : "Open-ended"}</span>
-                                                <span aria-hidden="true">•</span>
-                                                <span>{task.durationDays ? `${task.durationDays}d plan` : "No plan"}</span>
+                                                {task.dueDate ? <span>{`Due ${format(new Date(task.dueDate), "MMM d")}`}</span> : null}
+                                                {task.dueDate && task.durationDays ? <span aria-hidden="true">•</span> : null}
+                                                {task.durationDays ? <span>{`${task.durationDays}d`}</span> : null}
+                                                {!task.dueDate && !task.durationDays ? (
+                                                    <span className="text-muted-foreground/45">—</span>
+                                                ) : null}
                                             </div>
                                             <span className="text-sm font-semibold text-foreground">
                                                 {formatTaskPercent(taskSnapshot.actual)}
@@ -2570,7 +2605,7 @@ export function TasksPage() {
                                             key={header.id}
                                             className={cn(
                                                 "border-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
-                                                getTaskListWidthClass(header.column.id),
+                                                getTaskListWidthClass(header.column.id, isLaptopDensity),
                                             )}
                                         >
                                             {header.isPlaceholder
@@ -2600,7 +2635,7 @@ export function TasksPage() {
                                             key={cell.id}
                                             className={cn(
                                                 "border-0 px-3 py-2 align-middle",
-                                                getTaskListWidthClass(cell.column.id),
+                                                getTaskListWidthClass(cell.column.id, isLaptopDensity),
                                             )}
                                         >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -2626,7 +2661,7 @@ export function TasksPage() {
     const isRateLimited = useNetworkStore((state) => state.isRateLimited);
 
     return (
-        <div className="space-y-4" data-testid="tasks-page">
+        <div className="space-y-3" data-testid="tasks-page">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
                 {selectedProject ? (
@@ -2637,10 +2672,13 @@ export function TasksPage() {
             </div>
 
             <Card className="overflow-hidden border-border/70 shadow-sm">
-                <CardContent className="space-y-3 p-3 sm:p-4">
+                <CardContent className="space-y-2.5 p-3 sm:p-4">
                     <section className="space-y-3" data-testid="tasks-page-context-card">
-                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+                        <div
+                            className="flex flex-col gap-3 xl:flex-row xl:items-center"
+                            data-testid="tasks-primary-toolbar"
+                        >
+                            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center xl:w-auto xl:shrink-0">
                                 <Combobox
                                     options={projects?.map((p) => ({ label: p.name, value: p.id })) ?? []}
                                     value={selectedProject}
@@ -2650,6 +2688,11 @@ export function TasksPage() {
                                     searchPlaceholder="Search projects..."
                                     triggerTestId="tasks-project-combobox"
                                 />
+                            </div>
+
+                            <div className="hidden h-8 w-px shrink-0 bg-border/70 xl:block" aria-hidden="true" />
+
+                            <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                                 <div className="relative min-w-0 flex-1">
                                     <Label htmlFor="tasks-search-input" className="sr-only">Search tasks</Label>
                                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -2683,11 +2726,18 @@ export function TasksPage() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2" data-testid="tasks-team-summary">
+                            <div className="hidden h-8 w-px shrink-0 bg-border/70 xl:block" aria-hidden="true" />
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 xl:ml-auto xl:justify-end" data-testid="tasks-team-summary">
                                 {selectedProject ? (
                                     <>
                                         <TooltipProvider delayDuration={120}>
-                                            <div className="flex items-center">
+                                            <Link
+                                                to={`/projects/${selectedProject}/settings?tab=members`}
+                                                className="flex items-center"
+                                                aria-label={`Open members for ${currentProject?.name ?? "this project"}`}
+                                                title={`${teamMembersForSummary.length} member${teamMembersForSummary.length === 1 ? "" : "s"}`}
+                                            >
                                                 {visibleTeamMembers.length > 0 ? (
                                                     visibleTeamMembers.map((member, index) => (
                                                         <Tooltip key={member.id}>
@@ -2699,6 +2749,7 @@ export function TasksPage() {
                                                                 >
                                                                     <Avatar
                                                                         className={cn(
+                                                                            "transition-transform hover:-translate-y-0.5",
                                                                             member.presence?.status === "online"
                                                                                 ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
                                                                                 : undefined,
@@ -2750,17 +2801,11 @@ export function TasksPage() {
                                                         +{hiddenTeamMemberCount}
                                                     </div>
                                                 ) : null}
-                                            </div>
+                                            </Link>
                                         </TooltipProvider>
-                                        <Badge variant="outline" data-testid="tasks-team-count-badge">
-                                            {teamMembersForSummary.length} member{teamMembersForSummary.length === 1 ? "" : "s"}
-                                        </Badge>
                                         <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
                                             {onlineTeamMemberCount} online
                                         </Badge>
-                                        <Button asChild type="button" variant="ghost" size="sm" className="h-9 px-2">
-                                            <Link to={`/projects/${selectedProject}/settings?tab=members`}>Members</Link>
-                                        </Button>
                                     </>
                                 ) : (
                                     <span className="text-xs text-muted-foreground">Select a project to load the team.</span>
@@ -3480,18 +3525,24 @@ export function TasksPage() {
                         </div>
                     </section>
 
-                    <section className="space-y-2 border-t border-border/70 pt-2" data-testid="tasks-secondary-insights-card">
-                        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="min-w-0 flex-1 space-y-2" data-testid="tasks-health-summary-strip">
-                                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                    <section className="space-y-1.5 border-t border-border/70 pt-1.5" data-testid="tasks-secondary-insights-card">
+                        <div className="flex flex-col gap-1.5 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="min-w-0 flex-1 space-y-1.5" data-testid="tasks-health-summary-strip">
+                                <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center">
                                     <div className="flex min-w-0 flex-1 items-center gap-2">
-                                        <Badge variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"} className="shrink-0 rounded-full">
-                                            {healthSummaryExceptionCount} attention
+                                        <Badge
+                                            variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"}
+                                            className={cn(
+                                                "shrink-0 rounded-full",
+                                                isHealthSummaryAllClear
+                                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                                    : undefined,
+                                            )}
+                                        >
+                                            {isHealthSummaryAllClear ? "All clear" : `${healthSummaryExceptionCount} attention`}
                                         </Badge>
                                         <div className="flex h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-muted">
-                                            {healthSummaryItems
-                                                .filter((item) => item.count > 0)
-                                                .map((item) => (
+                                            {healthSummaryLegendItems.map((item) => (
                                                     <div
                                                         key={item.healthStatus}
                                                         className={cn(getTaskHealthBarClass(item.healthStatus))}
@@ -3502,83 +3553,122 @@ export function TasksPage() {
                                                     />
                                                 ))}
                                         </div>
+                                        {healthSummaryLegendItems.length > 0 ? (
+                                            <TooltipProvider delayDuration={120}>
+                                                <div className="hidden shrink-0 items-center gap-1 sm:flex" data-testid="tasks-health-summary-legend">
+                                                    {healthSummaryLegendItems.map((item) => (
+                                                        <Tooltip key={item.healthStatus}>
+                                                            <TooltipTrigger asChild>
+                                                                <span
+                                                                    className={cn("h-2 w-2 rounded-full", getTaskHealthBarClass(item.healthStatus))}
+                                                                    aria-label={`${item.label}: ${item.count}`}
+                                                                />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {item.label}: {item.count}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    ))}
+                                                </div>
+                                            </TooltipProvider>
+                                        ) : null}
                                         <span className="hidden text-[11px] text-muted-foreground xl:inline" data-testid="tasks-health-summary-scope">
                                             {healthSummaryScopeLabel}
                                         </span>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                        {healthSummaryItems.map((item) => (
-                                            <Button
-                                                key={item.healthStatus}
-                                                type="button"
-                                                variant={item.active ? "secondary" : "outline"}
-                                                size="sm"
-                                                className="h-6 gap-1.5 rounded-full px-2 text-[11px]"
-                                                onClick={() => {
-                                                    setHealthStatusFilter((current) => (
-                                                        current === item.healthStatus ? "all" : item.healthStatus
-                                                    ));
-                                                }}
-                                                data-testid="tasks-health-summary-chip"
-                                            >
-                                                <span>{item.label}</span>
-                                                <span>{item.count}</span>
-                                            </Button>
-                                        ))}
-                                        {healthStatusFilter !== "all" ? (
+                                    {isHealthSummaryAllClear ? null : (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {visibleHealthSummaryItems.map((item) => (
+                                                <Button
+                                                    key={item.healthStatus}
+                                                    type="button"
+                                                    variant={item.active ? "secondary" : "outline"}
+                                                    size="sm"
+                                                    className="h-6 gap-1.5 rounded-full px-2 text-[11px]"
+                                                    onClick={() => {
+                                                        setHealthStatusFilter((current) => (
+                                                            current === item.healthStatus ? "all" : item.healthStatus
+                                                        ));
+                                                    }}
+                                                    data-testid="tasks-health-summary-chip"
+                                                >
+                                                    <span>{item.label}</span>
+                                                    <span>{item.count}</span>
+                                                </Button>
+                                            ))}
+                                            {healthStatusFilter !== "all" ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 rounded-full px-2 text-[11px]"
+                                                    onClick={() => setHealthStatusFilter("all")}
+                                                    data-testid="tasks-health-summary-clear-button"
+                                                >
+                                                    Clear
+                                                </Button>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end" data-testid="tasks-time-to-task-summary">
+                                <Popover open={showTimeToTaskInsights} onOpenChange={setShowTimeToTaskInsights}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant={showTimeToTaskInsights ? "secondary" : "ghost"}
+                                            size="sm"
+                                            className="h-8 gap-2 px-3"
+                                            data-testid="tasks-time-to-task-toggle-button"
+                                        >
+                                            <span className="font-medium text-foreground">Telemetry</span>
+                                            <span className="text-muted-foreground">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</span>
+                                            <span className="hidden text-muted-foreground sm:inline">Last {formatDurationMs(timeToTaskSummary.lastMs)}</span>
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="end" className="w-[min(92vw,320px)] space-y-3 p-3">
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold text-foreground">Time to task</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Open when you want telemetry detail, then get back to the task list.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            <Badge variant="outline" className="justify-start">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
+                                            <Badge variant="outline" className="justify-start">Last {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
+                                            <Badge variant="outline" className="justify-start">
+                                                Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
+                                            </Badge>
+                                            <Badge variant="outline" className="justify-start">Samples {timeToTaskSummary.intentSampleCount}</Badge>
+                                            <Badge variant="outline" className="justify-start">Passive exits {timeToTaskSummary.passiveExitCount}</Badge>
+                                        </div>
+                                        <div className="flex justify-end">
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-6 rounded-full px-2 text-[11px]"
-                                                onClick={() => setHealthStatusFilter("all")}
-                                                data-testid="tasks-health-summary-clear-button"
+                                                className="h-8 px-2"
+                                                onClick={() => {
+                                                    clearTimeToTaskRecords(currentUserId);
+                                                    if (timeToTaskSessionIdRef.current) {
+                                                        abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
+                                                    }
+                                                    beginTimeToTaskSession();
+                                                    refreshTimeToTaskSummary();
+                                                }}
+                                                data-testid="tasks-time-to-task-reset-button"
+                                                disabled={timeToTaskSummary.trackedSessionCount === 0}
                                             >
-                                                Clear
+                                                Reset
                                             </Button>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 xl:justify-end" data-testid="tasks-time-to-task-summary">
-                                <Badge variant="outline">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
-                                <Badge variant="outline">Last {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
-                                {showTimeToTaskInsights ? (
-                                    <>
-                                        <Badge variant="outline">Intent {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%</Badge>
-                                        <Badge variant="outline">Samples {timeToTaskSummary.intentSampleCount}</Badge>
-                                        <Badge variant="outline">Passive {timeToTaskSummary.passiveExitCount}</Badge>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 px-2"
-                                            onClick={() => {
-                                                clearTimeToTaskRecords(currentUserId);
-                                                if (timeToTaskSessionIdRef.current) {
-                                                    abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
-                                                }
-                                                beginTimeToTaskSession();
-                                                refreshTimeToTaskSummary();
-                                            }}
-                                            data-testid="tasks-time-to-task-reset-button"
-                                            disabled={timeToTaskSummary.trackedSessionCount === 0}
-                                        >
-                                            Reset
-                                        </Button>
-                                    </>
-                                ) : null}
-                                <Button
-                                    type="button"
-                                    variant={showTimeToTaskInsights ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className="h-8 px-2"
-                                    onClick={() => setShowTimeToTaskInsights((prev) => !prev)}
-                                    data-testid="tasks-time-to-task-toggle-button"
-                                >
-                                    {showTimeToTaskInsights ? "Hide insights" : "Show insights"}
-                                </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <span className="sr-only">
+                                    Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%. Passive exits {timeToTaskSummary.passiveExitCount}.
+                                </span>
                             </div>
                         </div>
                         <div className="lg:hidden">
@@ -4054,16 +4144,16 @@ export function TasksPage() {
                             </div>
 
                             {isEditingWeightedTask ? (
-                                <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-weighted-progress-section">
+                                <div className="space-y-2.5 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-weighted-progress-section">
                                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <p className="text-sm font-semibold">Weighted components</p>
                                             <Badge variant="outline">{getProgressMethodLabel(editing?.progressMethod)}</Badge>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
                                             <Badge variant="outline">Actual {formatTaskPercent(editingTaskScurve?.actual ?? null)}</Badge>
-                                            <Badge variant="outline">Expected {formatTaskPercent(editingTaskScurve?.expected ?? null)}</Badge>
-                                            <Badge variant="outline">Variance {formatTaskVariance(editingTaskScurve?.variance ?? null)}</Badge>
+                                            <Badge variant="outline">Plan {formatTaskPercent(editingTaskScurve?.expected ?? null)}</Badge>
+                                            <Badge variant="outline">Delta {formatTaskVariance(editingTaskScurve?.variance ?? null)}</Badge>
                                             <Badge variant={getTaskHealthVariant(editingTaskScurve?.health ?? "needs_plan")}>
                                                 {getTaskHealthLabel(editingTaskScurve?.health ?? "needs_plan")}
                                             </Badge>
@@ -4076,7 +4166,7 @@ export function TasksPage() {
                                             <Skeleton className="h-16 w-full" />
                                         </div>
                                     ) : (
-                                        <div className="space-y-3">
+                                        <div className="space-y-2.5">
                                             {progressComponentDrafts.map((draft, index) => (
                                                 <div
                                                     key={draft.id ?? `component-${index}`}
@@ -4084,25 +4174,26 @@ export function TasksPage() {
                                                     data-testid="tasks-progress-component-row"
                                                 >
                                                     <div className="mb-2 flex items-center justify-between gap-3">
-                                                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                                        <p className="text-xs font-medium text-muted-foreground">
                                                             Component {index + 1}
                                                         </p>
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-2 text-xs"
+                                                            size="icon"
+                                                            className="h-7 w-7"
+                                                            aria-label={`Remove component ${index + 1}`}
                                                             onClick={() => removeProgressComponentDraft(index)}
                                                             disabled={isProgressComponentsSaving}
                                                             data-testid="tasks-progress-component-remove-button"
                                                         >
-                                                            Remove
+                                                            <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                     </div>
 
-                                                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_110px_130px_minmax(0,1.2fr)_minmax(0,1.2fr)]">
+                                                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,0.9fr)_96px_108px_minmax(0,1.05fr)_minmax(0,1.05fr)]">
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Name</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Name</Label>
                                                             <Input
                                                                 value={draft.name}
                                                                 onChange={(event) => updateProgressComponentDraft(index, "name", event.target.value)}
@@ -4111,7 +4202,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Type</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Type</Label>
                                                             <Input
                                                                 value={draft.componentType}
                                                                 onChange={(event) => updateProgressComponentDraft(index, "componentType", event.target.value)}
@@ -4120,7 +4211,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Weight</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Weight</Label>
                                                             <Input
                                                                 type="number"
                                                                 min="0"
@@ -4132,7 +4223,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Done</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Done</Label>
                                                             <Input
                                                                 type="number"
                                                                 min="0"
@@ -4144,7 +4235,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Planned</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Planned</Label>
                                                             <Input
                                                                 type="datetime-local"
                                                                 value={draft.plannedAt}
@@ -4153,7 +4244,7 @@ export function TasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Completed</Label>
+                                                            <Label className="text-[11px] text-muted-foreground">Completed</Label>
                                                             <Input
                                                                 type="datetime-local"
                                                                 value={draft.completedAt}
@@ -4165,7 +4256,7 @@ export function TasksPage() {
                                                 </div>
                                             ))}
 
-                                            <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="flex flex-col gap-2 border-t border-border/70 pt-2.5 sm:flex-row sm:items-center sm:justify-between">
                                                 <Badge
                                                     variant={Math.abs(totalProgressComponentWeight - 100) < 0.01 ? "success" : "warning"}
                                                     className="w-fit"
@@ -4221,19 +4312,19 @@ export function TasksPage() {
                                 )} />
                             )}
 
-                            <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-work-log-section">
+                            <div className="space-y-2.5 rounded-lg border border-border/70 bg-muted/20 p-3" data-testid="tasks-work-log-section">
                                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                     <p className="text-sm font-semibold">Work logs</p>
                                     <Badge variant="outline">
                                         {draftWorkLogEstimatedCost !== null && selectedWorkLogRole
                                             ? `Est. ${formatCurrencyAmount(draftWorkLogEstimatedCost, selectedWorkLogRole.currency)}`
-                                            : "Hours + role = cost"}
+                                            : "Cost pending"}
                                     </Badge>
                                 </div>
 
-                                <div className="grid gap-3 lg:grid-cols-[140px_100px_minmax(0,1.2fr)_minmax(0,1.6fr)_auto] lg:items-end">
+                                <div className="grid gap-2.5 lg:grid-cols-[126px_88px_minmax(0,1fr)_minmax(0,1.35fr)_auto] lg:items-end">
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</Label>
+                                        <Label className="text-[11px] text-muted-foreground">Date</Label>
                                         <Input
                                             type="date"
                                             value={workLogDate}
@@ -4242,7 +4333,7 @@ export function TasksPage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Hours</Label>
+                                        <Label className="text-[11px] text-muted-foreground">Hours</Label>
                                         <Input
                                             type="number"
                                             min={0.25}
@@ -4253,7 +4344,7 @@ export function TasksPage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Role</Label>
+                                        <Label className="text-[11px] text-muted-foreground">Role</Label>
                                         <Combobox
                                             value={workLogResourceRoleId}
                                             onChange={setWorkLogResourceRoleId}
@@ -4265,7 +4356,7 @@ export function TasksPage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Note</Label>
+                                        <Label className="text-[11px] text-muted-foreground">Note</Label>
                                         <Input
                                             value={workLogNote}
                                             onChange={(event) => setWorkLogNote(event.target.value)}
@@ -4278,6 +4369,7 @@ export function TasksPage() {
                                             <Button
                                                 type="button"
                                                 variant="ghost"
+                                                className="h-9 px-2"
                                                 onClick={handleCancelWorkLogEdit}
                                                 disabled={isWorkLogSaving}
                                                 data-testid="tasks-work-log-cancel-edit-button"
@@ -4287,7 +4379,7 @@ export function TasksPage() {
                                         ) : null}
                                         <Button
                                             type="button"
-                                            className="h-10"
+                                            className="h-9"
                                             onClick={() => {
                                                 void handleSaveWorkLog();
                                             }}
@@ -4295,8 +4387,8 @@ export function TasksPage() {
                                             data-testid="tasks-work-log-save-button"
                                         >
                                             {editingWorkLogId
-                                                ? (updateTaskWorkLogMutation.status === "pending" ? "Updating..." : "Update work log")
-                                                : (createTaskWorkLogMutation.status === "pending" ? "Adding..." : "Add work log")}
+                                                ? (updateTaskWorkLogMutation.status === "pending" ? "Updating..." : "Update")
+                                                : (createTaskWorkLogMutation.status === "pending" ? "Adding..." : "Add")}
                                         </Button>
                                     </div>
                                 </div>

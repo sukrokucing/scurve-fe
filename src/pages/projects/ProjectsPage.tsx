@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import { extractFieldErrorsFromAxios } from "@/lib/api";
 import { isPresenceRecentlyActive, summarizePresenceRoutes } from "@/lib/realtimePresentation";
+import { useMedia } from "@/hooks/vendor/reactUse";
 import { cn } from "@/lib/utils";
 import { useRealtimeStore } from "@/store/realtimeStore";
 import type { Project } from "@/types/domain";
@@ -151,6 +152,7 @@ export function ProjectsPage() {
     const { data: portfolioSummary } = usePortfolioSCurveSummary("progress");
     const [editing, setEditing] = useState<Project | null>(null);
     const [projectQuery, setProjectQuery] = useState("");
+    const isLaptopDensity = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
     const createForm = useForm<ProjectFormValues>({
         defaultValues: { name: "", description: "" },
     });
@@ -372,29 +374,39 @@ export function ProjectsPage() {
         });
 
         const total = filteredRows.length || 1;
+        const segments = [
+            { key: "stable", label: "Stable signal", count: counts.stable, className: "bg-emerald-500/90" },
+            { key: "attention", label: "Needs attention", count: counts.attention, className: "bg-amber-500/90" },
+            { key: "waiting", label: "Awaiting data", count: counts.waiting, className: "bg-slate-400" },
+            { key: "unsupported", label: "Unsupported", count: counts.unsupported, className: "bg-zinc-500" },
+        ]
+            .filter((segment) => segment.count > 0)
+            .map((segment) => ({
+                ...segment,
+                width: `${(segment.count / total) * 100}%`,
+            }));
+        const exceptionCount = counts.attention + counts.waiting + counts.unsupported;
+        const visibleSegments = isLaptopDensity && exceptionCount > 0
+            ? segments.filter((segment) => segment.key !== "stable")
+            : segments;
+
         return {
-            segments: [
-                { key: "stable", label: "Stable signal", count: counts.stable, className: "bg-emerald-500/90" },
-                { key: "attention", label: "Needs attention", count: counts.attention, className: "bg-amber-500/90" },
-                { key: "waiting", label: "Awaiting data", count: counts.waiting, className: "bg-slate-400" },
-                { key: "unsupported", label: "Unsupported", count: counts.unsupported, className: "bg-zinc-500" },
-            ]
-                .filter((segment) => segment.count > 0)
-                .map((segment) => ({
-                    ...segment,
-                    width: `${(segment.count / total) * 100}%`,
-                })),
+            counts,
+            segments,
+            visibleSegments,
+            exceptionCount,
+            isAllClear: exceptionCount === 0 && counts.stable > 0,
         };
-    }, [filteredRows, resolvedProjectSummaryById]);
+    }, [filteredRows, isLaptopDensity, resolvedProjectSummaryById]);
     const visibleProjectSummaryLabel = trimmedProjectQuery
         ? `${filteredRows.length} visible of ${rows.length} projects`
         : `${rows.length} project${rows.length === 1 ? "" : "s"} in workspace`;
 
     return (
-        <div className="space-y-6" data-testid="projects-page">
+        <div className="space-y-4" data-testid="projects-page">
             <Card className="overflow-hidden border-border/70 shadow-sm" data-testid="projects-page-setup-card">
-                <CardContent className="space-y-5 px-5 py-5">
-                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <CardContent className="space-y-4 px-5 py-5">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <Badge variant="outline">Setup before dashboard</Badge>
@@ -501,7 +513,7 @@ export function ProjectsPage() {
                         </DialogTrigger>
                         <AppDialogContent
                             title="Create project"
-                            description="Add a new project to your workspace."
+                            description="Name it now. Finish setup next."
                         >
                             <Form {...createForm}>
                                 <form
@@ -530,57 +542,63 @@ export function ProjectsPage() {
                                                 // otherwise hook shows toast
                                             });
                                     })}
-                                    className="space-y-6"
+                                    className="space-y-4"
                                 >
-                                    <FormField
-                                        control={createForm.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        data-testid="projects-create-name-input"
-                                                        className={
-                                                            createForm.formState.errors.name
-                                                                ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                : ""
-                                                        }
-                                                        ref={(e) => {
-                                                            // forward react-hook-form ref and keep local ref for autofocus
-                                                            if (typeof field.ref === "function") field.ref(e);
-                                                            else if (field.ref && "current" in field.ref) (field.ref as { current?: HTMLInputElement | null }).current = e;
-                                                            createNameRef.current = e;
-                                                        }}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={createForm.control}
-                                        name="description"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Description</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        data-testid="projects-create-description-input"
-                                                        className={
-                                                            createForm.formState.errors.description
-                                                                ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                : ""
-                                                        }
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <div className="flex justify-end">
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        <Badge variant="outline">Settings next</Badge>
+                                        <Badge variant="outline">Dashboard after setup</Badge>
+                                    </div>
+                                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+                                        <FormField
+                                            control={createForm.control}
+                                            name="name"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            data-testid="projects-create-name-input"
+                                                            className={
+                                                                createForm.formState.errors.name
+                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
+                                                                    : ""
+                                                            }
+                                                            ref={(e) => {
+                                                                if (typeof field.ref === "function") field.ref(e);
+                                                                else if (field.ref && "current" in field.ref) (field.ref as { current?: HTMLInputElement | null }).current = e;
+                                                                createNameRef.current = e;
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={createForm.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Description</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            data-testid="projects-create-description-input"
+                                                            className={
+                                                                createForm.formState.errors.description
+                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
+                                                                    : ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+                                        <p className="text-xs text-muted-foreground">Project settings comes next.</p>
                                         <Button
                                             type="submit"
                                             disabled={createPending}
@@ -642,7 +660,7 @@ export function ProjectsPage() {
                     >
                         <AppDialogContent
                             title="Edit project"
-                            description="Update project details and save your changes."
+                            description="Keep the identity tight and current."
                         >
                             <Form {...editForm}>
                                 <form
@@ -673,50 +691,58 @@ export function ProjectsPage() {
                                                 // otherwise hook shows toast
                                             });
                                     })}
-                                    className="space-y-6"
+                                    className="space-y-4"
                                 >
-                                    <FormField
-                                        control={editForm.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        className={
-                                                            editForm.formState.errors.name
-                                                                ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                : ""
-                                                        }
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={editForm.control}
-                                        name="description"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Description</FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        data-testid="projects-edit-description-input"
-                                                        className={
-                                                            editForm.formState.errors.description
-                                                                ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
-                                                                : ""
-                                                        }
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        <Badge variant="outline">Identity</Badge>
+                                        <Badge variant="outline">Safe update</Badge>
+                                    </div>
+                                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+                                        <FormField
+                                            control={editForm.control}
+                                            name="name"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Name</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            className={
+                                                                editForm.formState.errors.name
+                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
+                                                                    : ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={editForm.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Description</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            data-testid="projects-edit-description-input"
+                                                            className={
+                                                                editForm.formState.errors.description
+                                                                    ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
+                                                                    : ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+                                        <p className="text-xs text-muted-foreground">Only this project changes.</p>
+                                        <div className="flex justify-end gap-2">
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -733,6 +759,7 @@ export function ProjectsPage() {
                                         >
                                             {updatePending ? "Saving…" : "Save"}
                                         </Button>
+                                        </div>
                                     </div>
                                 </form>
                             </Form>
@@ -742,8 +769,8 @@ export function ProjectsPage() {
                         </div>
                     </div>
 
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-                        <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+                        <div className="space-y-2.5 rounded-2xl border border-border/70 bg-background/80 p-4">
                             <p className="text-sm font-medium text-foreground">Search workspace</p>
                             <div className="max-w-xl">
                                 <label htmlFor="projects-search-input" className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -778,30 +805,60 @@ export function ProjectsPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/25 p-4" data-testid="projects-signal-summary">
+                        <div className="space-y-2.5 rounded-2xl border border-border/70 bg-muted/25 p-4" data-testid="projects-signal-summary">
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-foreground">Portfolio signal</p>
                                 <p className="text-sm text-muted-foreground">Exceptions first.</p>
                             </div>
-                            <div className="overflow-hidden rounded-full bg-muted">
-                                <div className="flex h-2 w-full">
-                                    {projectSignalSummary.segments.length > 0 ? projectSignalSummary.segments.map((segment) => (
-                                        <div
-                                            key={segment.key}
-                                            className={segment.className}
-                                            style={{ width: segment.width }}
-                                        />
-                                    )) : (
-                                        <div className="h-2 w-full bg-slate-300" />
-                                    )}
+                            <div className="flex items-center gap-2">
+                                <div className="overflow-hidden rounded-full bg-muted flex-1">
+                                    <div className="flex h-2 w-full">
+                                        {projectSignalSummary.segments.length > 0 ? projectSignalSummary.segments.map((segment) => (
+                                            <div
+                                                key={segment.key}
+                                                className={segment.className}
+                                                style={{ width: segment.width }}
+                                            />
+                                        )) : (
+                                            <div className="h-2 w-full bg-slate-300" />
+                                        )}
+                                    </div>
                                 </div>
+                                {projectSignalSummary.segments.length > 0 ? (
+                                    <TooltipProvider delayDuration={120}>
+                                        <div className="hidden shrink-0 items-center gap-1 sm:flex" data-testid="projects-signal-summary-legend">
+                                            {projectSignalSummary.segments.map((segment) => (
+                                                <Tooltip key={segment.key}>
+                                                    <TooltipTrigger asChild>
+                                                        <span
+                                                            className={cn("h-2 w-2 rounded-full", segment.className)}
+                                                            aria-label={`${segment.label}: ${segment.count}`}
+                                                        />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {segment.label}: {segment.count}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ))}
+                                        </div>
+                                    </TooltipProvider>
+                                ) : null}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                {projectSignalSummary.segments.map((segment) => (
-                                    <Badge key={segment.key} variant="outline">
-                                        {segment.label}: {segment.count}
+                                {projectSignalSummary.isAllClear ? (
+                                    <Badge
+                                        variant="outline"
+                                        className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    >
+                                        All clear
                                     </Badge>
-                                ))}
+                                ) : (
+                                    projectSignalSummary.visibleSegments.map((segment) => (
+                                        <Badge key={segment.key} variant="outline">
+                                            {segment.label}: {segment.count}
+                                        </Badge>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>

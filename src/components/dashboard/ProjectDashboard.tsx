@@ -6,7 +6,7 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
-    Tooltip,
+    Tooltip as RechartsTooltip,
     Legend,
     ResponsiveContainer,
 } from "recharts";
@@ -22,6 +22,8 @@ import type { ApiSCurveMetric } from "@/api/openapiClient";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMedia } from "@/hooks/vendor/reactUse";
 import type { Task } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -45,27 +47,27 @@ type ScheduleSummaryItem = {
 function getMetricCopy(metric: ApiSCurveMetric) {
     if (metric === "hours") {
         return {
-            actualDescription: "Logged effort accumulated so far",
-            plannedDescription: "Planned effort at the current elapsed time",
-            varianceDescription: "Actual hours minus planned hours",
-            chartDescription: "Planned vs actual effort over time for this project.",
+            actualDescription: "Logged so far",
+            plannedDescription: "Planned by now",
+            varianceDescription: "Actual vs planned",
+            chartDescription: "Planned vs actual effort over time.",
         };
     }
 
     if (metric === "cost") {
         return {
-            actualDescription: "Tracked spend accumulated so far",
-            plannedDescription: "Planned spend at the current elapsed time",
-            varianceDescription: "Actual cost minus planned cost",
-            chartDescription: "Planned vs actual cost over time for this project.",
+            actualDescription: "Spent so far",
+            plannedDescription: "Planned by now",
+            varianceDescription: "Actual vs planned",
+            chartDescription: "Planned vs actual cost over time.",
         };
     }
 
     return {
-        actualDescription: "Current cumulative actual value",
-        plannedDescription: "Baseline target at current elapsed time",
-        varianceDescription: "Actual minus planned",
-        chartDescription: "Planned vs actual progress over time for this project.",
+        actualDescription: "Current actual",
+        plannedDescription: "Planned by now",
+        varianceDescription: "Actual vs planned",
+        chartDescription: "Planned vs actual progress over time.",
     };
 }
 
@@ -186,6 +188,7 @@ function formatRuleStatus(
 
 export const ProjectDashboard = () => {
     const { id } = useParams<{ id: string }>();
+    const isLaptopDensity = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
     const [metric, setMetric] = useState<ApiSCurveMetric>("progress");
     const { data: dashboard, isLoading, error } = useProjectDashboard(id || "", metric);
     const { data: health, isLoading: isHealthLoading } = useProjectSCurveHealth(id || "", metric);
@@ -304,6 +307,26 @@ export const ProjectDashboard = () => {
             scheduleSummary,
         };
     }, [dashboard?.task_status_counts, projectTasks]);
+    const scheduleSummaryLegendItems = useMemo(
+        () => taskCompletionSummary.scheduleSummary.filter((item) => item.value > 0),
+        [taskCompletionSummary.scheduleSummary],
+    );
+    const scheduleExceptionCount = useMemo(
+        () => taskCompletionSummary.scheduleSummary
+            .filter((item) => item.id === "overdue" || item.id === "notSpecified")
+            .reduce((total, item) => total + item.value, 0),
+        [taskCompletionSummary.scheduleSummary],
+    );
+    const isScheduleAllClear = scheduleExceptionCount === 0 && taskCompletionSummary.totalTasks > 0;
+    const visibleScheduleSummary = useMemo(() => {
+        if (isScheduleAllClear) {
+            return taskCompletionSummary.scheduleSummary.filter((item) => item.id === "finishedEarly" || item.id === "onTime");
+        }
+        if (isLaptopDensity) {
+            return taskCompletionSummary.scheduleSummary.filter((item) => item.id === "overdue" || item.id === "notSpecified");
+        }
+        return taskCompletionSummary.scheduleSummary;
+    }, [isLaptopDensity, isScheduleAllClear, taskCompletionSummary.scheduleSummary]);
 
     const workloadDistribution = useMemo(() => {
         const summaryRows = Array.isArray(dashboard?.workload_distribution) ? dashboard.workload_distribution : [];
@@ -410,9 +433,15 @@ export const ProjectDashboard = () => {
     const metricCopy = getMetricCopy(metric);
     const dueDateCoverage = Math.round(dashboard.due_date_coverage_pct);
     const assignmentCoverage = Math.round(dashboard.assignment_coverage_pct);
+    const governanceBadgeLabel = ruleIsNeutral ? "Awaiting data" : ruleIsPassing ? "All clear" : "Needs attention";
+    const governanceBadgeClassName = ruleIsNeutral
+        ? undefined
+        : ruleIsPassing
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+            : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
 
     return (
-        <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
+        <div className="mx-auto max-w-7xl space-y-3 p-4 sm:p-6">
             <Card className="border-border/70 shadow-sm">
                 <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-3">
@@ -471,11 +500,11 @@ export const ProjectDashboard = () => {
                                 <p className="text-sm text-muted-foreground">
                                     {taskCompletionSummary.totalTasks > 0
                                         ? `${taskCompletionSummary.completedTasks}/${taskCompletionSummary.totalTasks} tasks completed`
-                                        : "No tasks available yet"}
+                                        : "No tasks yet"}
                                 </p>
                             </div>
                             <div className="rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
-                                {overallProgress !== null ? "Progress tracked" : "Awaiting progress data"}
+                                {overallProgress !== null ? "Tracked" : "Awaiting data"}
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -486,7 +515,7 @@ export const ProjectDashboard = () => {
                                 />
                             </div>
                             {overallProgress === null ? (
-                                <p className="text-xs text-muted-foreground">Awaiting progress data.</p>
+                                <p className="text-xs text-muted-foreground">Awaiting data.</p>
                             ) : null}
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -503,11 +532,58 @@ export const ProjectDashboard = () => {
                 </Card>
 
                 <Card className="border-border/70 shadow-sm">
-                    <CardHeader>
+                    <CardHeader className="space-y-3">
                         <CardTitle>Schedule status</CardTitle>
                         <CardDescription>Due coverage {dueDateCoverage}%</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Badge
+                                variant={isScheduleAllClear ? "outline" : "warning"}
+                                className={cn(
+                                    "shrink-0 rounded-full",
+                                    isScheduleAllClear
+                                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                        : undefined,
+                                )}
+                            >
+                                {isScheduleAllClear ? "All clear" : `${scheduleExceptionCount} attention`}
+                            </Badge>
+                            <div className="flex h-2 min-w-[120px] flex-1 overflow-hidden rounded-full bg-muted/70">
+                                {scheduleSummaryLegendItems.map((item) => {
+                                    const share = taskCompletionSummary.totalTasks > 0
+                                        ? (item.value / taskCompletionSummary.totalTasks) * 100
+                                        : 0;
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={cn("h-full rounded-full", item.barClassName)}
+                                            style={{ width: `${share}%` }}
+                                            title={`${item.label}: ${item.value}`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            {scheduleSummaryLegendItems.length > 0 ? (
+                                <TooltipProvider delayDuration={120}>
+                                    <div className="hidden shrink-0 items-center gap-1 sm:flex" data-testid="project-dashboard-schedule-legend">
+                                        {scheduleSummaryLegendItems.map((item) => (
+                                            <Tooltip key={item.id}>
+                                                <TooltipTrigger asChild>
+                                                    <span
+                                                        className={cn("h-2 w-2 rounded-full", item.barClassName)}
+                                                        aria-label={`${item.label}: ${item.value}`}
+                                                    />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    {item.label}: {item.value}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ))}
+                                    </div>
+                                </TooltipProvider>
+                            ) : null}
+                        </div>
                         {taskCompletionSummary.completedWithoutActualTimestamp > 0 ? (
                             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                                 {taskCompletionSummary.completedWithoutActualTimestamp} completed task(s) are still missing `completed_at`.
@@ -515,10 +591,10 @@ export const ProjectDashboard = () => {
                         ) : null}
                         {isTasksLoading ? (
                             <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-                                Loading task distribution...
+                                Loading schedule...
                             </div>
                         ) : (
-                            taskCompletionSummary.scheduleSummary.map((item) => {
+                            visibleScheduleSummary.map((item) => {
                                 const share = taskCompletionSummary.totalTasks > 0
                                     ? (item.value / taskCompletionSummary.totalTasks) * 100
                                     : 0;
@@ -575,7 +651,7 @@ export const ProjectDashboard = () => {
                             <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Assignment coverage</p>
                                 <p className="mt-1 text-lg font-semibold">{assignmentCoverage}%</p>
-                                <p className="text-xs text-muted-foreground">Tasks with an owner</p>
+                                <p className="text-xs text-muted-foreground">Owned tasks</p>
                             </div>
                             <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Top load</p>
@@ -588,13 +664,13 @@ export const ProjectDashboard = () => {
                                 <p className="text-xs text-muted-foreground">
                                     {workloadDistribution.topOwner
                                         ? `${workloadDistribution.topOwner.count} task(s) assigned`
-                                        : "Assign owners to distribute work"}
+                                        : "Assign owners"}
                                 </p>
                             </div>
                         </div>
                         {isTasksLoading ? (
                             <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-                                Loading member workload...
+                                Loading workload...
                             </div>
                         ) : workloadDistribution.rows.length > 0 ? (
                             <div className="max-h-[260px] space-y-3 overflow-y-auto pr-1" data-testid="project-dashboard-workload-list">
@@ -631,7 +707,7 @@ export const ProjectDashboard = () => {
                             </div>
                         ) : (
                             <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-                                No member workload data yet.
+                                No workload yet.
                             </div>
                         )}
                     </CardContent>
@@ -696,10 +772,12 @@ export const ProjectDashboard = () => {
                 <Card className="border-border/70 shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Governance</CardTitle>
-                        <div className={cn(
-                            "h-3 w-3 rounded-full",
-                            ruleIsNeutral ? "bg-muted-foreground/60" : ruleIsPassing ? "bg-emerald-500" : "bg-destructive",
-                        )} />
+                        <Badge
+                            variant="outline"
+                            className={cn("rounded-full", governanceBadgeClassName)}
+                        >
+                            {governanceBadgeLabel}
+                        </Badge>
                     </CardHeader>
                     <CardContent className="space-y-1">
                         <div className={cn(
@@ -708,11 +786,11 @@ export const ProjectDashboard = () => {
                         )} data-testid="project-dashboard-governance-value">
                             {ruleStatusLabel}
                         </div>
-                        <p className="text-xs text-muted-foreground">Stage: {stageLabel}</p>
+                        <p className="text-xs text-muted-foreground">Stage {stageLabel}</p>
                         <p className="text-xs text-muted-foreground">
                             {isHealthLoading
-                                ? "Refreshing health..."
-                                : `Metric source: ${metric} · data: ${health?.data_status ?? "unknown"}`}
+                                ? "Refreshing..."
+                                : `Source ${metric} · ${health?.data_status ?? "unknown"}`}
                         </p>
                     </CardContent>
                 </Card>
@@ -748,7 +826,7 @@ export const ProjectDashboard = () => {
                                 domain={isProgressMetric ? [0, 100] : ["auto", "auto"]}
                                 tickFormatter={(value) => formatMetricAxisValue(metric, Number(value), chartUnit)}
                             />
-                            <Tooltip
+                            <RechartsTooltip
                                 contentStyle={{
                                     backgroundColor: "hsl(var(--background))",
                                     border: "1px solid hsl(var(--border))",

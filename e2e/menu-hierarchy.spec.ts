@@ -54,8 +54,8 @@ test.describe("menu hierarchy", () => {
         if (await actionToggles.count()) {
             await expect(actionToggles.first()).toBeVisible();
             await actionToggles.first().click();
-            await expect(page.getByTestId("projects-row-settings-link").first()).toBeVisible();
-            await expect(page.getByTestId("projects-row-dashboard-link").first()).toBeVisible();
+            await expect(page.getByTestId("projects-row-settings-link")).toBeVisible();
+            await expect(page.getByTestId("projects-row-dashboard-link")).toBeVisible();
         }
     });
 
@@ -69,7 +69,7 @@ test.describe("menu hierarchy", () => {
 
         await page.goto(`/tasks?project=${projects[0].id}`, { waitUntil: "domcontentloaded" });
 
-        await expect(page.getByRole("heading", { name: "Tasks" })).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByTestId("tasks-page-context-card")).toBeVisible();
         await expect(page.getByTestId("tasks-page-primary-actions-card")).toBeVisible();
         await expect(page.getByTestId("tasks-secondary-insights-card")).toBeVisible();
@@ -87,8 +87,8 @@ test.describe("menu hierarchy", () => {
         await expect(page.getByTestId("policy-page-audit-card")).toBeVisible();
         await expect(page.getByTestId("policy-page-matrix-section")).toBeVisible();
         await expect(page.getByTestId("policy-audit-log-button")).toBeVisible();
-        await expect(page.getByTestId("rbac-scope-overview")).toBeVisible();
-        await expect(page.getByTestId("rbac-controls-panel")).toBeVisible();
+        await expect(page.getByTestId("rbac-scope-overview")).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByTestId("rbac-controls-panel")).toBeVisible({ timeout: 15_000 });
 
         await page.goto("/settings/flow", { waitUntil: "domcontentloaded" });
         await expect(page.getByRole("heading", { name: "Access Flow Explorer" })).toBeVisible({ timeout: 15_000 });
