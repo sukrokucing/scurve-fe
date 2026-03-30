@@ -26,10 +26,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppDataTable } from "@/components/ui/app-data-table";
 import { Combobox } from "@/components/ui/combobox";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { DEFAULT_PROJECT_THEME_COLOR, isValidProjectThemeColor, resolveProjectThemeColor } from "@/lib/projectTheme";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
@@ -832,6 +834,7 @@ function MembersTab({
     onRemoveMember,
     removeMemberPending,
 }: MembersTabProps) {
+    const membersPagination = useClientPagination(projectMembers, { initialPageSize: 10 });
     const memberColumns = useMemo<ColumnDef<ApiProjectMember, unknown>[]>(() => ([
         memberColumnHelper.display({
             id: "member",
@@ -1017,29 +1020,39 @@ function MembersTab({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AppDataTable
-                        data={projectMembers}
-                        columns={memberColumns}
-                        getRowId={(row) => row.user_id}
-                        isLoading={isMembersLoading}
-                        className="text-sm"
-                        rowClassName="hover:bg-muted/25"
-                        loadingRow={(
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                    Loading members...
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        emptyRow={(
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                    No project members found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        getRowProps={(row) => ({ "data-testid": row.original.user_id ? "project-settings-member-row" : undefined })}
-                    />
+                    <div className="rounded-md border">
+                        <AppDataTable
+                            data={membersPagination.pageItems}
+                            columns={memberColumns}
+                            getRowId={(row) => row.user_id}
+                            isLoading={isMembersLoading}
+                            className="text-sm"
+                            rowClassName="hover:bg-muted/25"
+                            loadingRow={(
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        Loading members...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            emptyRow={(
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        No project members found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            getRowProps={(row) => ({ "data-testid": row.original.user_id ? "project-settings-member-row" : undefined })}
+                        />
+                        <DataTablePagination
+                            currentPage={membersPagination.page}
+                            totalPages={membersPagination.totalPages}
+                            pageSize={membersPagination.pageSize}
+                            setPage={membersPagination.setPage}
+                            setPageSize={membersPagination.setPageSize}
+                            totalItems={membersPagination.totalItems}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </section>
@@ -1081,6 +1094,7 @@ function ResourceRatesTab({
     onResetRate,
     clearRatePending,
 }: ResourceRatesTabProps) {
+    const ratesPagination = useClientPagination(projectResourceRoleRates, { initialPageSize: 10 });
     const rateColumns = useMemo<ColumnDef<ApiProjectResourceRoleRate, unknown>[]>(() => ([
         resourceRateColumnHelper.accessor("resource_role_name", {
             header: "Resource Role",
@@ -1228,29 +1242,39 @@ function ResourceRatesTab({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AppDataTable
-                        data={projectResourceRoleRates}
-                        columns={rateColumns}
-                        getRowId={(row) => row.resource_role_id}
-                        isLoading={isRatesLoading}
-                        className="text-sm"
-                        rowClassName="hover:bg-muted/25"
-                        loadingRow={(
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                    Loading project rates...
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        emptyRow={(
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                    No project resource roles found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        getRowProps={(row) => ({ "data-testid": row.original.resource_role_id ? "project-settings-rate-row" : undefined })}
-                    />
+                    <div className="rounded-md border">
+                        <AppDataTable
+                            data={ratesPagination.pageItems}
+                            columns={rateColumns}
+                            getRowId={(row) => row.resource_role_id}
+                            isLoading={isRatesLoading}
+                            className="text-sm"
+                            rowClassName="hover:bg-muted/25"
+                            loadingRow={(
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        Loading project rates...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            emptyRow={(
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        No project resource roles found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            getRowProps={(row) => ({ "data-testid": row.original.resource_role_id ? "project-settings-rate-row" : undefined })}
+                        />
+                        <DataTablePagination
+                            currentPage={ratesPagination.page}
+                            totalPages={ratesPagination.totalPages}
+                            pageSize={ratesPagination.pageSize}
+                            setPage={ratesPagination.setPage}
+                            setPageSize={ratesPagination.setPageSize}
+                            totalItems={ratesPagination.totalItems}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </section>
@@ -1287,9 +1311,9 @@ function TaskHealthTab({
 
             <Card className="border-border/80">
                 <CardHeader className="space-y-2">
-                    <CardTitle className="text-base">Variance Thresholds</CardTitle>
+                    <CardTitle className="text-base">Variance rules</CardTitle>
                     <CardDescription>
-                        Backend uses these ranges to classify task health. Leave a boundary blank to make it open-ended.
+                        Keep thresholds tight. Blank edges stay open-ended.
                     </CardDescription>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant="outline">Scope: {taskHealthRules?.scope ?? "project"}</Badge>
@@ -1298,12 +1322,13 @@ function TaskHealthTab({
                                 Updated: {new Date(taskHealthRules.updated_at).toLocaleString()}
                             </Badge>
                         ) : null}
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                            <span className="rounded-full border border-border/70 px-2 py-1">Behind &lt; 0</span>
+                            <span className="rounded-full border border-border/70 px-2 py-1">Ahead &gt; 0</span>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-                        Negative variance means actual progress is trailing plan. Positive variance means work is ahead of plan.
-                    </div>
                     {isTaskHealthRulesLoading ? (
                         <div className="space-y-2">
                             <Skeleton className="h-14 w-full" />
@@ -1312,24 +1337,24 @@ function TaskHealthTab({
                         </div>
                     ) : (
                         <>
+                            <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] gap-3 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground md:grid">
+                                <span>Status</span>
+                                <span>From (%)</span>
+                                <span>To (%)</span>
+                            </div>
                             <div className="grid gap-3">
                                 {taskHealthRuleDrafts.map((rule, index) => (
                                     <div
                                         key={rule.healthStatus}
-                                        className="grid gap-3 rounded-lg border border-border/70 bg-background/70 p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                                        className="grid gap-3 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)]"
                                         data-testid="project-settings-task-health-rule-row"
                                     >
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline">{formatTaskHealthStatusLabel(rule.healthStatus)}</Badge>
-                                                <span className="text-xs text-muted-foreground">Priority {rule.priority}</span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Example: values between these bounds will be marked as {formatTaskHealthStatusLabel(rule.healthStatus).toLowerCase()}.
-                                            </p>
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            <Badge variant="outline">{formatTaskHealthStatusLabel(rule.healthStatus)}</Badge>
+                                            <span className="text-[11px] text-muted-foreground">P{rule.priority}</span>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-xs font-medium text-muted-foreground">Variance from (%)</label>
+                                            <label className="text-[11px] font-medium text-muted-foreground md:sr-only">Variance from (%)</label>
                                             <Input
                                                 type="number"
                                                 step="0.1"
@@ -1337,11 +1362,12 @@ function TaskHealthTab({
                                                 disabled={!canManageSettings}
                                                 onChange={(event) => onRuleChange(index, "varianceFrom", event.target.value)}
                                                 placeholder="Open"
+                                                className="h-9"
                                                 data-testid="project-settings-task-health-from-input"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-xs font-medium text-muted-foreground">Variance to (%)</label>
+                                            <label className="text-[11px] font-medium text-muted-foreground md:sr-only">Variance to (%)</label>
                                             <Input
                                                 type="number"
                                                 step="0.1"
@@ -1349,6 +1375,7 @@ function TaskHealthTab({
                                                 disabled={!canManageSettings}
                                                 onChange={(event) => onRuleChange(index, "varianceTo", event.target.value)}
                                                 placeholder="Open"
+                                                className="h-9"
                                                 data-testid="project-settings-task-health-to-input"
                                             />
                                         </div>
@@ -1358,7 +1385,7 @@ function TaskHealthTab({
 
                             <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-xs text-muted-foreground">
-                                    Changes apply to backend task health classification and refresh task/dashboard queries after save.
+                                    Save to reclassify tasks and refresh affected views.
                                 </p>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Button
@@ -1418,46 +1445,68 @@ function GeneralTab({
     onSaveGeneral,
     updateProjectPending,
 }: GeneralTabProps) {
+    const resolvedThemeColor = resolveProjectThemeColor(generalThemeColor);
+
     return (
         <section className="space-y-4" data-testid="project-settings-general-section">
-            <h2 className="text-lg font-medium">General</h2>
+            <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-lg font-medium">General</h2>
+            </div>
             <Card className="border-border/80">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-base">Project metadata</CardTitle>
                     <CardDescription>
-                        Keep the basic identity clean here so the project table and dashboard stay readable.
+                        Keep the identity short, current, and easy to scan.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium">Project name</label>
-                        <Input
-                            value={generalName}
-                            disabled={!canManageSettings}
-                            onChange={(event) => setGeneralName(event.target.value)}
-                            data-testid="project-settings-general-name-input"
-                        />
+                <CardContent className="space-y-4">
+                    <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Project name</label>
+                            <Input
+                                value={generalName}
+                                disabled={!canManageSettings}
+                                onChange={(event) => setGeneralName(event.target.value)}
+                                data-testid="project-settings-general-name-input"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Description</label>
+                            <Input
+                                value={generalDescription}
+                                disabled={!canManageSettings}
+                                onChange={(event) => setGeneralDescription(event.target.value)}
+                                data-testid="project-settings-general-description-input"
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium">Description</label>
-                        <Input
-                            value={generalDescription}
-                            disabled={!canManageSettings}
-                            onChange={(event) => setGeneralDescription(event.target.value)}
-                            data-testid="project-settings-general-description-input"
-                        />
+                    <div className="grid gap-3 rounded-lg border border-border/70 bg-background/70 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Theme color</label>
+                            <Input
+                                value={generalThemeColor}
+                                disabled={!canManageSettings}
+                                onChange={(event) => setGeneralThemeColor(event.target.value)}
+                                placeholder={DEFAULT_PROJECT_THEME_COLOR}
+                                data-testid="project-settings-general-theme-input"
+                            />
+                        </div>
+                        <div className="flex items-end">
+                            <div className="flex items-center gap-3 rounded-full border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                                <span>Preview</span>
+                                <span
+                                    className="h-4 w-4 rounded-full border border-border/70"
+                                    style={{ backgroundColor: resolvedThemeColor }}
+                                />
+                                <code className="font-mono text-[11px] text-foreground">{resolvedThemeColor}</code>
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Theme color</label>
-                        <Input
-                            value={generalThemeColor}
-                            disabled={!canManageSettings}
-                            onChange={(event) => setGeneralThemeColor(event.target.value)}
-                            placeholder={DEFAULT_PROJECT_THEME_COLOR}
-                            data-testid="project-settings-general-theme-input"
-                        />
-                    </div>
-                    <div className="flex items-end">
+                    <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-muted-foreground">
+                            Project table and dashboard update after save.
+                        </p>
                         <Button
                             type="button"
                             onClick={onSaveGeneral}
@@ -1470,7 +1519,7 @@ function GeneralTab({
                                     Saving...
                                 </>
                             ) : (
-                                "Save General"
+                                "Save Changes"
                             )}
                         </Button>
                     </div>

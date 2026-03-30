@@ -49,6 +49,17 @@ jobs:
           PLAYWRIGHT_USER_EMAIL: ${{ secrets.PLAYWRIGHT_USER_EMAIL }}
         run: npm run test:e2e:critical
 
+      - name: Live project dialogs e2e
+        if: ${{ secrets.PLAYWRIGHT_AUTH_TOKEN != '' || (secrets.PLAYWRIGHT_USERNAME != '' && secrets.PLAYWRIGHT_PASSWORD != '') }}
+        env:
+          PLAYWRIGHT_AUTH_TOKEN: ${{ secrets.PLAYWRIGHT_AUTH_TOKEN }}
+          PLAYWRIGHT_USERNAME: ${{ secrets.PLAYWRIGHT_USERNAME }}
+          PLAYWRIGHT_PASSWORD: ${{ secrets.PLAYWRIGHT_PASSWORD }}
+          PLAYWRIGHT_USER_ID: ${{ secrets.PLAYWRIGHT_USER_ID }}
+          PLAYWRIGHT_USER_NAME: ${{ secrets.PLAYWRIGHT_USER_NAME }}
+          PLAYWRIGHT_USER_EMAIL: ${{ secrets.PLAYWRIGHT_USER_EMAIL }}
+        run: npm run test:e2e:project-dialogs-live
+
       - name: UI audit gate
         run: npm run audit:ui
 

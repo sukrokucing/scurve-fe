@@ -170,6 +170,31 @@ test("project settings task health rules save and reset", async ({ page }) => {
     await expect(reloadedFromInput).toHaveValue(nextValue);
 });
 
+test("project settings general metadata saves and reloads", async ({ page }) => {
+    test.skip(!createdProjectId, "No created project id from previous test.");
+    if (!createdProjectId) return;
+
+    const nextTheme = "#226644";
+
+    await page.goto(`/projects/${createdProjectId}/settings?tab=general`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("project-settings-general-section")).toBeVisible({ timeout: 15_000 });
+
+    const themeInput = page.getByTestId("project-settings-general-theme-input");
+    await themeInput.fill(nextTheme);
+
+    const saveResponsePromise = page.waitForResponse((response) => (
+        response.request().method() === "PUT"
+        && response.url().includes(`/api/projects/${createdProjectId}`)
+    ));
+    await page.getByTestId("project-settings-general-save-button").click();
+    const saveResponse = await saveResponsePromise;
+    expect(saveResponse.ok()).toBeTruthy();
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("project-settings-general-section")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("project-settings-general-theme-input")).toHaveValue(nextTheme);
+});
+
 test("project dashboard remains readable after setup flow", async ({ page }) => {
     test.skip(!createdProjectId, "No created project id from previous test.");
     if (!createdProjectId) return;

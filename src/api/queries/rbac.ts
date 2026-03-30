@@ -94,6 +94,7 @@ export function useUserEffectivePermissionsQuery(userId?: string, options?: { en
 export function useAuditLogsQuery(
     params: {
         page: number;
+        pageSize?: number;
         actionFilter: string;
         actorUserId?: string;
         targetUserId?: string;
@@ -104,13 +105,13 @@ export function useAuditLogsQuery(
 ) {
     const normalizedParams = normalizeAuditLogParams({
         page: params.page,
-        per_page: 20,
+        per_page: params.pageSize,
         action: params.actionFilter === "all" ? undefined : params.actionFilter,
         actor_id: params.actorUserId === "all" ? undefined : params.actorUserId,
         user_id: params.targetUserId === "all" ? undefined : params.targetUserId,
         from: params.fromDate,
         to: params.toDate,
-    }) ?? { page: 1, per_page: 20 };
+    }) ?? { page: 1, per_page: params.pageSize ?? 20 };
 
     return useQuery<AuditLogResponse>({
         queryKey: rbacKeys.auditLogs(normalizedParams),

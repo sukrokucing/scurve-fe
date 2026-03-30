@@ -38,8 +38,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AppDataTable } from "@/components/ui/app-data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useClientPagination } from "@/hooks/useClientPagination";
 
 import {
     useAssignPermissionToRoleMutation,
@@ -398,6 +400,7 @@ export const RolesPage = () => {
 
     // --- Queries ---
     const { data: roles, isLoading } = useRolesQuery();
+    const rosterPagination = useClientPagination(roles ?? [], { initialPageSize: 25 });
 
     // --- Mutations ---
     const createMutation = useCreateRoleMutation();
@@ -625,7 +628,7 @@ export const RolesPage = () => {
                 <CardContent className="pt-0">
                     <div className="rounded-md border bg-card">
                         <AppDataTable
-                            data={roles ?? []}
+                            data={rosterPagination.pageItems}
                             columns={columns}
                             getRowId={(row) => row.id}
                             emptyRow={(
@@ -633,8 +636,17 @@ export const RolesPage = () => {
                                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                         No roles found. Create one to get started.
                                     </TableCell>
-                                </TableRow>
+                                    </TableRow>
                             )}
+                        />
+                        <DataTablePagination
+                            currentPage={rosterPagination.page}
+                            totalPages={rosterPagination.totalPages}
+                            pageSize={rosterPagination.pageSize}
+                            setPage={rosterPagination.setPage}
+                            setPageSize={rosterPagination.setPageSize}
+                            totalItems={rosterPagination.totalItems}
+                            pageSizeOptions={[10, 25, 50, 100]}
                         />
                     </div>
                 </CardContent>

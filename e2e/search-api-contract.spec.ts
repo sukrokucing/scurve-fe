@@ -941,7 +941,7 @@ test("policy filter summary exposes active matrix scope", async ({ page }) => {
     await page.goto("/settings/policy", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("rbac-role-filter-combobox")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("rbac-filter-summary")).toContainText(
-        "All roles and resources are visible. Search narrows permission names when needed.",
+        "All roles, resources, and permissions are visible.",
     );
 
     await page.getByTestId("rbac-role-filter-combobox").click();
@@ -959,7 +959,7 @@ test("policy filter summary exposes active matrix scope", async ({ page }) => {
 
     await page.getByTestId("rbac-filter-summary-reset-button").click();
     await expect(page.getByTestId("rbac-filter-summary")).toContainText(
-        "All roles and resources are visible. Search narrows permission names when needed.",
+        "All roles, resources, and permissions are visible.",
     );
 });
 
@@ -1025,7 +1025,7 @@ test("audit log dialog uses backend paging and filter params", async ({ page }) 
     });
 
     await expect(page.getByTestId("policy-audit-log-filter-summary")).toContainText(
-        "Filter audit history by action, actor, target user, or date range.",
+        "All actions, users, and dates.",
     );
 
     await page.getByTestId("policy-audit-log-action-filter-combobox").click();
@@ -1072,7 +1072,7 @@ test("audit log dialog uses backend paging and filter params", async ({ page }) 
     await page.getByTestId("policy-audit-log-reset-filters-button").scrollIntoViewIfNeeded();
     await page.getByTestId("policy-audit-log-reset-filters-button").click();
     await expect(page.getByTestId("policy-audit-log-filter-summary")).toContainText(
-        "Filter audit history by action, actor, target user, or date range.",
+        "All actions, users, and dates.",
     );
     await page.getByTestId("policy-audit-log-next-button").scrollIntoViewIfNeeded();
     await page.getByTestId("policy-audit-log-next-button").evaluate((button: HTMLButtonElement) => button.click());

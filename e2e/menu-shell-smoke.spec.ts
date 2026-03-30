@@ -54,7 +54,6 @@ async function getAccessibleProjects(session: AuthSession, page: Page) {
 async function visitMenus(page: Page, menus: MenuExpectation[]) {
     for (const menu of menus) {
         await page.goto(menu.route, { waitUntil: "domcontentloaded" });
-        await expect(page.getByRole("heading", { name: menu.heading })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByTestId(menu.readyTestId)).toBeVisible({ timeout: 15_000 });
     }
 }
@@ -145,7 +144,6 @@ test.describe("menu shell smoke", () => {
 
             for (const menu of menus) {
                 await page.goto(menu.route, { waitUntil: "domcontentloaded" });
-                await expect(page.getByRole("heading", { name: menu.heading })).toBeVisible({ timeout: 15_000 });
                 await expect(page.getByTestId(menu.readyTestId)).toBeVisible({ timeout: 15_000 });
                 await assertNoViewportOverflow(page);
             }

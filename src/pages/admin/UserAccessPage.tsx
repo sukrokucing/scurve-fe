@@ -21,6 +21,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { AppDataTable } from "@/components/ui/app-data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import {
     Dialog,
     DialogFooter,
@@ -55,6 +56,7 @@ import {
     useUserRolesQuery,
 } from "@/api/queries/rbac";
 import { useUsersLookupQuery } from "@/api/queries/users";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { rbacApi, type Role } from "@/api/rbac";
 
 
@@ -79,6 +81,7 @@ export const UserAccessPage = () => {
     const { data: userRoles, isLoading: loadingRoles } = useUserRolesQuery(safeUserId, { enabled: Boolean(userId) });
 
     const { data: effectivePerms, isLoading: loadingPerms } = useUserEffectivePermissionsQuery(safeUserId, { enabled: Boolean(userId) });
+    const permissionsPagination = useClientPagination(effectivePerms?.permissions ?? [], { initialPageSize: 20 });
 
     const { data: allRoles } = useRolesQuery({ enabled: Boolean(userId) });
     const { data: usersLookup } = useUsersLookupQuery({ enabled: Boolean(userId) });
@@ -115,6 +118,10 @@ export const UserAccessPage = () => {
     const permissionColumns = useState<ColumnDef<EffectivePermissionRow, unknown>[]>(() => ([
         effectivePermissionColumnHelper.accessor("name", {
             header: "Permission",
+            meta: {
+                headerClassName: "w-[38%] min-w-[220px]",
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
                 <div className="flex items-center gap-2 font-medium">
                     <Check className="h-3 w-3 text-success" />
@@ -125,16 +132,23 @@ export const UserAccessPage = () => {
         effectivePermissionColumnHelper.display({
             id: "source",
             header: "Source",
+            meta: {
+                headerClassName: "w-[26%] min-w-[170px]",
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
-                <Badge variant={info.row.original.source === "role" ? "secondary" : "default"}>
+                <Badge variant={info.row.original.source === "role" ? "secondary" : "default"} className="text-[11px]">
                     {info.row.original.source === "role" ? `Role: ${info.row.original.role_name}` : "Direct"}
                 </Badge>
             ),
         }),
         effectivePermissionColumnHelper.accessor("scope", {
             header: "Scope",
+            meta: {
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
-                <span className="text-xs font-mono text-muted-foreground">
+                <span className="block max-w-[220px] truncate text-xs font-mono text-muted-foreground" title={info.getValue() ? JSON.stringify(info.getValue()) : "No scope"}>
                     {info.getValue() ? JSON.stringify(info.getValue()) : "—"}
                 </span>
             ),
@@ -232,77 +246,69 @@ export const UserAccessPage = () => {
                             </Button>
                         </DialogTrigger>
                             <AppDialogContent
-                                className="sm:max-w-xl"
+                                className="sm:max-w-lg"
                                 title="Assign Role"
-                                description="Select a role to grant to this user."
+                                description="Grant one role at a time."
                             >
-                                <div className="space-y-4">
-                                    <Card className="border-border/70 shadow-sm" data-testid="user-access-assign-role-dialog-overview">
-                                        <CardHeader className="pb-3">
-                                            <CardTitle className="text-base">Grant role with context</CardTitle>
-                                            <CardDescription>
-                                                Confirm the target user and role count here first, then assign one role at a time so access changes stay easy to explain.
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
-                                            <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
-                                            {selectedUser?.email ? <Badge variant="outline">{selectedUser.email}</Badge> : null}
-                                            <Badge variant="outline">{userRoles?.length ?? 0} assigned</Badge>
-                                            <Badge variant="outline">{availableRoles.length} available</Badge>
-                                        </CardContent>
-                                    </Card>
+                                <div className="space-y-3">
+                                    <div
+                                        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs text-muted-foreground"
+                                        data-testid="user-access-assign-role-dialog-overview"
+                                    >
+                                        <Badge variant="secondary">{selectedUser?.name ?? "Unknown user"}</Badge>
+                                        {selectedUser?.email ? <Badge variant="outline">{selectedUser.email}</Badge> : null}
+                                        <Badge variant="outline">{userRoles?.length ?? 0} assigned</Badge>
+                                        <Badge variant="outline">{availableRoles.length} available</Badge>
+                                    </div>
                                     <Form {...form}>
-                                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="roleId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Role</FormLabel>
-                                                    <Combobox
-                                                        options={availableRoles.map(role => ({ value: role.id, label: role.name }))}
-                                                        value={field.value}
-                                                        onChange={field.onChange}
-                                                        placeholder="Select a role"
-                                                        searchPlaceholder="Search roles..."
-                                                        emptyText={availableRoles.length === 0 ? "No roles available" : "No role found."}
-                                                    />
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Card className="border-border/70 shadow-sm" data-testid="user-access-assign-role-preview">
-                                            <CardHeader className="pb-3">
-                                                <CardTitle className="text-base">Selected role preview</CardTitle>
-                                                <CardDescription>
-                                                    Review the role intent before saving so you do not assign a broad role by mistake.
-                                                </CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="space-y-2 pt-0 text-sm">
-                                                {selectedAssignableRole ? (
-                                                    <>
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <Badge variant="secondary">{selectedAssignableRole.name}</Badge>
-                                                            <Badge variant="outline">Assigned to {selectedUser?.name ?? "this user"}</Badge>
-                                                        </div>
+                                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                                            <div className="space-y-3 rounded-lg border border-border/70 bg-background/80 p-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name="roleId"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Role</FormLabel>
+                                                            <Combobox
+                                                                options={availableRoles.map(role => ({ value: role.id, label: role.name }))}
+                                                                value={field.value}
+                                                                onChange={field.onChange}
+                                                                placeholder="Select a role"
+                                                                searchPlaceholder="Search roles..."
+                                                                emptyText={availableRoles.length === 0 ? "No roles available" : "No role found."}
+                                                            />
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/15 px-3 py-3 text-sm" data-testid="user-access-assign-role-preview">
+                                                    {selectedAssignableRole ? (
+                                                        <>
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <Badge variant="secondary">{selectedAssignableRole.name}</Badge>
+                                                                <Badge variant="outline">Assigned to {selectedUser?.name ?? "this user"}</Badge>
+                                                            </div>
+                                                            <p className="text-muted-foreground">
+                                                                {selectedAssignableRole.description || "No role description provided."}
+                                                            </p>
+                                                        </>
+                                                    ) : (
                                                         <p className="text-muted-foreground">
-                                                            {selectedAssignableRole.description || "No role description provided."}
+                                                            Choose a role above to review its intent before assigning it.
                                                         </p>
-                                                    </>
-                                                ) : (
-                                                    <p className="text-muted-foreground">
-                                                        Choose a role above to review its intent before assigning it.
-                                                    </p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                        <DialogFooter>
-                                            <Button type="submit" disabled={assignRoleMutation.isPending}>
-                                                Assign
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
-                                </Form>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <DialogFooter className="flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <p className="text-xs text-muted-foreground">
+                                                    Effective access updates as soon as the assign completes.
+                                                </p>
+                                                <Button type="submit" disabled={assignRoleMutation.isPending}>
+                                                    Assign
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </Form>
                                 </div>
                             </AppDialogContent>
                         </Dialog>
@@ -313,17 +319,19 @@ export const UserAccessPage = () => {
                                 <p className="text-sm text-muted-foreground">No roles assigned.</p>
                             ) : (
                                 userRoles.map(role => (
-                                    <div key={role.id} className="flex items-center justify-between rounded-lg border p-3 shadow-sm" data-testid="user-access-role-card">
-                                        <div className="flex flex-col space-y-2">
+                                    <div key={role.id} className="flex items-center justify-between rounded-lg border p-2.5 shadow-sm" data-testid="user-access-role-card">
+                                        <div className="min-w-0 space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <span className="font-medium">{role.name}</span>
                                                 <Badge variant="outline">Role</Badge>
                                             </div>
-                                            <span className="text-xs text-muted-foreground">{role.description || "No role description provided."}</span>
+                                            <span className="block truncate text-xs text-muted-foreground" title={role.description || "No role description provided."}>
+                                                {role.description || "No role description provided."}
+                                            </span>
                                         </div>
                                         <Button
                                             variant="ghost"
-                                            size="sm"
+                                            size="icon"
                                             className="text-muted-foreground hover:text-destructive"
                                             data-testid="user-access-role-revoke-button"
                                             onClick={() => {
@@ -351,16 +359,26 @@ export const UserAccessPage = () => {
                     <CardContent>
                         <div className="rounded-md border">
                             <AppDataTable
-                                data={effectivePerms?.permissions ?? []}
+                                data={permissionsPagination.pageItems}
                                 columns={permissionColumns}
                                 getRowId={(row, index) => `${row.name}-${index}`}
+                                className="text-sm"
+                                rowClassName="hover:bg-muted/25"
                                 emptyRow={(
                                     <TableRow>
                                         <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                                             No permissions found.
                                         </TableCell>
                                     </TableRow>
-                                )}
+                                    )}
+                                />
+                            <DataTablePagination
+                                currentPage={permissionsPagination.page}
+                                totalPages={permissionsPagination.totalPages}
+                                pageSize={permissionsPagination.pageSize}
+                                setPage={permissionsPagination.setPage}
+                                setPageSize={permissionsPagination.setPageSize}
+                                totalItems={permissionsPagination.totalItems}
                             />
                         </div>
                     </CardContent>

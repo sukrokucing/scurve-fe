@@ -88,6 +88,7 @@ import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal, MoreH
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useMedia } from "@/hooks/vendor/reactUse";
 import { useAuthStore } from "@/store/authStore";
@@ -1378,6 +1379,7 @@ export function TasksPage() {
             return bTime - aTime;
         });
     }, [taskWorkLogsQuery.data]);
+    const workLogPagination = useClientPagination(taskWorkLogs, { initialPageSize: 5 });
     const taskProgressComponents = useMemo(() => {
         const rows = Array.isArray(taskProgressComponentsQuery.data) ? taskProgressComponentsQuery.data : [];
         return [...rows].sort((a, b) => a.sort_order - b.sort_order);
@@ -4398,31 +4400,42 @@ export function TasksPage() {
                                     </p>
                                 ) : null}
 
-                                <div className="overflow-x-auto rounded-md border border-border/70 bg-background">
-                                    <AppDataTable
-                                        data={taskWorkLogs}
-                                        columns={workLogColumns}
-                                        getRowId={(row) => row.id}
-                                        className="min-w-[760px] table-fixed"
-                                        headerClassName="[&_tr]:border-0 bg-background"
-                                        bodyClassName="[&_tr:nth-child(even)]:bg-muted/[0.08]"
-                                        rowClassName="border-0 align-middle hover:bg-muted/20"
-                                        isLoading={taskWorkLogsQuery.isLoading}
-                                        loadingRow={(
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                                                    Loading work logs...
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                        emptyRow={(
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                                                    No work logs yet.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                        getRowProps={(row) => ({ "data-testid": row.original.id ? "tasks-work-log-row" : undefined })}
+                                <div className="rounded-md border border-border/70 bg-background">
+                                    <div className="overflow-x-auto">
+                                        <AppDataTable
+                                            data={workLogPagination.pageItems}
+                                            columns={workLogColumns}
+                                            getRowId={(row) => row.id}
+                                            className="min-w-[760px] table-fixed"
+                                            headerClassName="[&_tr]:border-0 bg-background"
+                                            bodyClassName="[&_tr:nth-child(even)]:bg-muted/[0.08]"
+                                            rowClassName="border-0 align-middle hover:bg-muted/20"
+                                            isLoading={taskWorkLogsQuery.isLoading}
+                                            loadingRow={(
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                                                        Loading work logs...
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            emptyRow={(
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                                                        No work logs yet.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            getRowProps={(row) => ({ "data-testid": row.original.id ? "tasks-work-log-row" : undefined })}
+                                        />
+                                    </div>
+                                    <DataTablePagination
+                                        currentPage={workLogPagination.page}
+                                        totalPages={workLogPagination.totalPages}
+                                        pageSize={workLogPagination.pageSize}
+                                        setPage={workLogPagination.setPage}
+                                        setPageSize={workLogPagination.setPageSize}
+                                        totalItems={workLogPagination.totalItems}
+                                        pageSizeOptions={[5, 10, 20, 50]}
                                     />
                                 </div>
                             </div>

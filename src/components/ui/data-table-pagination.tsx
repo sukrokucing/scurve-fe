@@ -12,6 +12,7 @@ import { Combobox } from "@/components/ui/combobox";
 type DataTablePaginationBaseProps = {
     totalItems: number;
     pageSizeOptions?: number[];
+    testIdPrefix?: string;
 };
 
 type DataTablePaginationStateProps = DataTablePaginationBaseProps & {
@@ -38,6 +39,12 @@ type DataTablePaginationProps<TData = unknown> =
 
 export function DataTablePagination<TData>(props: DataTablePaginationProps<TData>) {
     const pageSizeOptions = props.pageSizeOptions ?? [10, 20, 30, 40, 50];
+    const sizeOptions = [
+        ...pageSizeOptions.map((size) => ({ value: `${size}`, label: `${size}` })),
+        ...(props.totalItems > 0 && !pageSizeOptions.includes(props.totalItems)
+            ? [{ value: `${props.totalItems}`, label: "All" }]
+            : []),
+    ];
     const currentPage = props.table ? props.table.getState().pagination.pageIndex + 1 : props.currentPage;
     const pageSize = props.table ? props.table.getState().pagination.pageSize : props.pageSize;
     const totalPages = props.table ? props.table.getPageCount() : props.totalPages;
@@ -73,13 +80,14 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         onChange={(value) => setPageSize(Number(value))}
                         className="h-11 min-h-11 w-[112px]"
                         placeholder={`${pageSize}`}
-                        options={[
-                            ...pageSizeOptions.map((size) => ({ value: `${size}`, label: `${size}` })),
-                            { value: `${props.totalItems}`, label: "All" }
-                        ]}
+                        options={sizeOptions}
+                        triggerTestId={props.testIdPrefix ? `${props.testIdPrefix}-page-size-combobox` : undefined}
                     />
                 </div>
-                <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                <div
+                    className="flex w-[100px] items-center justify-center text-sm font-medium"
+                    data-testid={props.testIdPrefix ? `${props.testIdPrefix}-page-indicator` : undefined}
+                >
                     Page {currentPage} of {totalPages}
                 </div>
                 <div className="flex items-center space-x-2">
@@ -89,6 +97,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         className="hidden lg:inline-flex"
                         onClick={() => setPage(1)}
                         disabled={currentPage === 1}
+                        data-testid={props.testIdPrefix ? `${props.testIdPrefix}-first-button` : undefined}
                     >
                         <span className="sr-only">Go to first page</span>
                         <ChevronsLeft className="h-4 w-4" />
@@ -98,6 +107,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         size="icon"
                         onClick={() => setPage(currentPage - 1)}
                         disabled={currentPage === 1}
+                        data-testid={props.testIdPrefix ? `${props.testIdPrefix}-prev-button` : undefined}
                     >
                         <span className="sr-only">Go to previous page</span>
                         <ChevronLeft className="h-4 w-4" />
@@ -107,6 +117,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         size="icon"
                         onClick={() => setPage(currentPage + 1)}
                         disabled={currentPage === totalPages}
+                        data-testid={props.testIdPrefix ? `${props.testIdPrefix}-next-button` : undefined}
                     >
                         <span className="sr-only">Go to next page</span>
                         <ChevronRight className="h-4 w-4" />
@@ -117,6 +128,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         className="hidden lg:inline-flex"
                         onClick={() => setPage(totalPages)}
                         disabled={currentPage === totalPages}
+                        data-testid={props.testIdPrefix ? `${props.testIdPrefix}-last-button` : undefined}
                     >
                         <span className="sr-only">Go to last page</span>
                         <ChevronsRight className="h-4 w-4" />

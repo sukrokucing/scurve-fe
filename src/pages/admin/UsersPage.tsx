@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
 import { Users, Search, ShieldCheck, Mail, Calendar, ArrowRight, Loader2, UserRoundSearch, KeyRound } from "lucide-react";
@@ -10,6 +10,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AppDataTable } from "@/components/ui/app-data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import { useUsersListQuery } from "@/api/queries/users";
@@ -21,13 +22,25 @@ const userColumnHelper = createColumnHelper<UserRow>();
 
 export const UsersPage = () => {
     const [searchInput, setSearchInput] = useState("");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const debouncedSearchInput = useDebouncedValue(searchInput, 300);
     const deferredSearchInput = useDeferredValue(debouncedSearchInput);
     const searchQuery = useMemo(() => normalizeApiSearchQuery(deferredSearchInput), [deferredSearchInput]);
 
-    const { data, isLoading } = useUsersListQuery({ q: searchQuery || undefined });
+    useEffect(() => {
+        setPage(1);
+    }, [searchQuery]);
+
+    const { data, isLoading } = useUsersListQuery({
+        q: searchQuery || undefined,
+        page,
+        per_page: pageSize,
+    });
 
     const users = data?.users ?? [];
+    const totalUsers = data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
     const columns = useMemo<ColumnDef<UserRow, unknown>[]>(() => ([
         userColumnHelper.display({
             id: "user",
@@ -197,7 +210,8 @@ export const UsersPage = () => {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline">{users.length} visible</Badge>
+                            <Badge variant="outline">{users.length} on this page</Badge>
+                            <Badge variant="outline">{totalUsers} total</Badge>
                             <Badge variant="outline">Access actions stay on the right</Badge>
                         </div>
                     </div>
@@ -221,6 +235,14 @@ export const UsersPage = () => {
                                     </TableCell>
                                 </TableRow>
                             )}
+                        />
+                        <DataTablePagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            pageSize={pageSize}
+                            setPage={setPage}
+                            setPageSize={setPageSize}
+                            totalItems={totalUsers}
                         />
                     </div>
                 </CardContent>

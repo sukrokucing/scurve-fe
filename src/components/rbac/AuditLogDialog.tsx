@@ -13,11 +13,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { AppDataTable } from "@/components/ui/app-data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuditLogsQuery } from "@/api/queries/rbac";
 import { rbacApi } from "@/api/rbac";
@@ -29,6 +29,7 @@ const auditLogColumnHelper = createColumnHelper<AuditLogRow>();
 export function AuditLogDialog() {
     const [open, setOpen] = useState(false);
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     const [actionFilter, setActionFilter] = useState<string>("all");
     const [actorUserId, setActorUserId] = useState<string>("all");
     const [targetUserId, setTargetUserId] = useState<string>("all");
@@ -38,6 +39,7 @@ export function AuditLogDialog() {
 
     const { data, isLoading } = useAuditLogsQuery({
         page,
+        pageSize,
         actionFilter,
         actorUserId,
         targetUserId,
@@ -91,6 +93,7 @@ export function AuditLogDialog() {
         setTargetUserId("all");
         setFromDate("");
         setToDate("");
+        setPageSize(20);
         setPage(1);
     };
 
@@ -104,7 +107,11 @@ export function AuditLogDialog() {
     };
     const columns = useState<ColumnDef<AuditLogRow, unknown>[]>(() => ([
         auditLogColumnHelper.accessor("created_at", {
-            header: () => <div className="w-[180px]">Timestamp</div>,
+            header: () => <div className="w-[150px]">Time</div>,
+            meta: {
+                headerClassName: "w-[150px]",
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
                 <span className="text-xs font-mono text-muted-foreground">
                     {format(new Date(info.getValue()), "MMM d, HH:mm:ss")}
@@ -113,6 +120,10 @@ export function AuditLogDialog() {
         }),
         auditLogColumnHelper.accessor("actor_name", {
             header: () => <div className="w-[150px]">Actor</div>,
+            meta: {
+                headerClassName: "w-[150px]",
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
                 <div className="flex items-center gap-2">
                     <User className="h-3 w-3 text-muted-foreground" />
@@ -122,22 +133,33 @@ export function AuditLogDialog() {
         }),
         auditLogColumnHelper.accessor("action", {
             header: () => <div className="w-[150px]">Action</div>,
+            meta: {
+                headerClassName: "w-[150px]",
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => (
-                <Badge variant={actionColors[info.getValue()] || "outline"}>
+                <Badge variant={actionColors[info.getValue()] || "outline"} className="text-[11px]">
                     {info.getValue()}
                 </Badge>
             ),
         }),
         auditLogColumnHelper.accessor("target_user_name", {
             header: "Target",
-            cell: (info) => <span className="text-sm">{info.getValue() || "-"}</span>,
+            meta: {
+                headerClassName: "w-[150px]",
+                cellClassName: "align-middle py-2.5",
+            },
+            cell: (info) => <span className="text-sm">{info.getValue() || "—"}</span>,
         }),
         auditLogColumnHelper.accessor("details", {
             header: "Details",
+            meta: {
+                cellClassName: "align-middle py-2.5",
+            },
             cell: (info) => {
                 const details = JSON.stringify(info.getValue());
                 return (
-                    <span className="text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={JSON.stringify(info.getValue(), null, 2)}>
+                    <span className="block max-w-[220px] truncate text-xs font-mono text-muted-foreground" title={JSON.stringify(info.getValue(), null, 2)}>
                         {details}
                     </span>
                 );
@@ -154,38 +176,33 @@ export function AuditLogDialog() {
                 </Button>
             </DialogTrigger>
             <AppDialogContent
-                className="max-w-4xl max-h-[80vh] flex flex-col"
+                className="flex max-h-[82vh] max-w-5xl flex-col overflow-hidden"
                 title="System Audit Log"
-                description="View the history of security and access control changes."
+                description="Review access-change history."
             >
-                <div className="space-y-4 py-4">
-                    <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-intro-card">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Review change history with scope first</CardTitle>
-                            <CardDescription>
-                                Narrow the log by action, actor, target user, or date before scanning details. Pagination stays server-driven so the history remains consistent.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-wrap items-center gap-2 pt-0 text-xs text-muted-foreground">
-                            <Badge variant="outline">Page {page} of {totalPages}</Badge>
-                            <Badge variant="outline">{logs.length} row{logs.length === 1 ? "" : "s"} loaded</Badge>
-                            {hasActiveFilters ? <Badge variant="secondary">Filters active</Badge> : <Badge variant="outline">No filters applied</Badge>}
-                        </CardContent>
-                    </Card>
+                <div className="flex-1 space-y-3 overflow-y-auto py-2 pr-1">
+                    <div
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs text-muted-foreground"
+                        data-testid="policy-audit-log-intro-card"
+                    >
+                        <Badge variant="outline">Page {page} of {totalPages}</Badge>
+                        <Badge variant="outline">{logs.length} row{logs.length === 1 ? "" : "s"} loaded</Badge>
+                        {hasActiveFilters ? <Badge variant="secondary">Filters active</Badge> : <Badge variant="outline">All events</Badge>}
+                    </div>
 
                     <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-filters-card">
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-base">Filters</CardTitle>
                             <CardDescription>
-                                Keep the result set narrow enough to review quickly, then reset when you are ready to widen the audit scope again.
+                                Narrow by action, user, or date.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3 pt-0">
-                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                            <div className="grid gap-3 xl:grid-cols-[minmax(0,190px)_minmax(0,220px)_minmax(0,220px)_minmax(0,1fr)]">
                                 <Combobox
                                     value={actionFilter}
                                     onChange={(v) => { setActionFilter(v); setPage(1); }}
-                                    className="w-full md:w-[200px]"
+                                    className="w-full"
                                     placeholder="Filter by action"
                                     options={[
                                         { value: "all", label: "All Actions" },
@@ -203,7 +220,7 @@ export function AuditLogDialog() {
                                 <Combobox
                                     value={actorUserId}
                                     onChange={(value) => { setActorUserId(value || "all"); setPage(1); }}
-                                    className="w-full md:w-[240px]"
+                                    className="w-full"
                                     placeholder="Filter by actor"
                                     searchPlaceholder="Search actors..."
                                     options={userOptions}
@@ -214,7 +231,7 @@ export function AuditLogDialog() {
                                 <Combobox
                                     value={targetUserId}
                                     onChange={(value) => { setTargetUserId(value || "all"); setPage(1); }}
-                                    className="w-full md:w-[240px]"
+                                    className="w-full"
                                     placeholder="Filter by target user"
                                     searchPlaceholder="Search target users..."
                                     options={userOptions}
@@ -222,7 +239,7 @@ export function AuditLogDialog() {
                                     triggerTestId="policy-audit-log-target-filter-combobox"
                                     triggerAriaLabel="Filter audit log by target user"
                                 />
-                                <div className="grid w-full gap-3 sm:grid-cols-2 md:max-w-[360px]">
+                                <div className="grid w-full gap-3 sm:grid-cols-2">
                                     <Input
                                         type="date"
                                         value={fromDate}
@@ -268,26 +285,28 @@ export function AuditLogDialog() {
                                         </Button>
                                     </>
                                 ) : (
-                                    <span>Filter audit history by action, actor, target user, or date range.</span>
+                                    <span>All actions, users, and dates.</span>
                                 )}
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="border-border/70 shadow-sm" data-testid="policy-audit-log-results-section">
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-base">Results</CardTitle>
                             <CardDescription>
-                                Review the timestamp, actor, target, and details together before moving to the next page.
+                                Scan the event, then page forward only when needed.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4 pt-0">
-                            <ScrollArea className="flex-1 rounded-md border">
+                        <CardContent className="space-y-3 pt-0">
+                            <div className="overflow-hidden rounded-md border">
                                 <AppDataTable
                                     data={logs}
                                     columns={columns}
                                     getRowId={(row) => row.id}
                                     isLoading={isLoading}
+                                    className="text-sm"
+                                    rowClassName="hover:bg-muted/25"
                                     loadingRow={(
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-24 text-center">
@@ -303,32 +322,19 @@ export function AuditLogDialog() {
                                         </TableRow>
                                     )}
                                 />
-                            </ScrollArea>
+                            </div>
 
-                            <div className="flex items-center justify-between border-t pt-4">
-                                <div className="text-sm text-muted-foreground">
-                                    Page {page} of {totalPages}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                                        disabled={page === 1 || isLoading}
-                                        data-testid="policy-audit-log-prev-button"
-                                    >
-                                        Previous
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={page === totalPages || isLoading}
-                                        data-testid="policy-audit-log-next-button"
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
+                            <div className="border-t">
+                                <DataTablePagination
+                                    currentPage={page}
+                                    totalPages={totalPages}
+                                    pageSize={data?.per_page ?? pageSize}
+                                    setPage={setPage}
+                                    setPageSize={setPageSize}
+                                    totalItems={data?.total ?? logs.length}
+                                    pageSizeOptions={[10, 20, 50, 100]}
+                                    testIdPrefix="policy-audit-log"
+                                />
                             </div>
                         </CardContent>
                     </Card>

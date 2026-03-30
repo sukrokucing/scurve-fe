@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-26T01:56:25.003Z",
+  "generated_at": "2026-03-30T04:58:43.648Z",
   "base_url": "https://localhost:8800",
   "auth_source": "env-login",
   "auth_identity": "jimmy@dwp.co.id",
@@ -13,7 +13,7 @@
     "resourceRolesCreated": 0,
     "resourceRolesUpdated": 0,
     "projectCreated": 0,
-    "membershipsChanged": 0,
+    "membershipsChanged": 1,
     "tasksCreated": 0,
     "tasksUpdated": 5,
     "permissionsAdded": 0,

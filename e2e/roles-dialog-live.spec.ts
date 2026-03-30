@@ -27,6 +27,20 @@ async function cleanupRole(request: APIRequestContext) {
     createdRoleId = null;
 }
 
+async function expandRoleRosterIfNeeded(page: import("@playwright/test").Page) {
+    const tableCard = page.getByTestId("roles-page-table-card");
+    const pageSizeCombobox = tableCard.getByRole("combobox").first();
+    if (await pageSizeCombobox.count() === 0) return;
+
+    await pageSizeCombobox.click();
+    const allOption = page.getByRole("option", { name: "All" }).first();
+    if (await allOption.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await allOption.click();
+        return;
+    }
+    await page.keyboard.press("Escape").catch(() => undefined);
+}
+
 test.describe("roles dialog live", () => {
     test.describe.configure({ mode: "serial" });
     test.skip(
@@ -78,6 +92,7 @@ test.describe("roles dialog live", () => {
 
         await page.goto("/settings/roles", { waitUntil: "domcontentloaded" });
         await expect(page.getByTestId("roles-page-table-card")).toBeVisible({ timeout: 15_000 });
+        await expandRoleRosterIfNeeded(page);
 
         const roleRow = page.getByRole("row").filter({ hasText: roleName }).first();
         await expect(roleRow).toBeVisible({ timeout: 15_000 });

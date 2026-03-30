@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import { createColumnHelper, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable, type ColumnDef, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2 } from "lucide-react";
 import clsx from "clsx";
@@ -11,6 +11,7 @@ import { rbacKeys, usePermissionsQuery, useRolesWithPermissionsQuery } from "@/a
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import {
     Table,
@@ -53,7 +54,9 @@ export const PermissionMatrix = () => {
     const [bulkAction, setBulkAction] = useState<BulkState>(null);
     const [showQuickStart, setShowQuickStart] = useState(true);
     const isMobileViewport = useMedia("(max-width: 1023px)", false);
+    const isLaptopViewport = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
     const [showAdvancedMatrix, setShowAdvancedMatrix] = useState(false);
+    const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 18 });
     const debouncedPermissionQuery = useDebouncedValue(permissionQueryInput, 180);
     const deferredPermissionQuery = useDeferredValue(debouncedPermissionQuery);
     const normalizedPermissionQuery = useMemo(
@@ -277,6 +280,16 @@ export const PermissionMatrix = () => {
         }
     }, [editMode, isMobileViewport]);
 
+    useEffect(() => {
+        if (isMobileViewport || isLaptopViewport || filteredRoles.length > 8) {
+            setShowQuickStart(false);
+        }
+    }, [filteredRoles.length, isLaptopViewport, isMobileViewport]);
+
+    useEffect(() => {
+        setPagination((current) => ({ ...current, pageIndex: 0 }));
+    }, [assignedOnly, normalizedPermissionQuery, resourceFilter, roleFilter]);
+
     const summaryRole = filteredRoles.length === 1 ? filteredRoles[0] : null;
     const resourceSummaries = useMemo(() => {
         const assignedSet = summaryRole ? rolePermissionsMap?.[summaryRole.id] : undefined;
@@ -370,18 +383,37 @@ export const PermissionMatrix = () => {
             header: () => {
                 const roleBusy = bulkAction?.roleId === role.id && bulkMutation.isPending;
                 return (
-                    <div className="flex min-w-[170px] flex-col items-center gap-1 py-1 text-center">
-                        <span className="font-semibold text-foreground">{role.name}</span>
-                        <span className="line-clamp-1 text-xs font-normal text-muted-foreground" title={role.description || "No desc"}>
-                            {role.description || "No desc"}
-                        </span>
+                    <div className="flex min-w-[132px] flex-col items-center gap-1 py-1 text-center">
+                        <div className="flex items-center gap-1">
+                            <span className="line-clamp-1 text-sm font-semibold text-foreground" title={role.name}>
+                                {role.name}
+                            </span>
+                            {role.description ? (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-strong focus-visible:ring-offset-1"
+                                                aria-label={`Role info for ${role.name}`}
+                                            >
+                                                <Info className="h-3.5 w-3.5" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="max-w-[220px] text-sm">{role.description}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            ) : null}
+                        </div>
                         {editMode ? (
                             <div className="flex items-center gap-1 pt-1">
                                 <Button
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="h-9 px-2 text-xs"
+                                    className="h-8 px-2 text-[11px]"
                                     disabled={!allowGrant || totalVisiblePermissions === 0 || roleBusy}
                                     onClick={() => handleBulkForRole(role.id, "grant")}
                                     data-testid={`rbac-role-grant-visible-${role.id}`}
@@ -392,7 +424,7 @@ export const PermissionMatrix = () => {
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="h-9 px-2 text-xs"
+                                    className="h-8 px-2 text-[11px]"
                                     disabled={!allowRevoke || totalVisiblePermissions === 0 || roleBusy}
                                     onClick={() => handleBulkForRole(role.id, "revoke")}
                                     data-testid={`rbac-role-revoke-visible-${role.id}`}
@@ -401,9 +433,7 @@ export const PermissionMatrix = () => {
                                 </Button>
                             </div>
                         ) : (
-                            <span className="pt-1 text-[11px] text-muted-foreground">
-                                Read-only
-                            </span>
+                            <span className="pt-1 text-[11px] text-muted-foreground">Review</span>
                         )}
                     </div>
                 );
@@ -473,7 +503,10 @@ export const PermissionMatrix = () => {
     const matrixTable = useReactTable({
         data: matrixRows,
         columns: matrixColumns,
+        state: { pagination },
+        onPaginationChange: setPagination,
         getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
         getRowId: (row) => row.kind === "resource" ? `resource-${row.resource}` : row.permission.id,
     });
 
@@ -490,14 +523,11 @@ export const PermissionMatrix = () => {
     }
 
     return (
-        <div className="rounded-md border bg-card shadow-sm overflow-hidden">
-            <div className="border-b bg-background px-3 py-3" data-testid="rbac-scope-overview">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium text-foreground">Keep permission work scoped</p>
-                        <p className="text-xs text-muted-foreground">
-                            Pick the role and resource context first, then enter edit mode only when you are ready to grant or revoke visible permissions.
-                        </p>
+        <div className="overflow-hidden rounded-md border bg-card shadow-sm">
+            <div className="border-b bg-background px-3 py-2.5" data-testid="rbac-scope-overview">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-medium text-muted-foreground">
+                        {editMode ? "Editing visible cells" : "Reviewing visible cells"}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant={editMode ? "secondary" : "outline"}>
@@ -511,10 +541,9 @@ export const PermissionMatrix = () => {
                 </div>
             </div>
 
-            <div className="border-b bg-muted/20 px-3 py-3" data-testid="rbac-controls-panel">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <div className="border-b bg-muted/20 px-3 py-2.5" data-testid="rbac-controls-panel">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
                     <div className="space-y-3">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Scope</div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[170px_190px_minmax(0,1fr)_auto]">
                             <Combobox
                                 value={roleFilter}
@@ -556,13 +585,7 @@ export const PermissionMatrix = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Change mode</div>
-                            <span className="text-[11px] text-muted-foreground">
-                                Bulk actions only apply to currently visible permissions.
-                            </span>
-                        </div>
+                    <div className="space-y-2 xl:min-w-[280px]">
                         <div className="flex flex-wrap items-center gap-2">
                             <Button
                                 type="button"
@@ -571,7 +594,7 @@ export const PermissionMatrix = () => {
                                 onClick={() => setEditMode((prev) => !prev)}
                                 data-testid="rbac-edit-mode-toggle"
                             >
-                                {editMode ? "Exit edit mode" : "Edit permissions"}
+                                {editMode ? "Done" : "Edit"}
                             </Button>
                             {editMode ? (
                                 <>
@@ -582,7 +605,7 @@ export const PermissionMatrix = () => {
                                         onClick={() => setAllowGrant((prev) => !prev)}
                                         data-testid="rbac-grant-toggle"
                                     >
-                                        Allow grants
+                                        Grants
                                     </Button>
                                     <Button
                                         type="button"
@@ -591,7 +614,7 @@ export const PermissionMatrix = () => {
                                         onClick={() => setAllowRevoke((prev) => !prev)}
                                         data-testid="rbac-revoke-toggle"
                                     >
-                                        Allow revokes
+                                        Revokes
                                     </Button>
                                 </>
                             ) : null}
@@ -602,7 +625,7 @@ export const PermissionMatrix = () => {
                                 onClick={() => setShowQuickStart((prev) => !prev)}
                                 data-testid="rbac-toggle-help-button"
                             >
-                                {showQuickStart ? "Hide guide" : "Show guide"}
+                                {showQuickStart ? "Hide guide" : "Guide"}
                             </Button>
                         </div>
                     </div>
@@ -629,14 +652,14 @@ export const PermissionMatrix = () => {
                             </Button>
                         </>
                     ) : (
-                        <span>All roles and resources are visible. Search narrows permission names when needed.</span>
+                        <span>All roles, resources, and permissions are visible.</span>
                     )}
                 </div>
             </div>
             {showQuickStart ? (
-                <div className="border-b bg-background px-3 py-3 text-xs text-muted-foreground" data-testid="rbac-quick-start-panel">
+                <div className="border-b bg-background px-3 py-2.5 text-xs text-muted-foreground" data-testid="rbac-quick-start-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="font-medium text-foreground">Quick start (recommended order)</div>
+                        <div className="font-medium text-foreground">Guide</div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Button
                                 type="button"
@@ -659,31 +682,22 @@ export const PermissionMatrix = () => {
                             </Button>
                         </div>
                     </div>
-                    <div className="mt-2 grid gap-2 lg:grid-cols-3">
-                        <p>
-                            1. Filter to one role first{selectedRole ? ` (${selectedRole.name})` : ""} so permission changes are easy to verify.
-                        </p>
-                        <p>
-                            2. Narrow by resource/search, then use <span className="font-medium text-foreground">Assigned only</span> for quick audits.
-                        </p>
-                        <p>
-                            3. Enter edit mode and apply grant/revoke intentionally. Verify outcome in Audit Log after changes.
-                        </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span>Filter one role first{selectedRole ? ` (${selectedRole.name})` : ""}.</span>
+                        <span>Narrow by resource or search.</span>
+                        <span>Use Assigned only for quick audits.</span>
+                        <span>Edit only after the scope looks right.</span>
                     </div>
                 </div>
-            ) : (
-                <div className="border-b bg-background px-3 py-2 text-xs text-muted-foreground">
-                    Tip: filter to one role, then enable edit mode to make precise grant/revoke changes with less noise.
-                </div>
-            )}
+            ) : null}
 
             {!isMobileViewport && summaryRole && resourceSummaries.length > 0 ? (
                 <div className="border-b bg-muted/10 px-3 py-3" data-testid="rbac-resource-summary">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground">Visible resource coverage</p>
+                            <p className="text-sm font-medium text-foreground">Role coverage</p>
                             <p className="text-xs text-muted-foreground">
-                                Focused on role <span className="font-medium text-foreground">{summaryRole.name}</span>. Use this summary before opening the full matrix.
+                                Focused on <span className="font-medium text-foreground">{summaryRole.name}</span>.
                             </p>
                         </div>
                         <Badge variant="outline">{resourceSummaries.length} resource group(s)</Badge>
@@ -779,61 +793,72 @@ export const PermissionMatrix = () => {
             ) : null}
 
             {!isMobileViewport || showAdvancedMatrix ? (
-                <div className="overflow-x-auto" data-testid="rbac-matrix-scroll">
-                    <Table className="min-w-[900px]">
-                        <TableHeader>
-                            {matrixTable.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id} className="bg-muted/50">
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id} className={header.id === "resourcePermission" ? "w-[320px] font-bold" : "text-center"}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(header.column.columnDef.header, header.getContext())}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-                        <TableBody>
-                            {visibleResources.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={filteredRoles.length + 1} className="h-20 text-center text-muted-foreground">
-                                        No permissions match the current granular filters.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                matrixTable.getRowModel().rows.map((row) => {
-                                    if (row.original.kind === "resource") {
+                <div>
+                    <div className="overflow-x-auto" data-testid="rbac-matrix-scroll">
+                        <Table className="min-w-[900px]">
+                            <TableHeader>
+                                {matrixTable.getHeaderGroups().map((headerGroup) => (
+                                    <TableRow key={headerGroup.id} className="bg-muted/50">
+                                        {headerGroup.headers.map((header) => (
+                                            <TableHead key={header.id} className={header.id === "resourcePermission" ? "sticky left-0 z-20 w-[280px] bg-muted/50 font-bold" : "text-center"}>
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </TableHeader>
+                            <TableBody>
+                                {visibleResources.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={filteredRoles.length + 1} className="h-20 text-center text-muted-foreground">
+                                            No permissions match the current granular filters.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    matrixTable.getRowModel().rows.map((row) => {
+                                        if (row.original.kind === "resource") {
+                                            return (
+                                                <TableRow key={row.id} className="bg-muted/20 hover:bg-muted/30">
+                                                    <TableCell colSpan={filteredRoles.length + 1} className="sticky left-0 z-10 bg-muted/20 px-4 py-2 font-semibold text-primary">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="capitalize">{row.original.resource}</span>
+                                                            <span className="text-xs font-normal text-muted-foreground">
+                                                                {row.original.permissionCount} permission(s)
+                                                            </span>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        }
+
                                         return (
-                                            <TableRow key={row.id} className="bg-muted/20 hover:bg-muted/30">
-                                                <TableCell colSpan={filteredRoles.length + 1} className="font-semibold text-primary py-2 px-4">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="capitalize">{row.original.resource}</span>
-                                                        <span className="text-xs font-normal text-muted-foreground">
-                                                            {row.original.permissionCount} permission(s)
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
+                                            <TableRow key={row.id} className="hover:bg-muted/15">
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        className={cell.column.id === "resourcePermission" ? "sticky left-0 z-10 bg-background font-medium" : "p-2 text-center"}
+                                                    >
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                    </TableCell>
+                                                ))}
                                             </TableRow>
                                         );
-                                    }
-
-                                    return (
-                                        <TableRow key={row.id}>
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell
-                                                    key={cell.id}
-                                                    className={cell.column.id === "resourcePermission" ? "font-medium" : "text-center p-2"}
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    );
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {matrixRows.length > 0 ? (
+                        <div className="border-t bg-background px-2" data-testid="rbac-matrix-pagination">
+                            <DataTablePagination
+                                table={matrixTable}
+                                totalItems={matrixRows.length}
+                                pageSizeOptions={[12, 18, 30, 48]}
+                            />
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
         </div>
