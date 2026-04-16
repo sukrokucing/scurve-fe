@@ -29,12 +29,11 @@
     "test:e2e:ui-state": "playwright test e2e/ui-state-persistence.spec.ts --project=chromium",
     "test:e2e:tasks-health": "playwright test e2e/tasks-derived-health.spec.ts --project=chromium",
     "test:e2e:tasks-bulk-live": "playwright test e2e/tasks-bulk-edit-live.spec.ts --project=chromium --workers=1",
-    "test:e2e:flows": "playwright test e2e/business-flows.spec.ts",
+    "test:e2e:flows": "node scripts/generate-scenario-tests.mjs business_flow.yaml && playwright test e2e/generated/business-flow.generated.spec.ts",
     "test:e2e:smoke": "playwright test e2e/console-smoke.spec.ts",
     "test:e2e:perf": "playwright test e2e/perf-probes.spec.ts --project=chromium",
     "test:e2e:critical": "playwright test e2e/console-smoke.spec.ts e2e/menu-hierarchy.spec.ts e2e/menu-hierarchy-mobile.spec.ts e2e/menu-shell-smoke.spec.ts e2e/perf-probes.spec.ts --project=chromium --workers=1",
     "generate:e2e:scenario": "node scripts/generate-scenario-tests.mjs business_flow.yaml",
-    "test:e2e:scenario": "playwright test e2e/generated/business-flow.generated.spec.ts",
     "sync:openapi": "node scripts/sync-openapi.mjs",
     "generate:types": "node scripts/generate-openapi-types.mjs --source=local",
     "generate:types:remote": "node scripts/generate-openapi-types.mjs --source=remote",
@@ -51,9 +50,7 @@
     "perf:compare": "node scripts/upgrade/perf-compare.mjs",
     "visual:baseline": "node scripts/upgrade/visual-baseline.mjs",
     "visual:compare": "node scripts/upgrade/visual-compare.mjs",
-    "upgrade:tailwind4:canary": "node scripts/upgrade/run-tailwind4-canary.mjs",
     "upgrade:gate": "npm run check && npm run build && npm run audit:ui && npm run perf:compare && npm run visual:compare",
-    "qa:be-update:20260311": "node scripts/qa/verify-be-update-20260311.mjs",
     "qa:tables": "node scripts/qa/verify-table-stack.mjs"
   },
   "dependencies": {

@@ -3113,7 +3113,7 @@
     },
     "/auth/forgot-password": {
       "post": {
-        "description": "Generates a password reset token and returns it. In production, this should send an email.",
+        "description": "Always returns 200 OK regardless of whether the email exists (prevents user enumeration).\nIn production, send `raw_token` via email to the user; do not expose it in the response.",
         "operationId": "forgot_password",
         "requestBody": {
           "content": {
@@ -3140,10 +3140,7 @@
                 }
               }
             },
-            "description": "Reset token generated (for dev; in prod would send email)"
-          },
-          "404": {
-            "description": "User not found"
+            "description": "If that email is registered, a reset link has been sent"
           }
         },
         "security": [],
@@ -7308,13 +7305,6 @@
             "description": "Accepted telemetry events"
           },
           "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TelemetryErrorResponse"
-                }
-              }
-            },
             "description": "Invalid telemetry payload"
           }
         },

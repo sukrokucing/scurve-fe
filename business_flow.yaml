@@ -688,6 +688,97 @@ action_library:
       testid: policy-audit-log-next-button
     description: Next page control exists in audit log
 
+  # -------- Cleanup helpers --------
+  expect_no_created_project_row:
+    kind: expect_hidden
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${PROJECT_NAME}")'
+    timeout_ms: 15000
+    description: Created project row is no longer visible after deletion
+
+  expect_no_created_task_row:
+    kind: expect_hidden
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${TASK_TITLE_UPDATED}")'
+    timeout_ms: 15000
+    description: Updated task row is no longer visible after deletion
+
+  expect_no_created_role_row:
+    kind: expect_hidden
+    locator:
+      by: css
+      selector: 'tbody tr:has-text("${ROLE_NAME}")'
+    timeout_ms: 15000
+    description: Created role row is no longer visible after deletion
+
+  confirm_role_delete:
+    kind: click
+    locator:
+      by: testid
+      testid: roles-delete-confirm-button
+    description: Confirm role deletion in AlertDialog
+
+  # -------- Negative / edge case helpers --------
+  fill_login_invalid_email:
+    kind: fill
+    locator:
+      by: role
+      role: textbox
+      name: Email
+    value: "nonexistent@invalid.test"
+    description: Fill invalid email for negative login test
+
+  fill_login_invalid_password:
+    kind: fill
+    locator:
+      by: role
+      role: textbox
+      name: Password
+    value: "wrongpassword99"
+    description: Fill wrong password for negative login test
+
+  expect_login_error_toast:
+    kind: expect_visible
+    locator:
+      by: text
+      text: Login failed
+    timeout_ms: 10000
+    description: Login failure toast is visible
+
+  expect_login_form_still_visible:
+    kind: expect_visible
+    locator:
+      by: role
+      role: button
+      name: Sign in
+    description: Login form remains visible after failed attempt
+
+  fill_project_name_empty:
+    kind: fill
+    locator:
+      by: testid
+      testid: projects-create-name-input
+    value: ""
+    description: Leave project name empty for validation test
+
+  expect_project_create_validation_error:
+    kind: expect_visible
+    locator:
+      by: text
+      text: required
+    timeout_ms: 3000
+    description: Validation error message is visible
+
+  expect_tasks_empty_state:
+    kind: expect_visible
+    locator:
+      by: text
+      text: No tasks
+    timeout_ms: 10000
+    description: Tasks empty state is visible when no tasks exist
+
 flows:
   # -------- Auth / Dashboard --------
   - id: auth_login_email
@@ -713,6 +804,8 @@ flows:
     crud:
       - read
     risk_level: low
+    depends_on:
+      - auth_login_email
     preconditions:
       - user_logged_in
     steps:
@@ -729,6 +822,8 @@ flows:
     crud:
       - create
     risk_level: high
+    depends_on:
+      - auth_login_email
     preconditions:
       - user_logged_in
     steps:
@@ -753,6 +848,8 @@ flows:
     crud:
       - read
     risk_level: medium
+    depends_on:
+      - project_create
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -770,6 +867,8 @@ flows:
     crud:
       - read
     risk_level: medium
+    depends_on:
+      - project_create
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -792,6 +891,8 @@ flows:
     crud:
       - update
     risk_level: medium
+    depends_on:
+      - project_create
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -818,6 +919,8 @@ flows:
     crud:
       - update
     risk_level: medium
+    depends_on:
+      - project_create
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -839,6 +942,8 @@ flows:
     crud:
       - delete
     risk_level: medium
+    depends_on:
+      - project_update
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -850,6 +955,7 @@ flows:
       - use: click_first_project_delete_compact
       - use: expect_project_delete_dialog
       - use: confirm_project_delete
+      - use: expect_no_created_project_row
 
   # -------- Tasks CRUD --------
   - id: task_create
@@ -860,6 +966,8 @@ flows:
     crud:
       - create
     risk_level: high
+    depends_on:
+      - project_create
     preconditions:
       - at_least_one_project_exists
     steps:
@@ -880,6 +988,8 @@ flows:
     crud:
       - read
     risk_level: low
+    depends_on:
+      - task_create
     preconditions:
       - tasks_page_accessible
     steps:
@@ -907,6 +1017,8 @@ flows:
     crud:
       - update
     risk_level: medium
+    depends_on:
+      - task_create
     preconditions:
       - at_least_one_task_exists
     steps:
@@ -925,6 +1037,8 @@ flows:
     crud:
       - delete
     risk_level: medium
+    depends_on:
+      - task_update
     preconditions:
       - at_least_one_task_exists
     steps:
@@ -935,6 +1049,7 @@ flows:
       - use: click_first_task_delete
       - use: expect_task_delete_dialog
       - use: confirm_task_delete
+      - use: expect_no_created_task_row
 
   # -------- Roles CRUD-like --------
   - id: role_create
@@ -965,6 +1080,8 @@ flows:
     crud:
       - read
     risk_level: medium
+    depends_on:
+      - role_create
     preconditions:
       - roles_exist
     steps:
@@ -981,12 +1098,15 @@ flows:
     crud:
       - delete
     risk_level: high
+    depends_on:
+      - role_read_detail
     preconditions:
       - at_least_one_deletable_role_exists
     steps:
       - use: goto_roles
-      - use: accept_delete_role_confirm
       - use: click_first_role_delete
+      - use: confirm_role_delete
+      - use: expect_no_created_role_row
 
   # -------- Users / Access Flow / Policy --------
   - id: users_read_and_manage_access
@@ -1039,3 +1159,43 @@ flows:
       - use: expect_audit_log_dialog
       - use: expect_audit_log_next_button
       - use: close_active_dialog
+
+  # -------- Negative / Edge Cases --------
+  - id: auth_login_invalid_credentials
+    module: authentication
+    capability_ref: "1.1 Authentication"
+    title: login_with_invalid_credentials_shows_error
+    actor: anonymous_user
+    crud:
+      - read
+    risk_level: low
+    preconditions:
+      - app_reachable
+    steps:
+      - use: goto_login
+      - use: fill_login_invalid_email
+      - use: fill_login_invalid_password
+      - use: click_sign_in
+      - use: expect_login_error_toast
+      - use: expect_login_form_still_visible
+
+  - id: project_create_validation
+    module: project_management
+    capability_ref: "1.3 Projects"
+    title: create_project_with_empty_name_shows_validation
+    actor: app_user
+    crud:
+      - create
+    risk_level: low
+    depends_on:
+      - auth_login_email
+    preconditions:
+      - user_logged_in
+    steps:
+      - use: goto_projects
+      - use: expect_projects_heading
+      - use: open_project_create_dialog
+      - use: expect_project_create_dialog
+      - use: fill_project_name_empty
+      - use: submit_project_create
+      - use: expect_project_create_validation_error

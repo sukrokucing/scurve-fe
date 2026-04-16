@@ -201,7 +201,9 @@ function renderFlowTest(flow, steps, unresolvedReasons) {
         ].join("\n");
     }
 
-    const lines = [`test(${js(testName)}, async ({ page, request }, testInfo) => {`];
+    const usesRequest = needsAuth || steps.some((step) => step.kind === "ensure_authenticated");
+    const destructure = usesRequest ? "{ page, request }" : "{ page }";
+    const lines = [`test(${js(testName)}, async (${destructure}, testInfo) => {`];
     lines.push("    const FLOW_VARS = flowVars(testInfo);");
     if (isAuthFlow) {
         lines.push("    test.setTimeout(180_000);");

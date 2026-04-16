@@ -35,7 +35,8 @@ export interface paths {
         put?: never;
         /**
          * Request password reset
-         * @description Generates a password reset token and returns it. In production, this should send an email.
+         * @description Always returns 200 OK regardless of whether the email exists (prevents user enumeration).
+         *     In production, send `raw_token` via email to the user; do not expose it in the response.
          */
         post: operations["forgot_password"];
         delete?: never;
@@ -2365,7 +2366,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Reset token generated (for dev; in prod would send email) */
+            /** @description If that email is registered, a reset link has been sent */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2378,13 +2379,6 @@ export interface operations {
                      */
                     "application/json": components["schemas"]["MessageResponse"];
                 };
-            };
-            /** @description User not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -5342,9 +5336,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["TelemetryErrorResponse"];
-                };
+                content?: never;
             };
         };
     };
