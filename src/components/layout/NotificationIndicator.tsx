@@ -88,7 +88,7 @@ function NotificationList({
                             connectionStatus === "connected"
                                 ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
                                 : connectionStatus === "connecting"
-                                    ? "border-amber-500/40 text-amber-700 dark:text-amber-300"
+                                    ? "border-amber-500/40 text-amber-800 dark:text-amber-300"
                                     : "text-muted-foreground",
                         )}
                     >

@@ -29,8 +29,10 @@ async function ensureProjectSelected(page: Page): Promise<boolean> {
 async function rowActionForTitle(page: Page, title: string, testId: string): Promise<Locator> {
     const row = page.locator("tbody tr").filter({ hasText: title }).first();
     await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.scrollIntoViewIfNeeded();
     await row.getByTestId("tasks-row-actions-trigger").click();
-    const locator = page.getByTestId(testId).last();
+    const actionLabel = testId === "tasks-row-edit-button" ? "Edit task" : "Delete task";
+    const locator = page.getByRole("menuitem", { name: actionLabel }).first();
     await expect(locator).toBeVisible({ timeout: 15_000 });
     return locator;
 }
@@ -75,9 +77,7 @@ test.describe("tasks weighted progress", () => {
         await expect(page.getByRole("heading", { name: "Create task" })).toHaveCount(0, { timeout: 15_000 });
 
         await page.getByTestId("tasks-search-input").fill(taskTitle);
-        await rowActionForTitle(page, taskTitle, "tasks-row-edit-button").then((button) => button.evaluate((element) => {
-            (element as HTMLElement).click();
-        }));
+        await rowActionForTitle(page, taskTitle, "tasks-row-edit-button").then((button) => button.click());
         await expect(page.getByRole("heading", { name: "Edit task" })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByTestId("tasks-weighted-progress-section")).toBeVisible();
         await expect(page.getByTestId("tasks-progress-component-row")).toHaveCount(3, { timeout: 15_000 });
@@ -86,9 +86,7 @@ test.describe("tasks weighted progress", () => {
         await expect(page.getByTestId("tasks-progress-component-name-input").nth(2)).toHaveValue("Review and sign-off");
 
         await page.getByRole("button", { name: /^Cancel$/i }).click();
-        await rowActionForTitle(page, taskTitle, "tasks-row-delete-button").then((button) => button.evaluate((element) => {
-            (element as HTMLElement).click();
-        }));
+        await rowActionForTitle(page, taskTitle, "tasks-row-delete-button").then((button) => button.click());
         await page.getByTestId("tasks-delete-confirm-button").click();
         await expect(page.getByText(taskTitle)).toHaveCount(0, { timeout: 15_000 });
     });

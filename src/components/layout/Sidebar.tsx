@@ -107,20 +107,20 @@ export function Sidebar() {
                     type="button"
                     variant="outline"
                     className={cn(
-                        "mb-3 h-11 w-full text-muted-foreground hover:text-foreground",
-                        isCollapsed ? "justify-center px-0" : "justify-between"
+                        "mb-2 h-10 w-full text-muted-foreground hover:text-foreground",
+                        isCollapsed ? "justify-center px-0" : "justify-start gap-2 px-3"
                     )}
                     onClick={openGlobalMenuSearch}
                     data-testid="global-menu-search-trigger"
                     aria-label="Open global menu search"
                     title={isCollapsed ? "Search menu" : undefined}
                 >
-                    <span className={cn("flex items-center gap-2", isCollapsed ? "justify-center" : "")}>
+                    <span className={cn("flex min-w-0 items-center gap-2", isCollapsed ? "justify-center" : "")}>
                         <Search className="h-4 w-4 shrink-0" />
-                        {!isCollapsed ? <span className="text-sm">Search menu</span> : null}
+                        {!isCollapsed ? <span className="truncate text-sm">Search</span> : null}
                     </span>
                     {!isCollapsed ? (
-                        <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                             {searchShortcutLabel}
                         </span>
                     ) : null}

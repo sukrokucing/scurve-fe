@@ -48,6 +48,14 @@ async function openTaskEditorForTitle(page: Page, title: string) {
     await expect(page.getByTestId("tasks-edit-title-input")).toHaveValue(title, { timeout: 15_000 });
 }
 
+async function openRowAction(page: Page, title: string, actionLabel: "Edit task" | "Delete task") {
+    const row = page.locator("tbody tr").filter({ hasText: title }).first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.scrollIntoViewIfNeeded();
+    await row.getByTestId("tasks-row-actions-trigger").click();
+    await page.getByRole("menuitem", { name: actionLabel }).click();
+}
+
 test.describe("tasks work logs", () => {
     test.describe.configure({ mode: "serial" });
     test.skip(
@@ -171,5 +179,15 @@ test.describe("tasks work logs", () => {
         expect((await deleteWorkLogResponsePromise).ok()).toBeTruthy();
         await expect(page.getByTestId("tasks-work-log-row")).toHaveCount(0, { timeout: 15_000 });
         await expect(page.getByText("No work logs yet.")).toBeVisible({ timeout: 15_000 });
+
+        await page.getByRole("button", { name: /^Cancel$/i }).click();
+        const deleteTaskResponsePromise = page.waitForResponse((response) => (
+            response.request().method() === "DELETE"
+            && /\/api\/projects\/[^/]+\/tasks\/[^/]+$/.test(response.url())
+        ));
+        await openRowAction(page, taskTitle, "Delete task");
+        await page.getByTestId("tasks-delete-confirm-button").click();
+        expect((await deleteTaskResponsePromise).ok()).toBeTruthy();
+        await expect(page.locator("tbody tr").filter({ hasText: taskTitle })).toHaveCount(0, { timeout: 15_000 });
     });
 });

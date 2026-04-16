@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, User as UserIcon, Shield, Check, Lock, Loader2, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
@@ -11,22 +11,34 @@ import { Combobox } from "@/components/ui/combobox";
 import { useRolePermissionsQuery, useUserRolesQuery } from "@/api/queries/rbac";
 import { useUsersListQuery } from "@/api/queries/users";
 import { API_SEARCH_QUERY_MAX_LENGTH, normalizeApiSearchQuery } from "@/lib/apiSearch";
+import { useMedia } from "@/hooks/vendor/reactUse";
 import type { User } from "@/api/users";
 import type { Role } from "@/api/rbac";
 
 const EMPTY_USERS: User[] = [];
+const LAPTOP_USER_FOCUS_THRESHOLD = 8;
 
 export const HierarchyExplorer = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [defaultFocusDismissed, setDefaultFocusDismissed] = useState(false);
+    const [autoFocusedUserId, setAutoFocusedUserId] = useState<string | null>(null);
     const navigate = useNavigate();
     const normalizedSearchQuery = normalizeApiSearchQuery(searchQuery);
+    const isLaptopViewport = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
 
     // --- Column 1: Users (from real backend) ---
     const { data: usersData, isLoading: loadingUsers } = useUsersListQuery({ q: normalizedSearchQuery || undefined });
 
     const users = usersData?.users ?? EMPTY_USERS;
+    const hasManyUsers = (usersData?.total ?? users.length) > LAPTOP_USER_FOCUS_THRESHOLD;
+    const shouldAutoFocusUser = isLaptopViewport
+        && hasManyUsers
+        && !defaultFocusDismissed
+        && !selectedUser
+        && (normalizedSearchQuery?.length ?? 0) === 0;
+    const isAutoFocusedUser = Boolean(selectedUser && autoFocusedUserId === selectedUser.id);
     const userOptions = useMemo(() => {
         const mapped = users.map((user) => ({
             value: user.id,
@@ -70,11 +82,35 @@ export const HierarchyExplorer = () => {
     const selectedUserRoleCount = selectedUser ? (userRoles?.length ?? 0) : 0;
     const selectedRolePermissionCount = selectedRole ? (rolePermissions?.length ?? 0) : 0;
 
-    const handleClearSearch = () => setSearchQuery("");
+    useEffect(() => {
+        if (!shouldAutoFocusUser || users.length === 0) return;
+        setSelectedUser(users[0]);
+        setSelectedRole(null);
+        setAutoFocusedUserId(users[0].id);
+    }, [shouldAutoFocusUser, users]);
+
+    const handleUserSelection = (user: User) => {
+        setSelectedUser(user);
+        setSelectedRole(null);
+        setDefaultFocusDismissed(true);
+        setAutoFocusedUserId(null);
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery("");
+    };
 
     const handleResetScope = () => {
         setSelectedUser(null);
         setSelectedRole(null);
+        setDefaultFocusDismissed(true);
+        setAutoFocusedUserId(null);
+    };
+    const handleShowAllUsers = () => {
+        setSelectedUser(null);
+        setSelectedRole(null);
+        setDefaultFocusDismissed(true);
+        setAutoFocusedUserId(null);
     };
 
     // Helper for Column Loading State
@@ -141,10 +177,15 @@ export const HierarchyExplorer = () => {
                             const nextUser = users.find((user) => user.id === userId)
                                 ?? (selectedUser?.id === userId ? selectedUser : null);
                             if (!nextUser) return;
-                            setSelectedUser(nextUser);
-                            setSelectedRole(null);
+                            handleUserSelection(nextUser);
                         }}
-                        onSearchChange={setSearchQuery}
+                        onSearchChange={(value) => {
+                            setSearchQuery(value);
+                            if (value.trim().length > 0) {
+                                setDefaultFocusDismissed(true);
+                                setAutoFocusedUserId(null);
+                            }
+                        }}
                         shouldFilterClientSide={false}
                         searchDebounceMs={300}
                         minSearchLength={0}
@@ -207,6 +248,28 @@ export const HierarchyExplorer = () => {
                         </span>
                     )}
                 </div>
+                {isAutoFocusedUser ? (
+                    <div
+                        className="border-b bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
+                        data-testid="access-flow-default-focus-banner"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                Focused on <span className="font-medium text-foreground">{selectedUser?.name}</span> by default for a calmer laptop trace.
+                            </div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={handleShowAllUsers}
+                                data-testid="access-flow-show-all-users-button"
+                            >
+                                Show all users
+                            </Button>
+                        </div>
+                    </div>
+                ) : null}
                 <ScrollArea className="max-h-[260px] md:max-h-none md:flex-1">
                     {loadingUsers ? <ColumnLoading /> : (
                         <div className="p-2 space-y-1">
@@ -216,14 +279,12 @@ export const HierarchyExplorer = () => {
                                         key={user.id}
                                         data-testid="access-flow-user-item"
                                         onClick={() => {
-                                            setSelectedUser(user);
-                                            setSelectedRole(null); // Reset downstream selection
+                                            handleUserSelection(user);
                                         }}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter" || e.key === " ") {
                                                 e.preventDefault();
-                                                setSelectedUser(user);
-                                                setSelectedRole(null); // Reset downstream selection
+                                                handleUserSelection(user);
                                             }
                                         }}
                                         role="button"

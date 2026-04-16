@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "WebSearch",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__*",
+      "Bash(wc -l d:/Data/WinNMP/WWW/scurve-fe/.codex/skills/scurve-fe/SKILL.md d:/Data/WinNMP/WWW/scurve-fe/.codex/skills/scurve-fe/references/*.md)",
+      "Bash(wc -c d:/Data/WinNMP/WWW/scurve-fe/.codex/skills/scurve-fe/references/*.original.md)",
+      "Bash(npm run *)",
+      "Bash(curl -sk -o /dev/null -w \"%{http_code}\" http://localhost:3001/)",
+      "Bash(break)",
+      "Bash(node -e ' *)",
+      "Bash(cross-env NODE_OPTIONS=--trace-warnings NODE_TLS_REJECT_UNAUTHORIZED=0 npx vite --host --port 3001)",
+      "Bash(npx vite *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Jimmy\\.claude"
+    ]
+  }
+}

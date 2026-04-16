@@ -438,7 +438,7 @@ export const ProjectDashboard = () => {
         ? undefined
         : ruleIsPassing
             ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-            : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+            : "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300";
 
     return (
         <div className="mx-auto max-w-7xl space-y-3 p-4 sm:p-6">
@@ -585,7 +585,7 @@ export const ProjectDashboard = () => {
                             ) : null}
                         </div>
                         {taskCompletionSummary.completedWithoutActualTimestamp > 0 ? (
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
                                 {taskCompletionSummary.completedWithoutActualTimestamp} completed task(s) are still missing `completed_at`.
                             </div>
                         ) : null}

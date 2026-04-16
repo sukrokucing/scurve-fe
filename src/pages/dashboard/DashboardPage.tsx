@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Activity, CheckCircle2, Clock, FolderKanban, ShieldCheck } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 import { useAllTasks } from "@/api/queries/tasks";
 import {
@@ -11,7 +10,6 @@ import {
 } from "@/api/queries/projects";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function truncateLabel(value: string, maxLength = 16) {
@@ -58,19 +56,6 @@ export function DashboardPage() {
             })),
         [projectThemeById, projectsWithHealth],
     );
-    const fullNameByShortName = useMemo(
-        () => new Map(chartData.map((item) => [item.shortName, item.name])),
-        [chartData],
-    );
-    const shouldCompactXAxis = chartData.length >= 6;
-
-    const chartConfig = {
-        progress: {
-            label: "Progress",
-            color: "hsl(var(--chart-1))",
-        },
-    } satisfies ChartConfig;
-
     const governanceSummary = useMemo(() => {
         const ruleEvaluatedProjects = projectsWithHealth.filter(
             (project) => typeof project.rule_50_70_pass === "boolean",
@@ -194,45 +179,47 @@ export function DashboardPage() {
                     </CardHeader>
                     <CardContent className="overflow-hidden pl-2">
                         {chartData.length > 0 ? (
-                            <ChartContainer config={chartConfig} className="h-[320px] w-full overflow-hidden" data-testid="dashboard-project-progress-chart">
-                                <BarChart
-                                    data={chartData}
-                                    margin={{
-                                        top: 8,
-                                        right: 12,
-                                        left: 0,
-                                        bottom: shouldCompactXAxis ? 56 : 18,
-                                    }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis
-                                        dataKey="shortName"
-                                        tickLine={false}
-                                        tickMargin={8}
-                                        axisLine={false}
-                                        minTickGap={20}
-                                        interval={0}
-                                        angle={shouldCompactXAxis ? -24 : 0}
-                                        textAnchor={shouldCompactXAxis ? "end" : "middle"}
-                                        height={shouldCompactXAxis ? 64 : 32}
-                                    />
-                                    <YAxis
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(value) => `${value}%`}
-                                    />
-                                    <ChartTooltip
-                                        content={(
-                                            <ChartTooltipContent
-                                                labelFormatter={(label) =>
-                                                    fullNameByShortName.get(String(label)) ?? String(label)
-                                                }
-                                            />
-                                        )}
-                                    />
-                                    <Bar dataKey="progress" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ChartContainer>
+                            <div
+                                className="h-[320px] overflow-y-auto pr-3"
+                                data-testid="dashboard-project-progress-chart"
+                            >
+                                <div className="space-y-3">
+                                    {chartData.map((project) => (
+                                        <div
+                                            key={project.name}
+                                            className="grid gap-1.5 rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p
+                                                        className="truncate text-sm font-medium text-foreground"
+                                                        title={project.name}
+                                                    >
+                                                        {project.name}
+                                                    </p>
+                                                    <p className="text-[11px] text-muted-foreground">Actual progress</p>
+                                                </div>
+                                                <p className="shrink-0 text-sm font-semibold text-foreground">
+                                                    {project.progress.toFixed(0)}%
+                                                </p>
+                                            </div>
+                                            <div
+                                                className="h-2.5 overflow-hidden rounded-full bg-muted"
+                                                aria-label={`${project.name} actual progress ${project.progress.toFixed(0)} percent`}
+                                                role="img"
+                                            >
+                                                <div
+                                                    className="h-full rounded-full transition-[width] duration-300 ease-out"
+                                                    style={{
+                                                        width: `${project.progress}%`,
+                                                        backgroundColor: project.fill,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         ) : (
                             <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                                 Project progress data will appear here once portfolio summary values are available.

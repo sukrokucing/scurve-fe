@@ -54,8 +54,8 @@ test.describe("menu hierarchy", () => {
         if (await actionToggles.count()) {
             await expect(actionToggles.first()).toBeVisible();
             await actionToggles.first().click();
-            await expect(page.getByTestId("projects-row-settings-link")).toBeVisible();
-            await expect(page.getByTestId("projects-row-dashboard-link")).toBeVisible();
+            await expect(page.getByRole("menuitem", { name: "Project Settings" })).toBeVisible();
+            await expect(page.getByRole("menuitem", { name: "Dashboard" })).toBeVisible();
         }
     });
 
@@ -72,7 +72,7 @@ test.describe("menu hierarchy", () => {
         await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible({ timeout: 15_000 });
         await expect(page.getByTestId("tasks-page-context-card")).toBeVisible();
         await expect(page.getByTestId("tasks-page-primary-actions-card")).toBeVisible();
-        await expect(page.getByTestId("tasks-secondary-insights-card")).toBeVisible();
+        await expect(page.getByTestId("tasks-secondary-insights-card")).toBeHidden();
         await expect(page.getByTestId("tasks-team-summary")).toBeVisible();
         await expect(page.getByTestId("tasks-search-input")).toBeVisible();
         await expect(page.getByTestId("tasks-new-button")).toBeVisible();

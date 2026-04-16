@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,13 +16,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 import { useAuth } from "./useAuth";
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
+import { loginSchema, type LoginValues } from "@/schemas/auth";
 
 export function LoginForm() {
   const navigate = useNavigate();

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
     rbacApi,
@@ -16,6 +17,7 @@ export type RoleWithPermissions = {
 };
 
 const RBAC_QUERY_KEY = ["rbac"] as const;
+const RBAC_STALE_TIME_MS = 5 * 60 * 1000;
 
 export const rbacKeys = {
     all: RBAC_QUERY_KEY,
@@ -34,6 +36,7 @@ export function useRolesQuery(options?: { enabled?: boolean }) {
         queryKey: rbacKeys.roles,
         queryFn: rbacApi.listRoles,
         enabled: options?.enabled ?? true,
+        staleTime: RBAC_STALE_TIME_MS,
     });
 }
 
@@ -42,18 +45,28 @@ export function usePermissionsQuery(options?: { enabled?: boolean }) {
         queryKey: rbacKeys.permissions,
         queryFn: rbacApi.listPermissions,
         enabled: options?.enabled ?? true,
+        staleTime: RBAC_STALE_TIME_MS,
     });
 }
 
 export function useRolesWithPermissionsQuery(options?: { enabled?: boolean }) {
+    const queryClient = useQueryClient();
     return useQuery<RoleWithPermissions[]>({
         queryKey: rbacKeys.rolesWithPermissions,
         queryFn: async () => {
-            const roles = await rbacApi.listRoles();
+            const roles = await queryClient.ensureQueryData<Role[]>({
+                queryKey: rbacKeys.roles,
+                queryFn: rbacApi.listRoles,
+                staleTime: RBAC_STALE_TIME_MS,
+            });
             const enriched = await Promise.all(
                 roles.map(async (role) => {
                     try {
-                        const permissions = await rbacApi.getRolePermissions(role.id);
+                        const permissions = await queryClient.ensureQueryData<Permission[]>({
+                            queryKey: rbacKeys.rolePermissions(role.id),
+                            queryFn: () => rbacApi.getRolePermissions(role.id),
+                            staleTime: RBAC_STALE_TIME_MS,
+                        });
                         return { role, permissions };
                     } catch (error) {
                         console.warn(`Failed to fetch permissions for role ${role.id}`, error);
@@ -64,6 +77,7 @@ export function useRolesWithPermissionsQuery(options?: { enabled?: boolean }) {
             return enriched;
         },
         enabled: options?.enabled ?? true,
+        staleTime: RBAC_STALE_TIME_MS,
     });
 }
 
@@ -72,7 +86,41 @@ export function useRolePermissionsQuery(roleId?: string, options?: { enabled?: b
         queryKey: rbacKeys.rolePermissions(roleId ?? ""),
         queryFn: () => (roleId ? rbacApi.getRolePermissions(roleId) : Promise.resolve([])),
         enabled: Boolean(roleId) && (options?.enabled ?? true),
+        staleTime: RBAC_STALE_TIME_MS,
     });
+}
+
+export function useRolePermissionsMapQueries(roleIds: string[], options?: { enabled?: boolean }) {
+    const normalizedRoleIds = useMemo(
+        () => Array.from(new Set(roleIds.filter(Boolean))),
+        [roleIds],
+    );
+    const queryResults = useQueries({
+        queries: normalizedRoleIds.map((roleId) => ({
+            queryKey: rbacKeys.rolePermissions(roleId),
+            queryFn: () => rbacApi.getRolePermissions(roleId),
+            enabled: (options?.enabled ?? true) && normalizedRoleIds.length > 0,
+            staleTime: RBAC_STALE_TIME_MS,
+        })),
+    });
+
+    const permissionsByRoleId = useMemo(() => (
+        normalizedRoleIds.reduce<Record<string, Permission[]>>((accumulator, roleId, index) => {
+            accumulator[roleId] = queryResults[index]?.data ?? [];
+            return accumulator;
+        }, {})
+    ), [normalizedRoleIds, queryResults]);
+
+    const isLoading = (options?.enabled ?? true)
+        && normalizedRoleIds.length > 0
+        && queryResults.some((result) => result.isLoading);
+    const isFetching = queryResults.some((result) => result.isFetching);
+
+    return {
+        permissionsByRoleId,
+        isLoading,
+        isFetching,
+    };
 }
 
 export function useUserRolesQuery(userId?: string, options?: { enabled?: boolean }) {

@@ -126,6 +126,62 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
             created_at: "2026-01-02T00:00:00Z",
             updated_at: "2026-01-02T00:00:00Z",
         },
+        {
+            id: "user-3",
+            name: "Morgan Planner",
+            email: "morgan.planner@example.com",
+            provider: "local",
+            created_at: "2026-01-03T00:00:00Z",
+            updated_at: "2026-01-03T00:00:00Z",
+        },
+        {
+            id: "user-4",
+            name: "Taylor Architect",
+            email: "taylor.architect@example.com",
+            provider: "local",
+            created_at: "2026-01-04T00:00:00Z",
+            updated_at: "2026-01-04T00:00:00Z",
+        },
+        {
+            id: "user-5",
+            name: "Jordan Developer",
+            email: "jordan.developer@example.com",
+            provider: "local",
+            created_at: "2026-01-05T00:00:00Z",
+            updated_at: "2026-01-05T00:00:00Z",
+        },
+        {
+            id: "user-6",
+            name: "Casey Reviewer",
+            email: "casey.reviewer@example.com",
+            provider: "local",
+            created_at: "2026-01-06T00:00:00Z",
+            updated_at: "2026-01-06T00:00:00Z",
+        },
+        {
+            id: "user-7",
+            name: "Riley Tester",
+            email: "riley.tester@example.com",
+            provider: "local",
+            created_at: "2026-01-07T00:00:00Z",
+            updated_at: "2026-01-07T00:00:00Z",
+        },
+        {
+            id: "user-8",
+            name: "Sky Support",
+            email: "sky.support@example.com",
+            provider: "local",
+            created_at: "2026-01-08T00:00:00Z",
+            updated_at: "2026-01-08T00:00:00Z",
+        },
+        {
+            id: "user-9",
+            name: "Blake Operator",
+            email: "blake.operator@example.com",
+            provider: "local",
+            created_at: "2026-01-09T00:00:00Z",
+            updated_at: "2026-01-09T00:00:00Z",
+        },
     ];
     const accessRoles = [
         {
@@ -139,6 +195,62 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
             id: "role-analyst",
             name: "system_analyst",
             description: "System analysts",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-project-owner",
+            name: "project_owner",
+            description: "Project owners",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-project-manager",
+            name: "project_manager",
+            description: "Project managers",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-backend",
+            name: "backend_developer",
+            description: "Backend developers",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-frontend",
+            name: "frontend_developer",
+            description: "Frontend developers",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-fullstack",
+            name: "fullstack_developer",
+            description: "Fullstack developers",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-data-analyst",
+            name: "data_analyst",
+            description: "Data analysts",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-member",
+            name: "member",
+            description: "Workspace members",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "role-viewer",
+            name: "viewer",
+            description: "Read-only viewers",
             created_at: "2026-01-01T00:00:00Z",
             updated_at: "2026-01-01T00:00:00Z",
         },
@@ -166,10 +278,94 @@ async function installSearchContractMocks(page: Page): Promise<SearchContractCap
             created_at: "2026-01-01T00:00:00Z",
             updated_at: "2026-01-01T00:00:00Z",
         },
+        {
+            id: "perm-task-update",
+            name: "task.update",
+            description: "Update tasks",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-member-create",
+            name: "member.create",
+            description: "Add project members",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-member-delete",
+            name: "member.delete",
+            description: "Remove project members",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-resource-role-manage",
+            name: "resource_role.manage",
+            description: "Manage project resource roles",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-work-log-create",
+            name: "work_log.create",
+            description: "Create work logs",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-work-log-update",
+            name: "work_log.update",
+            description: "Update work logs",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-dashboard-view",
+            name: "dashboard.view",
+            description: "View dashboards",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-permission-manage",
+            name: "permission.manage",
+            description: "Manage permissions",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
+        {
+            id: "perm-role-view",
+            name: "role.view",
+            description: "View roles",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+        },
     ];
     let rolePermissionsById: Record<string, typeof permissionsCatalog> = {
-        "role-admin": [permissionsCatalog[0], permissionsCatalog[1]],
+        "role-admin": [
+            permissionsCatalog[0],
+            permissionsCatalog[1],
+            permissionsCatalog[2],
+            permissionsCatalog[3],
+            permissionsCatalog[4],
+            permissionsCatalog[5],
+            permissionsCatalog[6],
+            permissionsCatalog[7],
+            permissionsCatalog[8],
+            permissionsCatalog[9],
+            permissionsCatalog[10],
+            permissionsCatalog[11],
+        ],
         "role-analyst": [permissionsCatalog[2]],
+        "role-project-owner": [permissionsCatalog[0], permissionsCatalog[1], permissionsCatalog[2], permissionsCatalog[9]],
+        "role-project-manager": [permissionsCatalog[0], permissionsCatalog[1], permissionsCatalog[2], permissionsCatalog[3], permissionsCatalog[9]],
+        "role-backend": [permissionsCatalog[2], permissionsCatalog[3], permissionsCatalog[7], permissionsCatalog[8]],
+        "role-frontend": [permissionsCatalog[2], permissionsCatalog[3]],
+        "role-fullstack": [permissionsCatalog[0], permissionsCatalog[2], permissionsCatalog[3], permissionsCatalog[7], permissionsCatalog[8]],
+        "role-data-analyst": [permissionsCatalog[0], permissionsCatalog[9]],
+        "role-member": [permissionsCatalog[2], permissionsCatalog[7]],
+        "role-viewer": [],
     };
     let userRolesByUserId: Record<string, typeof accessRoles> = {
         "user-1": [accessRoles[0]],
@@ -897,6 +1093,34 @@ test("tasks search/filter UI uses backend task query contract params", async ({ 
     });
 });
 
+test("tasks health summary segments apply backend health filters", async ({ page }) => {
+    const capture = await installSearchContractMocks(page);
+
+    await page.goto("/tasks", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("tasks-health-summary-segment-critical")).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId("tasks-health-summary-segment-critical").click();
+    await expect.poll(() => capture.taskQueries.at(-1)?.get("health_status")).toBe("critical");
+    await expect(page.getByTestId("tasks-health-summary-clear-button")).toBeVisible();
+
+    await page.getByTestId("tasks-health-summary-clear-button").click();
+    await expect(page.getByTestId("tasks-health-summary-clear-button")).toBeHidden();
+
+    await page.getByTestId("tasks-search-input").fill("critical reset");
+    await expect.poll(() => {
+        const latest = capture.taskQueries.at(-1);
+        return latest
+            ? {
+                health_status: latest.get("health_status"),
+                q: latest.get("q"),
+            }
+            : null;
+    }).toEqual({
+        health_status: null,
+        q: "critical reset",
+    });
+});
+
 test("users search UI uses `q` backend query param", async ({ page }) => {
     const capture = await installSearchContractMocks(page);
 
@@ -926,38 +1150,38 @@ test("projects search summary exposes active filter state", async ({ page }) => 
 
     await page.goto("/projects", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("projects-search-input")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId("projects-filter-summary")).toContainText(
-        "Search filters project identity plus S-curve readiness signals.",
-    );
+    await expect(page.getByTestId("projects-filter-summary")).toContainText("1 project in workspace");
 
     await page.getByTestId("projects-search-input").fill("contract");
     await expect(page.getByTestId("projects-filter-summary")).toContainText("Search: contract");
-    await expect(page.getByTestId("projects-filter-summary")).toContainText("1 match(es)");
+    await expect(page.getByTestId("projects-filter-summary")).toContainText("1 visible of 1 projects");
 });
 
 test("policy filter summary exposes active matrix scope", async ({ page }) => {
     await installSearchContractMocks(page);
+    await page.setViewportSize({ width: 1600, height: 1100 });
 
     await page.goto("/settings/policy", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("rbac-role-filter-combobox")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("combobox", { name: "Filter roles" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("rbac-default-focus-banner")).toBeVisible();
+    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Role: project_owner");
+    await page.getByTestId("rbac-show-all-roles-button").click();
+    await expect(page.getByTestId("rbac-default-focus-banner")).not.toBeVisible();
     await expect(page.getByTestId("rbac-filter-summary")).toContainText(
         "All roles, resources, and permissions are visible.",
     );
+});
 
-    await page.getByTestId("rbac-role-filter-combobox").click();
-    await page.getByRole("option", { name: "project_admin" }).click();
-    await page.getByTestId("rbac-resource-filter-combobox").click();
-    await page.getByRole("option", { name: "project" }).click();
-    await page.getByTestId("rbac-permission-search-input").fill("update");
-    await page.getByTestId("rbac-assigned-only-toggle").focus();
-    await page.getByTestId("rbac-assigned-only-toggle").press("Enter");
+test("policy matrix defaults to a focused role on laptop widths", async ({ page }) => {
+    await installSearchContractMocks(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
 
-    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Role: project_admin");
-    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Resource: project");
-    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Search: update");
-    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Assigned only");
+    await page.goto("/settings/policy", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("rbac-default-focus-banner")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("rbac-filter-summary")).toContainText("Role:");
 
-    await page.getByTestId("rbac-filter-summary-reset-button").click();
+    await page.getByTestId("rbac-show-all-roles-button").click();
+    await expect(page.getByTestId("rbac-default-focus-banner")).not.toBeVisible();
     await expect(page.getByTestId("rbac-filter-summary")).toContainText(
         "All roles, resources, and permissions are visible.",
     );
@@ -965,6 +1189,7 @@ test("policy filter summary exposes active matrix scope", async ({ page }) => {
 
 test("access flow summary exposes active search and selection scope", async ({ page }) => {
     const capture = await installSearchContractMocks(page);
+    await page.setViewportSize({ width: 1600, height: 1100 });
 
     await page.goto("/settings/flow", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("access-flow-user-search-combobox")).toBeVisible({ timeout: 15_000 });
@@ -992,6 +1217,19 @@ test("access flow summary exposes active search and selection scope", async ({ p
     await expect(page.getByTestId("access-flow-filter-summary")).toContainText(
         "Search narrows users by name or email. Selecting a user or role keeps the explorer scoped until you reset it.",
     );
+});
+
+test("access flow defaults to a focused user on laptop widths", async ({ page }) => {
+    await installSearchContractMocks(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await page.goto("/settings/flow", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("access-flow-default-focus-banner")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("access-flow-selected-summary")).toContainText("User: Alex Analyst");
+
+    await page.getByTestId("access-flow-show-all-users-button").click();
+    await expect(page.getByTestId("access-flow-default-focus-banner")).not.toBeVisible();
+    await expect(page.getByTestId("access-flow-selected-summary")).toContainText("No user selected");
 });
 
 test("audit log dialog uses backend paging and filter params", async ({ page }) => {
@@ -1268,13 +1506,32 @@ test("user access flows use backend assign and revoke role contracts", async ({ 
     await expect(page.getByTestId("user-access-role-card").filter({ hasText: /project_admin/i })).toHaveCount(0);
 });
 
+test("user access defaults to a focused permission domain on laptop widths", async ({ page }) => {
+    await installSearchContractMocks(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await page.goto("/settings/users/user-1", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("User Access Management")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("user-access-permission-focus-banner")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("user-access-permissions-summary")).toContainText("Domain: project");
+    await expect(page.getByTestId("user-access-permissions-summary")).toContainText("2 visible");
+    await expect(page.getByTestId("user-access-permissions-summary")).toContainText("12 total");
+    await expect(page.getByTestId("user-access-page-permissions-section")).toContainText("project.view");
+    await expect(page.getByTestId("user-access-page-permissions-section")).toContainText("project.update");
+
+    await page.getByTestId("user-access-show-all-permissions-button").click();
+    await expect(page.getByTestId("user-access-permission-focus-banner")).toHaveCount(0);
+    await expect(page.getByTestId("user-access-permissions-summary")).toContainText("All permission domains");
+    await expect(page.getByTestId("user-access-permissions-summary")).toContainText("12 visible");
+    await expect(page.getByTestId("user-access-page-permissions-section")).toContainText("task.update");
+});
+
 test("task work-log flows use backend create, update, and delete contracts", async ({ page }) => {
     const capture = await installSearchContractMocks(page);
 
     await page.goto("/tasks", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("tasks-row-actions-trigger").first()).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("tasks-row-actions-trigger").first().click();
-    await page.getByTestId("tasks-row-edit-button").last().click();
+    await expect(page.getByRole("row", { name: /Alpha%_ task contract/i })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("row", { name: /Alpha%_ task contract/i }).dblclick();
     await expect(page.getByRole("heading", { name: "Edit task" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("tasks-work-log-section")).toBeVisible();
     await expect(page.getByTestId("tasks-work-log-row")).toHaveCount(1);

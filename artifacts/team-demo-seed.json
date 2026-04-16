@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-30T04:58:43.648Z",
+  "generated_at": "2026-03-31T02:25:23.116Z",
   "base_url": "https://localhost:8800",
   "auth_source": "env-login",
   "auth_identity": "jimmy@dwp.co.id",
@@ -13,7 +13,7 @@
     "resourceRolesCreated": 0,
     "resourceRolesUpdated": 0,
     "projectCreated": 0,
-    "membershipsChanged": 1,
+    "membershipsChanged": 0,
     "tasksCreated": 0,
     "tasksUpdated": 5,
     "permissionsAdded": 0,
@@ -127,17 +127,17 @@
       }
     ],
     "actual_schedule_counts": {
-      "not_specified": 22,
+      "not_specified": 37,
       "finished_early": 1,
       "overdue": 1,
       "on_time": 2
     },
     "task_status_counts": {
-      "total": 26,
+      "total": 41,
       "finished_early": 1,
       "overdue": 1,
       "on_time": 2,
-      "not_specified": 22
+      "not_specified": 37
     },
     "workload_distribution": [
       {
@@ -166,15 +166,15 @@
         "task_count": 1
       }
     ],
-    "overall_progress_pct": 9,
-    "assignment_coverage_pct": 19.23,
-    "due_date_coverage_pct": 15.38,
+    "overall_progress_pct": 9.13,
+    "assignment_coverage_pct": 12.2,
+    "due_date_coverage_pct": 9.76,
     "project_health": {
       "data_status": "ok",
       "metric_supported": true,
       "planned_pct": 100,
-      "actual_pct": 9,
-      "variance_pct": -91,
+      "actual_pct": 9.13,
+      "variance_pct": -90.87,
       "stage": "lag",
       "rule_50_70_status": "insufficient_elapsed_time_data",
       "rule_50_70_pass": null

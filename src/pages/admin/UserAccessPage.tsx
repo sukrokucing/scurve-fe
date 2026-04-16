@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Trash2, Plus, User as UserIcon, Loader2, Check, ShieldCheck, KeyRound, ScanSearch } from "lucide-react";
 
 import { toast } from "sonner";
@@ -57,16 +56,22 @@ import {
 } from "@/api/queries/rbac";
 import { useUsersLookupQuery } from "@/api/queries/users";
 import { useClientPagination } from "@/hooks/useClientPagination";
+import { useMedia } from "@/hooks/vendor/reactUse";
 import { rbacApi, type Role } from "@/api/rbac";
+import { assignRoleSchema, type AssignRoleValues } from "@/schemas/user-access";
 
-
-
-// --- Schema ---
-const assignRoleSchema = z.object({
-    roleId: z.string().min(1, "Please select a role"),
-});
-
-type AssignRoleValues = z.infer<typeof assignRoleSchema>;
+const ALL_PERMISSION_DOMAINS = "__all_permission_domains__";
+const LAPTOP_PERMISSION_FOCUS_THRESHOLD = 8;
+const PREFERRED_PERMISSION_DOMAIN_ORDER = [
+    "project",
+    "task",
+    "member",
+    "resource_role",
+    "work_log",
+    "role",
+    "permission",
+    "dashboard",
+] as const;
 type EffectivePermissionRow = NonNullable<Awaited<ReturnType<typeof rbacApi.getUserEffectivePermissions>>["permissions"]>[number];
 const effectivePermissionColumnHelper = createColumnHelper<EffectivePermissionRow>();
 
@@ -76,12 +81,15 @@ export const UserAccessPage = () => {
     const [assignOpen, setAssignOpen] = useState(false);
     const [revokeRole, setRevokeRole] = useState<Role | null>(null);
     const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+    const [permissionDomainFilter, setPermissionDomainFilter] = useState(ALL_PERMISSION_DOMAINS);
+    const [permissionFocusDismissed, setPermissionFocusDismissed] = useState(false);
+    const [autoFocusedPermissionDomain, setAutoFocusedPermissionDomain] = useState<string | null>(null);
+    const isLaptopViewport = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
 
     // --- Queries ---
     const { data: userRoles, isLoading: loadingRoles } = useUserRolesQuery(safeUserId, { enabled: Boolean(userId) });
 
     const { data: effectivePerms, isLoading: loadingPerms } = useUserEffectivePermissionsQuery(safeUserId, { enabled: Boolean(userId) });
-    const permissionsPagination = useClientPagination(effectivePerms?.permissions ?? [], { initialPageSize: 20 });
 
     const { data: allRoles } = useRolesQuery({ enabled: Boolean(userId) });
     const { data: usersLookup } = useUsersLookupQuery({ enabled: Boolean(userId) });
@@ -89,6 +97,69 @@ export const UserAccessPage = () => {
         () => usersLookup?.users.find((user) => user.id === safeUserId),
         [safeUserId, usersLookup?.users],
     );
+    const permissionRows = useMemo(
+        () => effectivePerms?.permissions ?? [],
+        [effectivePerms?.permissions],
+    );
+    const permissionDomains = useMemo(
+        () => Array.from(new Set(
+            permissionRows.map((permission) => permission.name.split(".")[0] || "general"),
+        )).sort(),
+        [permissionRows],
+    );
+    const preferredPermissionDomain = useMemo(() => {
+        for (const preferredDomain of PREFERRED_PERMISSION_DOMAIN_ORDER) {
+            if (permissionDomains.includes(preferredDomain)) {
+                return preferredDomain;
+            }
+        }
+        return permissionDomains[0] ?? null;
+    }, [permissionDomains]);
+    const shouldAutoFocusPermissionDomain = isLaptopViewport
+        && permissionRows.length > LAPTOP_PERMISSION_FOCUS_THRESHOLD
+        && !permissionFocusDismissed
+        && permissionDomainFilter === ALL_PERMISSION_DOMAINS;
+    const filteredPermissions = useMemo(
+        () => permissionDomainFilter === ALL_PERMISSION_DOMAINS
+            ? permissionRows
+            : permissionRows.filter((permission) => (permission.name.split(".")[0] || "general") === permissionDomainFilter),
+        [permissionDomainFilter, permissionRows],
+    );
+    const permissionsPagination = useClientPagination(filteredPermissions, { initialPageSize: 20 });
+    const permissionDomainOptions = useMemo(
+        () => [
+            { value: ALL_PERMISSION_DOMAINS, label: "All permission domains" },
+            ...permissionDomains.map((domain) => ({
+                value: domain,
+                label: domain.replace(/_/g, " "),
+            })),
+        ],
+        [permissionDomains],
+    );
+    const isAutoFocusedPermissionDomain = Boolean(
+        permissionDomainFilter !== ALL_PERMISSION_DOMAINS
+        && autoFocusedPermissionDomain === permissionDomainFilter,
+    );
+    const activePermissionDomainLabel = permissionDomainFilter === ALL_PERMISSION_DOMAINS
+        ? "All permission domains"
+        : `Domain: ${permissionDomainFilter}`;
+
+    useEffect(() => {
+        if (!shouldAutoFocusPermissionDomain || !preferredPermissionDomain) return;
+        setPermissionDomainFilter(preferredPermissionDomain);
+        setAutoFocusedPermissionDomain(preferredPermissionDomain);
+    }, [preferredPermissionDomain, shouldAutoFocusPermissionDomain]);
+
+    const handlePermissionDomainChange = useCallback((value: string) => {
+        setPermissionDomainFilter(value || ALL_PERMISSION_DOMAINS);
+        setPermissionFocusDismissed(true);
+        setAutoFocusedPermissionDomain(null);
+    }, []);
+    const handleShowAllPermissions = useCallback(() => {
+        setPermissionDomainFilter(ALL_PERMISSION_DOMAINS);
+        setPermissionFocusDismissed(true);
+        setAutoFocusedPermissionDomain(null);
+    }, []);
 
     // --- Mutations ---
     const assignRoleMutation = useAssignRoleToUserMutation(safeUserId);
@@ -356,7 +427,50 @@ export const UserAccessPage = () => {
                             Computed permissions from all roles and direct grants. Use this to verify final access outcome.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="space-y-1">
+                                <div className="max-w-xs">
+                                    <p className="text-xs font-medium text-muted-foreground">Permission domain</p>
+                                    <Combobox
+                                        options={permissionDomainOptions}
+                                        value={permissionDomainFilter}
+                                        onChange={handlePermissionDomainChange}
+                                        placeholder="All permission domains"
+                                        searchPlaceholder="Search permission domains..."
+                                        triggerTestId="user-access-permission-domain-filter-combobox"
+                                    />
+                                </div>
+                            </div>
+                            <div
+                                className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                                data-testid="user-access-permissions-summary"
+                            >
+                                <Badge variant="outline">{activePermissionDomainLabel}</Badge>
+                                <Badge variant="outline">{filteredPermissions.length} visible</Badge>
+                                <Badge variant="outline">{permissionRows.length} total</Badge>
+                            </div>
+                        </div>
+                        {isAutoFocusedPermissionDomain ? (
+                            <div
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
+                                data-testid="user-access-permission-focus-banner"
+                            >
+                                <div>
+                                    Focused on <span className="font-medium text-foreground">{permissionDomainFilter}</span> permissions by default for a calmer laptop view.
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={handleShowAllPermissions}
+                                    data-testid="user-access-show-all-permissions-button"
+                                >
+                                    Show all permissions
+                                </Button>
+                            </div>
+                        ) : null}
                         <div className="rounded-md border">
                             <AppDataTable
                                 data={permissionsPagination.pageItems}

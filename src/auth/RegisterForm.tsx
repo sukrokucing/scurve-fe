@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,20 +16,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 import { useAuth } from "./useAuth";
-
-const registerSchema = z
-  .object({
-    name: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(8),
-    confirmPassword: z.string().min(8),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    message: "Passwords must match",
-    path: ["confirmPassword"],
-  });
-
-type RegisterValues = z.infer<typeof registerSchema>;
+import { registerSchema, type RegisterValues } from "@/schemas/auth";
 
 export function RegisterForm() {
   const navigate = useNavigate();

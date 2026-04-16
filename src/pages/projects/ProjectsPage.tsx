@@ -558,6 +558,7 @@ export function ProjectsPage() {
                                                     <FormControl>
                                                         <Input
                                                             {...field}
+                                                            autoComplete="off"
                                                             data-testid="projects-create-name-input"
                                                             className={
                                                                 createForm.formState.errors.name
@@ -584,6 +585,7 @@ export function ProjectsPage() {
                                                     <FormControl>
                                                         <Input
                                                             {...field}
+                                                            autoComplete="off"
                                                             data-testid="projects-create-description-input"
                                                             className={
                                                                 createForm.formState.errors.description
@@ -707,6 +709,7 @@ export function ProjectsPage() {
                                                     <FormControl>
                                                         <Input
                                                             {...field}
+                                                            autoComplete="off"
                                                             className={
                                                                 editForm.formState.errors.name
                                                                     ? "border-2 border-destructive bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-0"
@@ -727,6 +730,7 @@ export function ProjectsPage() {
                                                     <FormControl>
                                                         <Input
                                                             {...field}
+                                                            autoComplete="off"
                                                             data-testid="projects-edit-description-input"
                                                             className={
                                                                 editForm.formState.errors.description
@@ -778,9 +782,11 @@ export function ProjectsPage() {
                                 </label>
                                 <Input
                                     id="projects-search-input"
+                                    name="projectSearch"
                                     value={projectQuery}
                                     onChange={(event) => setProjectQuery(event.target.value)}
                                     placeholder="Search by name, description, stage, or data status…"
+                                    autoComplete="off"
                                     className="sm:max-w-xl"
                                     data-testid="projects-search-input"
                                     aria-label="Search projects"

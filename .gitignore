@@ -21,6 +21,9 @@ artifacts/ui-audit/screenshots/**/*.png
 artifacts/perf-upgrade/
 artifacts/perf-probes/metrics.json
 artifacts/demo-persona-seed.json
+artifacts/perf-upgrade-devserver.pid
+artifacts/tailwind-debug.css
+artifacts/dev-server.*.log
 
 # Editor directories and files
 .vscode/*
@@ -32,3 +35,4 @@ artifacts/demo-persona-seed.json
 *.njsproj
 *.sln
 *.sw?
+*.tmp

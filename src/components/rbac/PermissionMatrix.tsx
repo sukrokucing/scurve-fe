@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { rbacApi } from "@/api/rbac";
 import type { Permission, Role } from "@/api/rbac";
-import { rbacKeys, usePermissionsQuery, useRolesWithPermissionsQuery } from "@/api/queries/rbac";
+import { rbacKeys, usePermissionsQuery, useRolePermissionsMapQueries, useRolesQuery } from "@/api/queries/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -32,6 +32,20 @@ import { useMedia } from "@/hooks/vendor/reactUse";
 
 const ALL_ROLES = "__all_roles__";
 const ALL_RESOURCES = "__all_resources__";
+const LAPTOP_ROLE_FOCUS_THRESHOLD = 8;
+const PREFERRED_ROLE_FOCUS_ORDER = [
+    "project_owner",
+    "project_manager",
+    "system_analyst",
+    "backend_developer",
+    "frontend_developer",
+    "fullstack_developer",
+    "data_analyst",
+    "super_admin",
+    "admin",
+    "member",
+    "viewer",
+] as const;
 
 type ToggleState = { roleId: string; permId: string } | null;
 type BulkState = { roleId: string; mode: "grant" | "revoke" } | null;
@@ -54,9 +68,10 @@ export const PermissionMatrix = () => {
     const [bulkAction, setBulkAction] = useState<BulkState>(null);
     const [showQuickStart, setShowQuickStart] = useState(true);
     const isMobileViewport = useMedia("(max-width: 1023px)", false);
-    const isLaptopViewport = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
     const [showAdvancedMatrix, setShowAdvancedMatrix] = useState(false);
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 18 });
+    const [defaultFocusDismissed, setDefaultFocusDismissed] = useState(false);
+    const [autoFocusedRoleId, setAutoFocusedRoleId] = useState<string | null>(null);
     const debouncedPermissionQuery = useDebouncedValue(permissionQueryInput, 180);
     const deferredPermissionQuery = useDeferredValue(debouncedPermissionQuery);
     const normalizedPermissionQuery = useMemo(
@@ -64,21 +79,8 @@ export const PermissionMatrix = () => {
         [deferredPermissionQuery],
     );
 
-    const { data: rolesWithPermissions = [], isLoading: loadingRolesWithPermissions } = useRolesWithPermissionsQuery();
+    const { data: roles = [], isLoading: loadingRoles } = useRolesQuery();
     const { data: permissions, isLoading: loadingPerms } = usePermissionsQuery();
-
-    const roles = useMemo<Role[]>(
-        () => rolesWithPermissions.map((entry) => entry.role),
-        [rolesWithPermissions],
-    );
-
-    const rolePermissionsMap = useMemo<Record<string, Set<string>>>(() => {
-        const map: Record<string, Set<string>> = {};
-        rolesWithPermissions.forEach(({ role, permissions: rolePermissions }) => {
-            map[role.id] = new Set(rolePermissions.map((permission) => permission.id));
-        });
-        return map;
-    }, [rolesWithPermissions]);
 
     const groupedPermissions = useMemo(() => {
         if (!permissions) return {} as Record<string, Permission[]>;
@@ -124,9 +126,82 @@ export const PermissionMatrix = () => {
         return summary;
     }, [assignedOnly, normalizedPermissionQuery, permissionQueryInput, resourceFilter, roleFilter, selectedRole]);
 
+    const roleOptions = useMemo(
+        () => [
+            { value: ALL_ROLES, label: "All roles" },
+            ...(roles ?? []).map((role) => ({ value: role.id, label: role.name })),
+        ],
+        [roles],
+    );
+    const preferredFocusRole = useMemo(() => {
+        if (roles.length === 0) return null;
+
+        const normalizedRoles = [...roles].sort((a, b) => a.name.localeCompare(b.name));
+        for (const preferredName of PREFERRED_ROLE_FOCUS_ORDER) {
+            const matched = normalizedRoles.find((role) => role.name.toLowerCase() === preferredName);
+            if (matched) {
+                return matched;
+            }
+        }
+
+        return normalizedRoles[0] ?? null;
+    }, [roles]);
+
+    const resourceOptions = useMemo(
+        () => [
+            { value: ALL_RESOURCES, label: "All resources" },
+            ...Object.keys(groupedPermissions).sort().map((resource) => ({ value: resource, label: resource })),
+        ],
+        [groupedPermissions],
+    );
+    const hasManyRoles = roles.length > LAPTOP_ROLE_FOCUS_THRESHOLD;
+    const shouldAutoFocusRole = useMemo(
+        () => (
+            !isMobileViewport
+            && hasManyRoles
+            && !defaultFocusDismissed
+            && roleFilter === ALL_ROLES
+            && resourceFilter === ALL_RESOURCES
+            && normalizedPermissionQuery.length === 0
+            && !assignedOnly
+            && !editMode
+        ),
+        [
+            assignedOnly,
+            defaultFocusDismissed,
+            editMode,
+            hasManyRoles,
+            isMobileViewport,
+            normalizedPermissionQuery.length,
+            resourceFilter,
+            roleFilter,
+        ],
+    );
+    const isAutoFocusedRole = Boolean(selectedRole && autoFocusedRoleId === selectedRole.id);
+    const visibleRoles = useMemo<Role[]>(() => {
+        if (shouldAutoFocusRole && preferredFocusRole) {
+            return [preferredFocusRole];
+        }
+        return filteredRoles;
+    }, [filteredRoles, preferredFocusRole, shouldAutoFocusRole]);
+    const canHydrateVisibleRolePermissions = Boolean(permissions) && visibleRoles.length > 0;
+    const {
+        permissionsByRoleId,
+        isLoading: loadingVisibleRolePermissions,
+    } = useRolePermissionsMapQueries(
+        visibleRoles.map((role) => role.id),
+        { enabled: canHydrateVisibleRolePermissions },
+    );
+    const rolePermissionsMap = useMemo<Record<string, Set<string>>>(() => {
+        const map: Record<string, Set<string>> = {};
+        Object.entries(permissionsByRoleId).forEach(([roleId, rolePermissions]) => {
+            map[roleId] = new Set(rolePermissions.map((permission) => permission.id));
+        });
+        return map;
+    }, [permissionsByRoleId]);
     const filteredGroupedPermissions = useMemo(() => {
         const next: Record<string, Permission[]> = {};
-        const roleIds = filteredRoles.map((role) => role.id);
+        const roleIds = visibleRoles.map((role) => role.id);
 
         Object.entries(groupedPermissions).forEach(([resource, perms]) => {
             if (resourceFilter !== ALL_RESOURCES && resource !== resourceFilter) {
@@ -151,7 +226,7 @@ export const PermissionMatrix = () => {
         });
 
         return next;
-    }, [assignedOnly, filteredRoles, groupedPermissions, normalizedPermissionQuery, resourceFilter, rolePermissionsMap]);
+    }, [assignedOnly, groupedPermissions, normalizedPermissionQuery, resourceFilter, rolePermissionsMap, visibleRoles]);
 
     const visibleResources = useMemo(
         () => Object.keys(filteredGroupedPermissions).sort(),
@@ -181,23 +256,6 @@ export const PermissionMatrix = () => {
         });
         return rows;
     }, [filteredGroupedPermissions, visibleResources]);
-
-    const roleOptions = useMemo(
-        () => [
-            { value: ALL_ROLES, label: "All roles" },
-            ...(roles ?? []).map((role) => ({ value: role.id, label: role.name })),
-        ],
-        [roles],
-    );
-
-    const resourceOptions = useMemo(
-        () => [
-            { value: ALL_RESOURCES, label: "All resources" },
-            ...Object.keys(groupedPermissions).sort().map((resource) => ({ value: resource, label: resource })),
-        ],
-        [groupedPermissions],
-    );
-    const canFocusFirstRole = roleFilter === ALL_ROLES && roles.length > 0;
 
     const assignMutation = useMutation({
         mutationFn: async ({ roleId, permId }: { roleId: string; permId: string }) => {
@@ -263,7 +321,7 @@ export const PermissionMatrix = () => {
     });
 
     const canMutate = editMode;
-    const isLoading = loadingRolesWithPermissions || loadingPerms;
+    const isLoading = loadingRoles || loadingPerms || loadingVisibleRolePermissions;
 
     const totalVisiblePermissions = visiblePermissionIds.length;
     const totalVisibleCells = filteredRoles.length * totalVisiblePermissions;
@@ -281,16 +339,25 @@ export const PermissionMatrix = () => {
     }, [editMode, isMobileViewport]);
 
     useEffect(() => {
-        if (isMobileViewport || isLaptopViewport || filteredRoles.length > 8) {
+        if (isMobileViewport || filteredRoles.length > 8) {
             setShowQuickStart(false);
         }
-    }, [filteredRoles.length, isLaptopViewport, isMobileViewport]);
+    }, [filteredRoles.length, isMobileViewport]);
+
+    useEffect(() => {
+        if (!shouldAutoFocusRole || !preferredFocusRole) {
+            return;
+        }
+
+        setRoleFilter(preferredFocusRole.id);
+        setAutoFocusedRoleId(preferredFocusRole.id);
+    }, [preferredFocusRole, shouldAutoFocusRole]);
 
     useEffect(() => {
         setPagination((current) => ({ ...current, pageIndex: 0 }));
     }, [assignedOnly, normalizedPermissionQuery, resourceFilter, roleFilter]);
 
-    const summaryRole = filteredRoles.length === 1 ? filteredRoles[0] : null;
+    const summaryRole = visibleRoles.length === 1 ? visibleRoles[0] : null;
     const resourceSummaries = useMemo(() => {
         const assignedSet = summaryRole ? rolePermissionsMap?.[summaryRole.id] : undefined;
         return visibleResources.map((resource) => {
@@ -332,10 +399,22 @@ export const PermissionMatrix = () => {
         setBulkAction({ roleId, mode });
         bulkMutation.mutate({ roleId, permissionIds: visiblePermissionIds, mode });
     }, [allowGrant, allowRevoke, bulkMutation, editMode, visiblePermissionIds]);
-    const handleFocusFirstRole = useCallback(() => {
-        if (roles.length === 0) return;
-        setRoleFilter(roles[0].id);
-    }, [roles]);
+    const handleRoleFilterChange = useCallback((value: string) => {
+        setRoleFilter(value);
+        setAutoFocusedRoleId(null);
+        setDefaultFocusDismissed(true);
+    }, []);
+    const handleFocusPreferredRole = useCallback(() => {
+        if (!preferredFocusRole) return;
+        setRoleFilter(preferredFocusRole.id);
+        setAutoFocusedRoleId(null);
+        setDefaultFocusDismissed(true);
+    }, [preferredFocusRole]);
+    const handleShowAllRoles = useCallback(() => {
+        setRoleFilter(ALL_ROLES);
+        setAutoFocusedRoleId(null);
+        setDefaultFocusDismissed(true);
+    }, []);
     const handleResetFilters = useCallback(() => {
         setRoleFilter(ALL_ROLES);
         setResourceFilter(ALL_RESOURCES);
@@ -344,6 +423,8 @@ export const PermissionMatrix = () => {
         setEditMode(false);
         setAllowGrant(true);
         setAllowRevoke(true);
+        setAutoFocusedRoleId(null);
+        setDefaultFocusDismissed(false);
     }, []);
 
     const matrixColumns = useMemo<ColumnDef<MatrixRow, unknown>[]>(() => ([
@@ -378,7 +459,7 @@ export const PermissionMatrix = () => {
                 );
             },
         }),
-        ...filteredRoles.map((role) => matrixColumnHelper.display({
+        ...visibleRoles.map((role) => matrixColumnHelper.display({
             id: `role-${role.id}`,
             header: () => {
                 const roleBusy = bulkAction?.roleId === role.id && bulkMutation.isPending;
@@ -491,7 +572,7 @@ export const PermissionMatrix = () => {
         bulkMutation.isPending,
         canToggleCell,
         editMode,
-        filteredRoles,
+        visibleRoles,
         handleBulkForRole,
         handleToggle,
         rolePermissionsMap,
@@ -533,7 +614,7 @@ export const PermissionMatrix = () => {
                         <Badge variant={editMode ? "secondary" : "outline"}>
                             {editMode ? "Edit mode" : "Review mode"}
                         </Badge>
-                        <Badge variant="outline">{filteredRoles.length} role(s)</Badge>
+                        <Badge variant="outline">{visibleRoles.length} role(s)</Badge>
                         <Badge variant="outline">{visibleResources.length} resource(s)</Badge>
                         <Badge variant="outline">{totalVisiblePermissions} permission(s)</Badge>
                         <Badge variant="outline">{totalVisibleCells} cell(s)</Badge>
@@ -547,7 +628,7 @@ export const PermissionMatrix = () => {
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[170px_190px_minmax(0,1fr)_auto]">
                             <Combobox
                                 value={roleFilter}
-                                onChange={setRoleFilter}
+                                onChange={handleRoleFilterChange}
                                 options={roleOptions}
                                 className="w-full"
                                 placeholder="All roles"
@@ -566,9 +647,12 @@ export const PermissionMatrix = () => {
                                 triggerTestId="rbac-resource-filter-combobox"
                             />
                             <Input
+                                id="rbac-permission-search-input"
+                                name="permissionSearch"
                                 value={permissionQueryInput}
                                 onChange={(event) => setPermissionQueryInput(event.target.value)}
                                 placeholder="Search permissions..."
+                                aria-label="Search permissions"
                                 className="h-11 w-full"
                                 data-testid="rbac-permission-search-input"
                             />
@@ -656,6 +740,28 @@ export const PermissionMatrix = () => {
                     )}
                 </div>
             </div>
+            {isAutoFocusedRole ? (
+                <div
+                    className="border-b bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
+                    data-testid="rbac-default-focus-banner"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            Focused on <span className="font-medium text-foreground">{selectedRole?.name}</span> by default for a calmer view.
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={handleShowAllRoles}
+                            data-testid="rbac-show-all-roles-button"
+                        >
+                            Show all roles
+                        </Button>
+                    </div>
+                </div>
+            ) : null}
             {showQuickStart ? (
                 <div className="border-b bg-background px-3 py-2.5 text-xs text-muted-foreground" data-testid="rbac-quick-start-panel">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -665,8 +771,8 @@ export const PermissionMatrix = () => {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={handleFocusFirstRole}
-                                disabled={!canFocusFirstRole}
+                                onClick={handleFocusPreferredRole}
+                                disabled={roles.length === 0}
                                 data-testid="rbac-focus-first-role-button"
                             >
                                 Focus first role
@@ -812,7 +918,7 @@ export const PermissionMatrix = () => {
                             <TableBody>
                                 {visibleResources.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={filteredRoles.length + 1} className="h-20 text-center text-muted-foreground">
+                                        <TableCell colSpan={visibleRoles.length + 1} className="h-20 text-center text-muted-foreground">
                                             No permissions match the current granular filters.
                                         </TableCell>
                                     </TableRow>
@@ -821,7 +927,7 @@ export const PermissionMatrix = () => {
                                         if (row.original.kind === "resource") {
                                             return (
                                                 <TableRow key={row.id} className="bg-muted/20 hover:bg-muted/30">
-                                                    <TableCell colSpan={filteredRoles.length + 1} className="sticky left-0 z-10 bg-muted/20 px-4 py-2 font-semibold text-primary">
+                                                    <TableCell colSpan={visibleRoles.length + 1} className="sticky left-0 z-10 bg-muted/20 px-4 py-2 font-semibold text-primary">
                                                         <div className="flex items-center justify-between gap-2">
                                                             <span className="capitalize">{row.original.resource}</span>
                                                             <span className="text-xs font-normal text-muted-foreground">

@@ -84,6 +84,7 @@ import { GanttView } from "@/components/gantt/GanttView";
 import type { GanttTask } from "@/components/gantt/types";
 import { KanbanProvider, KanbanBoard, KanbanHeader, KanbanCards, KanbanCard } from "@/components/kanban/board";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, List, Kanban, CalendarRange, ListTodo, SlidersHorizontal, MoreHorizontal, PencilLine, Plus, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -299,18 +300,42 @@ function getCompactTaskStatusLabel(status: Task["executionStatus"] | Task["statu
 function getTaskListWidthClass(columnId: string, isLaptopDensity = false) {
     switch (columnId) {
         case "selection":
-            return "w-[72px]";
+            return "w-[52px]";
         case "name":
-            return isLaptopDensity ? "w-[46%] min-w-[300px]" : "w-[43%] min-w-[340px]";
+            return isLaptopDensity ? "w-[52%] min-w-[340px]" : "w-[49%] min-w-[380px]";
         case "progress":
-            return isLaptopDensity ? "w-[22%] min-w-[168px]" : "w-[27%] min-w-[220px]";
+            return isLaptopDensity ? "w-[22%] min-w-[164px]" : "w-[26%] min-w-[210px]";
         case "timeline":
-            return isLaptopDensity ? "w-[16%] min-w-[132px]" : "w-[18%] min-w-[150px]";
+            return isLaptopDensity ? "w-[18%] min-w-[128px]" : "w-[19%] min-w-[144px]";
         case "actions":
             return "w-[64px]";
         default:
             return "";
     }
+}
+
+function getTaskListHeaderContentClass(columnId: string) {
+    switch (columnId) {
+        case "selection":
+            return "inline-flex items-center";
+        case "name":
+            return "inline-flex items-center pl-0.5";
+        case "progress":
+            return "inline-flex items-center pl-1";
+        case "timeline":
+            return "inline-flex items-center pl-0.5";
+        case "actions":
+            return "inline-flex w-full items-center justify-end";
+        default:
+            return "inline-flex items-center";
+    }
+}
+
+function isGeneratedWorkLogTask(task: Pick<Task, "name" | "assigneeId" | "dueDate" | "durationDays">) {
+    return /^WorkLog Task \d+$/i.test(task.name.trim())
+        && !task.assigneeId
+        && !task.dueDate
+        && !task.durationDays;
 }
 
 function normalizeDateTimeLocalToIso(value?: string | null) {
@@ -423,6 +448,48 @@ function getTaskStatusTintClass(status: string) {
     }
 }
 
+function getKanbanColumnHeaderClass(columnId: string) {
+    switch (columnId) {
+        case "in_progress":
+            return "border-b border-sky-500/15 bg-sky-500/8";
+        case "blocked":
+            return "border-b border-rose-500/20 bg-rose-500/10";
+        case "done":
+            return "border-b border-emerald-500/15 bg-emerald-500/8";
+        case "todo":
+        default:
+            return "border-b border-slate-500/15 bg-slate-500/8";
+    }
+}
+
+function getKanbanColumnCountClass(columnId: string) {
+    switch (columnId) {
+        case "in_progress":
+            return "border-transparent bg-sky-500/12 text-sky-700 dark:text-sky-300";
+        case "blocked":
+            return "border-transparent bg-rose-500/12 text-rose-700 dark:text-rose-300";
+        case "done":
+            return "border-transparent bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
+        case "todo":
+        default:
+            return "border-transparent bg-slate-500/12 text-slate-700 dark:text-slate-300";
+    }
+}
+
+function getKanbanColumnTabClass(columnId: string) {
+    switch (columnId) {
+        case "in_progress":
+            return "border-sky-500/15 bg-sky-500/6 text-sky-900 dark:text-sky-100 data-[state=active]:border-sky-500/30 data-[state=active]:bg-sky-500/12";
+        case "blocked":
+            return "border-rose-500/20 bg-rose-500/8 text-rose-900 dark:text-rose-100 data-[state=active]:border-rose-500/35 data-[state=active]:bg-rose-500/14";
+        case "done":
+            return "border-emerald-500/15 bg-emerald-500/6 text-emerald-900 dark:text-emerald-100 data-[state=active]:border-emerald-500/30 data-[state=active]:bg-emerald-500/12";
+        case "todo":
+        default:
+            return "border-slate-500/15 bg-slate-500/6 text-slate-900 dark:text-slate-100 data-[state=active]:border-slate-500/30 data-[state=active]:bg-slate-500/12";
+    }
+}
+
 function getTaskScurveTitle(task: Task) {
     const snapshot = getTaskScurveSnapshot(task);
 
@@ -438,7 +505,7 @@ function getScheduleStatusToneClass(status?: TaskScheduleStatus) {
         case "finished_early":
             return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
         case "overdue":
-            return "border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-300";
+            return "border-amber-500/25 bg-amber-500/12 text-amber-800 dark:text-amber-300";
         case "on_time":
             return "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300";
         case "not_specified":
@@ -604,6 +671,7 @@ const TASK_SORT_OPTIONS: { value: TaskListSortOptionValue; label: string }[] = [
 ];
 const TASK_HEALTH_SUMMARY_ORDER: TaskHealthStatus[] = ["ahead", "on_track", "at_risk", "critical", "needs_plan"];
 const TASK_HEALTH_EXCEPTION_SET = new Set<TaskHealthStatus>(["critical", "at_risk", "needs_plan"]);
+const TASK_HEALTH_EXCEPTION_PRIORITY: TaskHealthStatus[] = ["critical", "at_risk", "needs_plan"];
 
 function parseTaskSortOption(value: string): { sortBy: TaskListSortField; sortDir: TaskListSortDirection } {
     const [rawSortBy, rawSortDir] = value.split(":");
@@ -656,7 +724,9 @@ export function TasksPage() {
     }, [searchParams, selectedProject, setSearchParams]);
     const [view, setView] = useState<"list" | "gantt" | "kanban">("list");
     const isTabletOrMobile = useMedia("(max-width: 1023px)", false);
+    const isCompactBoardViewport = useMedia("(max-width: 1199px)", false);
     const isLaptopDensity = useMedia("(min-width: 1024px) and (max-width: 1439px)", false);
+    const [activeKanbanColumn, setActiveKanbanColumn] = useState<string>(KANBAN_COLUMNS[0].id);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -921,7 +991,6 @@ export function TasksPage() {
         const start = (page - 1) * pageSize;
         return filteredTasks.slice(start, start + pageSize);
     }, [filteredTasks, page, pageSize, view]);
-
     const totalFilteredCount = view === "list" ? listTotalCount : filteredTasks.length;
     const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
     const hasAdvancedFilters = assigneeFilter !== "all"
@@ -998,13 +1067,13 @@ export function TasksPage() {
     );
     const healthSummaryScopeLabel = useMemo(() => {
         if (view === "list") {
-            if (pagedTasks.length === 0) return "Current page";
+            if (pagedTasks.length === 0) return "No tasks shown";
             if (totalFilteredCount > pagedTasks.length) {
-                return `Current page (${pagedTasks.length} of ${totalFilteredCount})`;
+                return `${pagedTasks.length} shown · ${totalFilteredCount} total`;
             }
-            return `Current page (${pagedTasks.length})`;
+            return `${pagedTasks.length} shown`;
         }
-        return `Filtered set (${filteredTasks.length})`;
+        return `${filteredTasks.length} matching`;
     }, [filteredTasks.length, pagedTasks.length, totalFilteredCount, view]);
     const healthSummaryItems = useMemo(() => {
         const counts = new Map<TaskHealthStatus, number>(
@@ -1027,24 +1096,24 @@ export function TasksPage() {
     );
     const visibleHealthSummaryItems = useMemo(() => {
         const availableItems = healthSummaryItems.filter((item) => item.count > 0 || item.active);
-
-        if (!isLaptopDensity) {
-            return availableItems;
-        }
-
         const exceptionItems = availableItems.filter((item) => TASK_HEALTH_EXCEPTION_SET.has(item.healthStatus));
-        const activeStableItems = availableItems.filter((item) => item.active && !TASK_HEALTH_EXCEPTION_SET.has(item.healthStatus));
 
         if (exceptionItems.length > 0) {
-            const includedStates = new Set(exceptionItems.map((item) => item.healthStatus));
-            return [
-                ...exceptionItems,
-                ...activeStableItems.filter((item) => !includedStates.has(item.healthStatus)),
-            ];
+            const prioritizedExceptionItems = TASK_HEALTH_EXCEPTION_PRIORITY
+                .map((healthStatus) => exceptionItems.find((item) => item.healthStatus === healthStatus))
+                .filter((item): item is (typeof exceptionItems)[number] => Boolean(item))
+                .slice(0, 2);
+
+            const activeItem = availableItems.find((item) => item.active);
+            const includedStates = new Set(prioritizedExceptionItems.map((item) => item.healthStatus));
+
+            return activeItem && !includedStates.has(activeItem.healthStatus)
+                ? [...prioritizedExceptionItems, activeItem]
+                : prioritizedExceptionItems;
         }
 
         return availableItems.slice(0, 2);
-    }, [healthSummaryItems, isLaptopDensity]);
+    }, [healthSummaryItems]);
     const healthSummaryTotalCount = useMemo(
         () => healthSummaryItems.reduce((total, item) => total + item.count, 0),
         [healthSummaryItems],
@@ -1058,6 +1127,11 @@ export function TasksPage() {
     const isHealthSummaryAllClear = healthSummaryExceptionCount === 0
         && healthStatusFilter === "all"
         && healthSummaryTotalCount > 0;
+    const toggleHealthSummaryFilter = useCallback((healthStatus: TaskHealthStatus) => {
+        setHealthStatusFilter((current) => (
+            current === healthStatus ? "all" : healthStatus
+        ));
+    }, []);
     const selectionScopeLabel = useMemo(() => {
         if (view === "list") {
             return selectedOnPageCount > 0 ? ` (${selectedOnPageCount} on this page)` : "";
@@ -1159,28 +1233,17 @@ export function TasksPage() {
     ]);
     const visibleTaskScopeSummary = useMemo(() => {
         const summaryParts: string[] = [];
-        summaryParts.push(`View: ${currentViewLabel}`);
-        if (view === "list") {
-            summaryParts.push(`Sort: ${activeSortLabel}`);
-        }
         if (statusFilter !== "all") {
             summaryParts.push(`Status: ${getTaskStatusLabel(statusFilter as TaskStatus)}`);
         }
-        if (scheduleStatusFilter !== "all") {
-            summaryParts.push(`Schedule: ${activeScheduleFilterLabel}`);
-        }
-        if (healthStatusFilter !== "all") {
-            summaryParts.push(`Health: ${activeHealthFilterLabel}`);
+        if (view === "list" && sortOption !== "updated_at:desc") {
+            summaryParts.push(`Sort: ${activeSortLabel}`);
         }
         return summaryParts;
     }, [
-        activeHealthFilterLabel,
-        activeScheduleFilterLabel,
         activeSortLabel,
-        currentViewLabel,
-        healthStatusFilter,
-        scheduleStatusFilter,
         statusFilter,
+        sortOption,
         view,
     ]);
     const allowedResourceRoleIds = useMemo(() => {
@@ -1228,7 +1291,6 @@ export function TasksPage() {
         });
         return counts;
     }, [filteredTasks]);
-
     // List view table scroll container (desktop).
 
     useEffect(() => {
@@ -1268,6 +1330,18 @@ export function TasksPage() {
         resetBulkDraft();
         setIsSelectionActionsOpen(false);
     }, [resetBulkDraft, selectedProject, view]);
+
+    useEffect(() => {
+        if (view !== "kanban" || !isCompactBoardViewport) return;
+
+        const activeCount = kanbanCountByStatus.get(activeKanbanColumn) ?? 0;
+        if (activeCount > 0) return;
+
+        const firstColumnWithTasks = KANBAN_COLUMNS.find((column) => (kanbanCountByStatus.get(column.id) ?? 0) > 0);
+        if (firstColumnWithTasks) {
+            setActiveKanbanColumn(firstColumnWithTasks.id);
+        }
+    }, [activeKanbanColumn, isCompactBoardViewport, kanbanCountByStatus, view]);
 
     const toggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
         setSelectedTaskIds((current) => {
@@ -2048,20 +2122,19 @@ export function TasksPage() {
             taskListColumnHelper.display({
                 id: "selection",
                 header: () => (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center">
                         <TaskSelectionCheckbox
                             checked={allPageSelected}
                             onToggle={toggleSelectAllOnPage}
                             label="Select all tasks on current page"
                             testId="tasks-select-all-page-checkbox"
                         />
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">#</span>
                     </div>
                 ),
                 cell: (info) => {
                     const task = info.row.original;
                     return (
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="flex items-center justify-center text-muted-foreground">
                             <TaskSelectionCheckbox
                                 checked={selectedTaskIdSet.has(task.id)}
                                 onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
@@ -2069,7 +2142,7 @@ export function TasksPage() {
                                 label={`Select task ${task.name}`}
                                 testId="tasks-row-select-checkbox"
                             />
-                            <span className="text-xs">{((page - 1) * pageSize) + info.row.index + 1}</span>
+                            <span className="sr-only">Row {((page - 1) * pageSize) + info.row.index + 1}</span>
                         </div>
                     );
                 },
@@ -2078,29 +2151,49 @@ export function TasksPage() {
                 header: "Task",
                 cell: (info) => {
                     const task = info.row.original;
+                    const isGeneratedLogTask = isGeneratedWorkLogTask(task);
                     const assigneeLabel = getAssigneeLabel(task.assigneeId);
                     return (
                         <div className="min-w-0">
                             <div className="flex min-w-0 items-center gap-2">
-                                <Badge
-                                    variant="outline"
+                                {isGeneratedLogTask ? (
+                                    <Badge
+                                        variant="outline"
+                                        className="shrink-0 rounded-full border-dashed px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+                                    >
+                                        Work log
+                                    </Badge>
+                                ) : (
+                                    <Badge
+                                        variant="outline"
+                                        className={cn(
+                                            "shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium",
+                                            getTaskStatusTintClass(task.executionStatus ?? task.status),
+                                        )}
+                                        title={getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                    >
+                                        {getCompactTaskStatusLabel(task.executionStatus ?? task.status)}
+                                    </Badge>
+                                )}
+                                <span
                                     className={cn(
-                                        "shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium",
-                                        getTaskStatusTintClass(task.executionStatus ?? task.status),
+                                        "min-w-0 flex-1 truncate font-medium",
+                                        isGeneratedLogTask ? "text-muted-foreground" : "text-foreground",
                                     )}
-                                    title={getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                    title={info.getValue()}
                                 >
-                                    {getCompactTaskStatusLabel(task.executionStatus ?? task.status)}
-                                </Badge>
-                                <span className="min-w-0 flex-1 truncate font-medium text-foreground" title={info.getValue()}>
                                     {info.getValue()}
                                 </span>
-                                <span className="hidden max-w-[160px] truncate text-xs text-muted-foreground xl:inline" title={assigneeLabel}>
-                                    {assigneeLabel}
-                                </span>
-                                <span className="hidden rounded-full bg-muted/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground 2xl:inline-flex">
+                                {!isGeneratedLogTask && assigneeLabel !== "—" ? (
+                                    <span className="hidden max-w-[150px] truncate text-xs text-muted-foreground xl:inline" title={assigneeLabel}>
+                                        {assigneeLabel}
+                                    </span>
+                                ) : null}
+                                {!isGeneratedLogTask ? (
+                                    <span className="hidden rounded-full bg-muted/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground 2xl:inline-flex">
                                     {task.id.slice(0, 8)}
-                                </span>
+                                    </span>
+                                ) : null}
                             </div>
                         </div>
                     );
@@ -2111,6 +2204,7 @@ export function TasksPage() {
                 header: "Progress",
                 cell: (info) => {
                     const task = info.row.original;
+                    const isGeneratedLogTask = isGeneratedWorkLogTask(task);
                     const snapshot = getTaskScurveSnapshot(task);
                     const actualValue = Math.max(0, Math.min(snapshot.actual, 100));
                     const expectedValue = snapshot.expected === null
@@ -2124,7 +2218,11 @@ export function TasksPage() {
                         >
                             <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/70">
                                 <div
-                                    className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(snapshot.health))}
+                                    className={cn(
+                                        "h-full rounded-full transition-[width]",
+                                        getTaskHealthBarClass(snapshot.health),
+                                        isGeneratedLogTask ? "opacity-35" : undefined,
+                                    )}
                                     style={{ width: `${actualValue}%` }}
                                 />
                                 {expectedValue !== null ? (
@@ -2136,7 +2234,10 @@ export function TasksPage() {
                                 ) : null}
                             </div>
                             <div className="flex shrink-0 items-center gap-1">
-                                <span className="w-10 text-right text-sm font-semibold text-foreground tabular-nums">
+                                <span className={cn(
+                                    "w-10 text-right text-sm font-semibold tabular-nums",
+                                    isGeneratedLogTask ? "text-muted-foreground" : "text-foreground",
+                                )}>
                                     {formatTaskPercent(snapshot.actual)}
                                 </span>
                                 {!isLaptopDensity && snapshot.variance !== null ? (
@@ -2164,6 +2265,7 @@ export function TasksPage() {
                 header: "Timeline",
                 cell: (info) => {
                     const task = info.row.original;
+                    const isGeneratedLogTask = isGeneratedWorkLogTask(task);
                     const dueLabel = task.dueDate
                         ? `Due ${format(new Date(task.dueDate), "MMM d")}`
                         : null;
@@ -2191,7 +2293,7 @@ export function TasksPage() {
                                 </span>
                             ) : null}
                             {!dueLabel && !planLabel && !scheduleLabel ? (
-                                <span className="text-muted-foreground/40">—</span>
+                                <span className={cn("text-muted-foreground/40", isGeneratedLogTask ? "text-muted-foreground/30" : undefined)}>—</span>
                             ) : null}
                             <span className="sr-only">
                                 {dueLabel ?? "No due date"}. {planLabel ?? "No plan"}. {scheduleLabel ?? "Not specified"}.
@@ -2293,6 +2395,7 @@ export function TasksPage() {
                             placeholder="Sort tasks"
                             searchPlaceholder="Search sort order..."
                             className="w-full"
+                            triggerAriaLabel="Sort tasks"
                             triggerTestId="tasks-mobile-sort-combobox"
                         />
                     </div>
@@ -2305,6 +2408,7 @@ export function TasksPage() {
                             placeholder="Health"
                             searchPlaceholder="Search health..."
                             className="w-full"
+                            triggerAriaLabel="Filter tasks by health"
                             triggerTestId="tasks-mobile-health-filter-combobox"
                         />
                     </div>
@@ -2317,6 +2421,7 @@ export function TasksPage() {
                             placeholder="Schedule status"
                             searchPlaceholder="Search schedule status..."
                             className="w-full"
+                            triggerAriaLabel="Filter tasks by schedule status"
                             triggerTestId="tasks-mobile-schedule-filter-combobox"
                         />
                     </div>
@@ -2337,6 +2442,126 @@ export function TasksPage() {
             </div>
         </div>
     ) : null;
+    const tasksHealthSummaryStrip = (
+        <div className="min-w-0 space-y-2" data-testid="tasks-health-summary-strip">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 space-y-0.5">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        Attention
+                    </p>
+                    <p
+                        className="truncate text-[11px] text-muted-foreground"
+                        data-testid="tasks-health-summary-scope"
+                        title={healthSummaryScopeLabel}
+                    >
+                        {healthSummaryScopeLabel}
+                    </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                    <Badge
+                        variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"}
+                        className={cn(
+                            "shrink-0 rounded-full",
+                            isHealthSummaryAllClear
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                : undefined,
+                        )}
+                    >
+                        {isHealthSummaryAllClear ? "All clear" : `${healthSummaryExceptionCount} attention`}
+                    </Badge>
+                    {healthStatusFilter !== "all" ? (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 rounded-full px-2 text-[11px]"
+                            onClick={() => setHealthStatusFilter("all")}
+                            data-testid="tasks-health-summary-clear-button"
+                        >
+                            Clear
+                        </Button>
+                    ) : null}
+                </div>
+            </div>
+            <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                    {healthSummaryLegendItems.map((item) => (
+                        <button
+                            key={item.healthStatus}
+                            type="button"
+                            className={cn(
+                                "h-full transition-opacity hover:opacity-85 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                                getTaskHealthBarClass(item.healthStatus),
+                                item.active ? "opacity-100" : "opacity-90",
+                            )}
+                            style={{
+                                width: `${healthSummaryTotalCount === 0 ? 0 : (item.count / healthSummaryTotalCount) * 100}%`,
+                            }}
+                            title={`${item.label}: ${item.count}`}
+                            aria-label={`Filter ${item.label} tasks (${item.count})`}
+                            onClick={() => toggleHealthSummaryFilter(item.healthStatus)}
+                            data-testid={`tasks-health-summary-segment-${item.healthStatus}`}
+                        />
+                    ))}
+                </div>
+            </div>
+            {isHealthSummaryAllClear ? null : (
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {visibleHealthSummaryItems.map((item) => (
+                        <Button
+                            key={item.healthStatus}
+                            type="button"
+                            variant={item.active ? "secondary" : "outline"}
+                            size="sm"
+                            className="h-6 gap-1.5 rounded-full px-2 text-[11px]"
+                            onClick={() => toggleHealthSummaryFilter(item.healthStatus)}
+                            data-testid="tasks-health-summary-chip"
+                        >
+                            <span>{item.label}</span>
+                            <span>{item.count}</span>
+                        </Button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+    const renderKanbanCardBody = (kanbanTask: KanbanTaskItem, compact = false) => {
+        const description = kanbanTask.description?.trim();
+        const hasFooterMeta = Boolean(kanbanTask.assigneeId || kanbanTask.dueDate);
+
+        return (
+            <>
+                <div className={cn("font-medium leading-tight", compact ? "text-[15px]" : "text-sm")}>
+                    {kanbanTask.name}
+                </div>
+                {description ? (
+                    <div className="line-clamp-2 text-xs text-muted-foreground" title={description}>
+                        {description}
+                    </div>
+                ) : null}
+                {hasFooterMeta ? (
+                    <div className="flex items-center justify-between pt-2">
+                        {kanbanTask.assigneeId ? (
+                            <div
+                                className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary"
+                                title={getAssigneeLabel(kanbanTask.assigneeId)}
+                            >
+                                {getAssigneeInitial(kanbanTask.assigneeId)}
+                            </div>
+                        ) : (
+                            <span />
+                        )}
+
+                        {kanbanTask.dueDate ? (
+                            <div className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                {format(new Date(kanbanTask.dueDate), "MMM d")}
+                            </div>
+                        ) : null}
+                    </div>
+                ) : null}
+            </>
+        );
+    };
     // Prepare content for CardContent to keep JSX simple and avoid nested ternaries
     const content = (() => {
         if (!selectedProject) return (
@@ -2362,11 +2587,91 @@ export function TasksPage() {
         );
 
         if (view === "kanban") {
+            if (isCompactBoardViewport) {
+                return (
+                    <div className="space-y-4" data-testid="tasks-board-compact-layout">
+                        <Tabs
+                            value={activeKanbanColumn}
+                            onValueChange={setActiveKanbanColumn}
+                            data-testid="tasks-board-status-tabs"
+                        >
+                            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-transparent p-0 sm:grid-cols-4">
+                                {KANBAN_COLUMNS.map((column) => (
+                                    <TabsTrigger
+                                        key={column.id}
+                                        value={column.id}
+                                        className={cn(
+                                            "flex h-auto min-h-[72px] flex-col items-start gap-1 rounded-xl border px-3 py-2 text-left shadow-sm",
+                                            getKanbanColumnTabClass(column.id),
+                                        )}
+                                        data-testid={`tasks-board-tab-${column.id}`}
+                                    >
+                                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                                            {column.title}
+                                        </span>
+                                        <span className="text-lg font-semibold">
+                                            {kanbanCountByStatus.get(column.id) ?? 0}
+                                        </span>
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                            {KANBAN_COLUMNS.map((column) => (
+                                <TabsContent
+                                    key={column.id}
+                                    value={column.id}
+                                    className="mt-3"
+                                    data-testid={`tasks-board-panel-${column.id}`}
+                                >
+                                    <Card className="overflow-hidden border-border/70 shadow-sm">
+                                        <div
+                                            className={cn(
+                                                "flex items-center justify-between px-4 py-3",
+                                                getKanbanColumnHeaderClass(column.id),
+                                            )}
+                                            data-testid={`tasks-board-compact-header-${column.id}`}
+                                        >
+                                            <div>
+                                                <p className="text-base font-semibold">{column.title}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {kanbanCountByStatus.get(column.id) ?? 0} task{(kanbanCountByStatus.get(column.id) ?? 0) === 1 ? "" : "s"}
+                                                </p>
+                                            </div>
+                                            <Badge className={cn("shadow-none", getKanbanColumnCountClass(column.id))}>
+                                                {kanbanCountByStatus.get(column.id) ?? 0}
+                                            </Badge>
+                                        </div>
+                                        <CardContent className="space-y-3 p-3">
+                                            {kanbanTasks.filter((task) => task.column === column.id).length > 0 ? (
+                                                kanbanTasks.filter((task) => task.column === column.id).map((kanbanTask) => (
+                                                    <Card
+                                                        key={kanbanTask.id}
+                                                        className="gap-3 rounded-lg border border-border/70 p-3 shadow-sm"
+                                                        onDoubleClick={() => openTaskEditor(kanbanTask)}
+                                                        data-testid="tasks-board-compact-card"
+                                                    >
+                                                        {renderKanbanCardBody(kanbanTask, true)}
+                                                    </Card>
+                                                ))
+                                            ) : (
+                                                <div className="rounded-lg border border-dashed border-border/70 bg-muted/15 px-4 py-8 text-center text-sm text-muted-foreground">
+                                                    No tasks in {column.title.toLowerCase()}.
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </div>
+                );
+            }
+
             return (
-                <div className="h-[calc(100vh-280px)]">
+                <div className="h-[calc(100vh-280px)]" data-testid="tasks-board-desktop-layout">
                     <KanbanProvider<KanbanTaskItem>
                         columns={KANBAN_COLUMNS}
                         data={kanbanTasks}
+                        className="grid h-full min-h-0 grid-cols-4 gap-4 pb-4"
                         onColumnChange={(taskId, newColumnId) => {
                             inlineUpdateMutation.mutate({
                                 id: taskId,
@@ -2377,51 +2682,32 @@ export function TasksPage() {
 
                     >
                         {(column) => (
-                            <KanbanBoard id={column.id} key={column.id}>
-                                <KanbanHeader>
-                                    {column.title}
-                                    <Badge variant="secondary" className="ml-2">
+                            <KanbanBoard
+                                id={column.id}
+                                key={column.id}
+                                className="min-w-0 overflow-hidden border-border/70 bg-card/90 shadow-sm"
+                            >
+                                <KanbanHeader
+                                    className={cn("px-4 py-3", getKanbanColumnHeaderClass(column.id))}
+                                    data-testid={`tasks-board-column-header-${column.id}`}
+                                >
+                                    <span>{column.title}</span>
+                                    <Badge className={cn("ml-2 shadow-none", getKanbanColumnCountClass(column.id))}>
                                         {kanbanCountByStatus.get(column.id) ?? 0}
                                     </Badge>
                                 </KanbanHeader>
                                 <KanbanCards<KanbanTaskItem> id={column.id}>
-                                    {(task) => {
-                                        const kanbanTask = task;
-                                        return (
-                                            <KanbanCard<KanbanTaskItem>
-                                                key={kanbanTask.id}
-                                                item={kanbanTask}
-                                                onDoubleClick={(item) => {
-                                                    openTaskEditor(item);
-                                                }}
-                                            >
-
-                                                <div className="font-medium text-sm leading-tight">{kanbanTask.name}</div>
-                                                {kanbanTask.description && (
-                                                    <div className="text-xs text-muted-foreground line-clamp-2" title={kanbanTask.description}>{kanbanTask.description}</div>
-                                                )}
-
-                                                <div className="flex items-center justify-between pt-2">
-                                                    {kanbanTask.assigneeId && (
-                                                        <div
-                                                            className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold"
-                                                            title={getAssigneeLabel(kanbanTask.assigneeId)}
-                                                        >
-                                                            {getAssigneeInitial(kanbanTask.assigneeId)}
-                                                        </div>
-                                                    )}
-
-                                                    {kanbanTask.dueDate && (
-                                                        <div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                                            {format(new Date(kanbanTask.dueDate), "MMM d")}
-                                                        </div>
-                                                    )}
-
-
-                                                </div>
-                                            </KanbanCard>
-                                        );
-                                    }}
+                                    {(kanbanTask) => (
+                                        <KanbanCard<KanbanTaskItem>
+                                            key={kanbanTask.id}
+                                            item={kanbanTask}
+                                            onDoubleClick={(item) => {
+                                                openTaskEditor(item);
+                                            }}
+                                        >
+                                            {renderKanbanCardBody(kanbanTask)}
+                                        </KanbanCard>
+                                    )}
                                 </KanbanCards>
                             </KanbanBoard>
                         )}
@@ -2482,115 +2768,129 @@ export function TasksPage() {
                         const expectedValue = taskSnapshot.expected === null
                             ? null
                             : Math.max(0, Math.min(taskSnapshot.expected, 100));
+                        const isGeneratedLogTask = isGeneratedWorkLogTask(task);
                         return (
                             <Card
                                 key={task.id}
                                 className={cn(
                                     "border-border/70 border-l-4 shadow-none transition-colors hover:bg-muted/20",
                                     getTaskHealthBorderClass(taskSnapshot.health),
+                                    isGeneratedLogTask ? "bg-muted/[0.06]" : undefined,
                                 )}
                                 data-testid="tasks-mobile-card"
                             >
                                 <CardContent className="space-y-3 p-3">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex min-w-0 items-start gap-3">
-                                            <TaskSelectionCheckbox
-                                                checked={selectedTaskIdSet.has(task.id)}
-                                                onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
-                                                label={`Select task ${task.name}`}
-                                                testId="tasks-row-select-checkbox"
-                                            />
-                                            <div className="min-w-0 space-y-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <p className="text-sm font-semibold leading-tight line-clamp-1" title={task.name}>
-                                                        {task.name}
-                                                    </p>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={getTaskStatusTintClass(task.executionStatus ?? task.status)}
-                                                    >
-                                                        {getTaskStatusLabel(task.executionStatus ?? task.status)}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                    <span>{getAssigneeLabel(task.assigneeId)}</span>
-                                                    <span aria-hidden="true">•</span>
-                                                    <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px]">
-                                                        {task.id.slice(0, 8)}
-                                                    </span>
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex min-w-0 items-start gap-3">
+                                                <TaskSelectionCheckbox
+                                                    checked={selectedTaskIdSet.has(task.id)}
+                                                    onToggle={(nextChecked) => toggleTaskSelection(task.id, nextChecked)}
+                                                    label={`Select task ${task.name}`}
+                                                    testId="tasks-row-select-checkbox"
+                                                />
+                                                <div className="min-w-0 space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className={cn(
+                                                            "text-sm font-semibold leading-tight line-clamp-1",
+                                                            isGeneratedLogTask ? "text-muted-foreground" : undefined,
+                                                        )} title={task.name}>
+                                                            {task.name}
+                                                        </p>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                isGeneratedLogTask
+                                                                    ? "border-dashed text-muted-foreground"
+                                                                    : getTaskStatusTintClass(task.executionStatus ?? task.status),
+                                                            )}
+                                                        >
+                                                            {isGeneratedLogTask ? "Work log" : getTaskStatusLabel(task.executionStatus ?? task.status)}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                        <span>{getAssigneeLabel(task.assigneeId)}</span>
+                                                        <span aria-hidden="true">•</span>
+                                                        <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px]">
+                                                            {task.id.slice(0, 8)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <TaskActionMenu
+                                                task={task}
+                                                triggerTestId="tasks-mobile-actions-trigger"
+                                                editTestId="tasks-mobile-edit-button"
+                                                deleteTestId="tasks-mobile-delete-button"
+                                                onEdit={openTaskEditor}
+                                                onDelete={(nextTask) => {
+                                                    setTaskToDelete(nextTask);
+                                                    setConfirmOpen(true);
+                                                }}
+                                            />
                                         </div>
-                                        <TaskActionMenu
-                                            task={task}
-                                            triggerTestId="tasks-mobile-actions-trigger"
-                                            editTestId="tasks-mobile-edit-button"
-                                            deleteTestId="tasks-mobile-delete-button"
-                                            onEdit={openTaskEditor}
-                                            onDelete={(nextTask) => {
-                                                setTaskToDelete(nextTask);
-                                                setConfirmOpen(true);
-                                            }}
-                                        />
-                                    </div>
 
-                                    <div className="space-y-2" title={getTaskScurveTitle(task)}>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                {task.dueDate ? <span>{`Due ${format(new Date(task.dueDate), "MMM d")}`}</span> : null}
-                                                {task.dueDate && task.durationDays ? <span aria-hidden="true">•</span> : null}
-                                                {task.durationDays ? <span>{`${task.durationDays}d`}</span> : null}
-                                                {!task.dueDate && !task.durationDays ? (
-                                                    <span className="text-muted-foreground/45">—</span>
+                                        <div className="space-y-2" title={getTaskScurveTitle(task)}>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                    {task.dueDate ? <span>{`Due ${format(new Date(task.dueDate), "MMM d")}`}</span> : null}
+                                                    {task.dueDate && task.durationDays ? <span aria-hidden="true">•</span> : null}
+                                                    {task.durationDays ? <span>{`${task.durationDays}d`}</span> : null}
+                                                    {!task.dueDate && !task.durationDays ? (
+                                                        <span className="text-muted-foreground/45">—</span>
+                                                    ) : null}
+                                                </div>
+                                                <span className={cn("text-sm font-semibold", isGeneratedLogTask ? "text-muted-foreground" : "text-foreground")}>
+                                                    {formatTaskPercent(taskSnapshot.actual)}
+                                                </span>
+                                            </div>
+                                            <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                                                <div
+                                                    className={cn(
+                                                        "h-full rounded-full transition-[width]",
+                                                        getTaskHealthBarClass(taskSnapshot.health),
+                                                        isGeneratedLogTask ? "opacity-35" : undefined,
+                                                    )}
+                                                    style={{ width: `${actualValue}%` }}
+                                                />
+                                                {expectedValue !== null ? (
+                                                    <span
+                                                        className="absolute inset-y-[-2px] w-px rounded-full bg-background shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
+                                                        style={{ left: `calc(${expectedValue}% - 1px)` }}
+                                                        aria-hidden="true"
+                                                    />
                                                 ) : null}
                                             </div>
-                                            <span className="text-sm font-semibold text-foreground">
-                                                {formatTaskPercent(taskSnapshot.actual)}
-                                            </span>
-                                        </div>
-                                        <div className="relative h-2 overflow-hidden rounded-full bg-muted">
-                                            <div
-                                                className={cn("h-full rounded-full transition-[width]", getTaskHealthBarClass(taskSnapshot.health))}
-                                                style={{ width: `${actualValue}%` }}
-                                            />
-                                            {expectedValue !== null ? (
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <span
-                                                    className="absolute inset-y-[-2px] w-px rounded-full bg-background shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
-                                                    style={{ left: `calc(${expectedValue}% - 1px)` }}
-                                                    aria-hidden="true"
-                                                />
-                                            ) : null}
+                                                    className={cn(
+                                                        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset",
+                                                        getTaskHealthTintClass(taskSnapshot.health),
+                                                        isGeneratedLogTask ? "opacity-80" : undefined,
+                                                    )}
+                                                >
+                                                    {getTaskHealthLabel(taskSnapshot.health)}
+                                                </span>
+                                                {task.scheduleStatus && task.scheduleStatus !== "not_specified" ? (
+                                                    <Badge variant="outline" className={getScheduleStatusToneClass(task.scheduleStatus)}>
+                                                        {getScheduleStatusLabel(task.scheduleStatus)}
+                                                    </Badge>
+                                                ) : null}
+                                                <span className="text-xs text-muted-foreground">
+                                                    {taskSnapshot.variance === null
+                                                        ? "Awaiting plan"
+                                                        : `Variance ${formatTaskVariance(taskSnapshot.variance)}`}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span
-                                                className={cn(
-                                                    "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset",
-                                                    getTaskHealthTintClass(taskSnapshot.health),
-                                                )}
-                                            >
-                                                {getTaskHealthLabel(taskSnapshot.health)}
-                                            </span>
-                                            {task.scheduleStatus && task.scheduleStatus !== "not_specified" ? (
-                                                <Badge variant="outline" className={getScheduleStatusToneClass(task.scheduleStatus)}>
-                                                    {getScheduleStatusLabel(task.scheduleStatus)}
+
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                            {task.completedAtIsBackfilled ? (
+                                                <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
+                                                    Backfilled
                                                 </Badge>
                                             ) : null}
-                                            <span className="text-xs text-muted-foreground">
-                                                {taskSnapshot.variance === null
-                                                    ? "Awaiting plan"
-                                                    : `Variance ${formatTaskVariance(taskSnapshot.variance)}`}
-                                            </span>
+                                            <span>#{((page - 1) * pageSize) + index + 1}</span>
                                         </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                        {task.completedAtIsBackfilled ? (
-                                            <Badge variant="outline" title="Completion timestamp reconstructed by backend for legacy data">
-                                                Backfilled
-                                            </Badge>
-                                        ) : null}
-                                        <span>#{((page - 1) * pageSize) + index + 1}</span>
-                                    </div>
                                 </CardContent>
                             </Card>
                         );
@@ -2606,13 +2906,15 @@ export function TasksPage() {
                                         <TableHead
                                             key={header.id}
                                             className={cn(
-                                                "border-0 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                                                "h-9 border-0 px-3 pb-1 pt-1 align-bottom text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
                                                 getTaskListWidthClass(header.column.id, isLaptopDensity),
                                             )}
                                         >
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                            {header.isPlaceholder ? null : (
+                                                <span className={cn(getTaskListHeaderContentClass(header.column.id))}>
+                                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                                </span>
+                                            )}
                                         </TableHead>
                                     ))}
                                 </TableRow>
@@ -2626,25 +2928,33 @@ export function TasksPage() {
                                     </TableCell>
                                 </TableRow>
                             )}
-                            {listRows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    onDoubleClick={() => openTaskEditor(row.original)}
-                                    className="group border-0 bg-transparent transition-colors odd:bg-muted/[0.12] hover:bg-muted/24"
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className={cn(
-                                                "border-0 px-3 py-2 align-middle",
-                                                getTaskListWidthClass(cell.column.id, isLaptopDensity),
-                                            )}
-                                        >
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
+                            {listRows.map((row) => {
+                                const isGeneratedLogTask = isGeneratedWorkLogTask(row.original);
+                                return (
+                                    <TableRow
+                                        key={row.id}
+                                        onDoubleClick={() => openTaskEditor(row.original)}
+                                        className={cn(
+                                            "group border-0 bg-transparent transition-colors hover:bg-muted/24",
+                                            isGeneratedLogTask
+                                                ? "bg-muted/[0.06] hover:bg-muted/16"
+                                                : "odd:bg-muted/[0.12]",
+                                        )}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell
+                                                key={cell.id}
+                                                className={cn(
+                                                    "border-0 px-3 py-1.5 align-middle",
+                                                    getTaskListWidthClass(cell.column.id, isLaptopDensity),
+                                                )}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </div>
@@ -2677,24 +2987,20 @@ export function TasksPage() {
                 <CardContent className="space-y-2.5 p-3 sm:p-4">
                     <section className="space-y-3" data-testid="tasks-page-context-card">
                         <div
-                            className="flex flex-col gap-3 xl:flex-row xl:items-center"
+                            className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
                             data-testid="tasks-primary-toolbar"
                         >
-                            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center xl:w-auto xl:shrink-0">
+                            <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                                 <Combobox
                                     options={projects?.map((p) => ({ label: p.name, value: p.id })) ?? []}
                                     value={selectedProject}
                                     onChange={setSelectedProject}
-                                    className="w-full sm:w-64"
+                                    className="w-full sm:w-64 xl:w-72 xl:shrink-0"
                                     placeholder="Select project"
                                     searchPlaceholder="Search projects..."
+                                    triggerAriaLabel="Select project"
                                     triggerTestId="tasks-project-combobox"
                                 />
-                            </div>
-
-                            <div className="hidden h-8 w-px shrink-0 bg-border/70 xl:block" aria-hidden="true" />
-
-                            <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                                 <div className="relative min-w-0 flex-1">
                                     <Label htmlFor="tasks-search-input" className="sr-only">Search tasks</Label>
                                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -2708,7 +3014,9 @@ export function TasksPage() {
                                         data-testid="tasks-search-input"
                                     />
                                 </div>
-                                <div className="w-full sm:w-[190px]">
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-2 xl:flex-nowrap xl:justify-end" data-testid="tasks-team-summary">
+                                <div className="w-full sm:w-[190px] xl:w-[180px] xl:shrink-0">
                                     <Label className="sr-only">Status</Label>
                                     <Combobox
                                         value={statusFilter}
@@ -2723,92 +3031,84 @@ export function TasksPage() {
                                         placeholder="Status"
                                         searchPlaceholder="Search status..."
                                         className="w-full"
+                                        triggerAriaLabel="Filter tasks by workflow status"
                                         triggerTestId="tasks-filter-status-combobox"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="hidden h-8 w-px shrink-0 bg-border/70 xl:block" aria-hidden="true" />
-
-                            <div className="flex flex-wrap items-center justify-between gap-2 xl:ml-auto xl:justify-end" data-testid="tasks-team-summary">
                                 {selectedProject ? (
-                                    <>
-                                        <TooltipProvider delayDuration={120}>
-                                            <Link
-                                                to={`/projects/${selectedProject}/settings?tab=members`}
-                                                className="flex items-center"
-                                                aria-label={`Open members for ${currentProject?.name ?? "this project"}`}
-                                                title={`${teamMembersForSummary.length} member${teamMembersForSummary.length === 1 ? "" : "s"}`}
-                                            >
-                                                {visibleTeamMembers.length > 0 ? (
-                                                    visibleTeamMembers.map((member, index) => (
-                                                        <Tooltip key={member.id}>
-                                                            <TooltipTrigger asChild>
-                                                                <div
-                                                                    className={cn("relative", index > 0 ? "-ml-2" : "")}
-                                                                    aria-label={member.label}
-                                                                    data-testid="tasks-team-avatar"
+                                    <TooltipProvider delayDuration={120}>
+                                        <Link
+                                            to={`/projects/${selectedProject}/settings?tab=members`}
+                                            className="flex shrink-0 items-center"
+                                            aria-label={`Open members for ${currentProject?.name ?? "this project"}`}
+                                            title={`${teamMembersForSummary.length} member${teamMembersForSummary.length === 1 ? "" : "s"}${onlineTeamMemberCount > 0 ? ` • ${onlineTeamMemberCount} online` : ""}`}
+                                        >
+                                            {visibleTeamMembers.length > 0 ? (
+                                                visibleTeamMembers.map((member, index) => (
+                                                    <Tooltip key={member.id}>
+                                                        <TooltipTrigger asChild>
+                                                            <div
+                                                                className={cn("relative", index > 0 ? "-ml-2" : "")}
+                                                                aria-hidden="true"
+                                                                data-testid="tasks-team-avatar"
+                                                            >
+                                                                <Avatar
+                                                                    className={cn(
+                                                                        "transition-transform hover:-translate-y-0.5",
+                                                                        member.presence?.status === "online"
+                                                                            ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
+                                                                            : undefined,
+                                                                    )}
                                                                 >
-                                                                    <Avatar
-                                                                        className={cn(
-                                                                            "transition-transform hover:-translate-y-0.5",
-                                                                            member.presence?.status === "online"
-                                                                                ? "ring-2 ring-emerald-500/70 ring-offset-2 ring-offset-background"
-                                                                                : undefined,
-                                                                        )}
-                                                                    >
-                                                                        <AvatarFallback>{member.initials}</AvatarFallback>
-                                                                    </Avatar>
-                                                                    <span
-                                                                        className={cn(
-                                                                            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background",
-                                                                            member.presence?.status === "online"
-                                                                                ? "bg-emerald-500"
-                                                                                : "bg-muted-foreground/40",
-                                                                        )}
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <div className="space-y-1">
-                                                                    <p className="font-medium">{member.label}</p>
-                                                                    <p className="text-[11px] text-muted-foreground">{member.email}</p>
+                                                                    <AvatarFallback>{member.initials}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span
+                                                                    className={cn(
+                                                                        "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background",
+                                                                        member.presence?.status === "online"
+                                                                            ? "bg-emerald-500"
+                                                                            : "bg-muted-foreground/40",
+                                                                    )}
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium">{member.label}</p>
+                                                                <p className="text-[11px] text-muted-foreground">{member.email}</p>
+                                                                <p className="text-[11px] text-muted-foreground">
+                                                                    {getPresenceStatusLabel(member.presence)}
+                                                                </p>
+                                                                {member.presence?.route && getRealtimeRouteLabel(member.presence.route) ? (
                                                                     <p className="text-[11px] text-muted-foreground">
-                                                                        {getPresenceStatusLabel(member.presence)}
+                                                                        Working in {getRealtimeRouteLabel(member.presence.route)}
                                                                     </p>
-                                                                    {member.presence?.route && getRealtimeRouteLabel(member.presence.route) ? (
-                                                                        <p className="text-[11px] text-muted-foreground">
-                                                                            Working in {getRealtimeRouteLabel(member.presence.route)}
-                                                                        </p>
-                                                                    ) : null}
-                                                                </div>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    ))
-                                                ) : (
-                                                    <Avatar
-                                                        className="border-dashed bg-muted/40 text-muted-foreground"
-                                                        data-testid="tasks-team-avatar-empty"
-                                                    >
-                                                        <AvatarFallback className="bg-muted/40 text-muted-foreground">0</AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                                {hiddenTeamMemberCount > 0 ? (
-                                                    <div
-                                                        className="-ml-2 flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-background px-2 text-xs font-semibold text-foreground ring-2 ring-background"
-                                                        data-testid="tasks-team-avatar-overflow"
-                                                        title={`${hiddenTeamMemberCount} more team member${hiddenTeamMemberCount === 1 ? "" : "s"}`}
-                                                    >
-                                                        +{hiddenTeamMemberCount}
-                                                    </div>
-                                                ) : null}
-                                            </Link>
-                                        </TooltipProvider>
-                                        <Badge variant={onlineTeamMemberCount > 0 ? "success" : "outline"}>
-                                            {onlineTeamMemberCount} online
-                                        </Badge>
-                                    </>
+                                                                ) : null}
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                ))
+                                            ) : (
+                                                <Avatar
+                                                    className="border-dashed bg-muted/40 text-muted-foreground"
+                                                    data-testid="tasks-team-avatar-empty"
+                                                >
+                                                    <AvatarFallback className="bg-muted/40 text-muted-foreground">0</AvatarFallback>
+                                                </Avatar>
+                                            )}
+                                            {hiddenTeamMemberCount > 0 ? (
+                                                <div
+                                                    className="-ml-2 flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-background px-2 text-xs font-semibold text-foreground ring-2 ring-background"
+                                                    data-testid="tasks-team-avatar-overflow"
+                                                    title={`${hiddenTeamMemberCount} more team member${hiddenTeamMemberCount === 1 ? "" : "s"}`}
+                                                    aria-hidden="true"
+                                                >
+                                                    +{hiddenTeamMemberCount}
+                                                </div>
+                                            ) : null}
+                                        </Link>
+                                    </TooltipProvider>
                                 ) : (
                                     <span className="text-xs text-muted-foreground">Select a project to load the team.</span>
                                 )}
@@ -2952,6 +3252,7 @@ export function TasksPage() {
                                                     placeholder="Select a project"
                                                     searchPlaceholder="Search projects..."
                                                     className="w-full"
+                                                    triggerAriaLabel="Select project for new task"
                                                 />
                                                 <FormMessage />
                                             </FormItem>
@@ -3018,6 +3319,7 @@ export function TasksPage() {
                                                     placeholder="Select assignee"
                                                     searchPlaceholder="Search team member..."
                                                     className="w-full"
+                                                    triggerAriaLabel="Select assignee for new task"
                                                     triggerTestId="tasks-create-assignee-combobox"
                                                 />
                                                 <p className="text-xs text-muted-foreground">
@@ -3113,6 +3415,7 @@ export function TasksPage() {
                                                     placeholder="Duration"
                                                     searchPlaceholder="Search days..."
                                                     className="w-28"
+                                                    triggerAriaLabel="Select new task duration"
                                                 />
                                             )}
                                         </div>
@@ -3312,6 +3615,9 @@ export function TasksPage() {
                     </Dialog>
                             </div>
                         </div>
+                        <div className="rounded-lg border border-border/70 bg-muted/[0.18] px-3 py-2.5 sm:px-4">
+                            {tasksHealthSummaryStrip}
+                        </div>
                     </section>
                     <section className="border-t border-border/70 pt-2" data-testid="tasks-page-primary-actions-card">
                         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
@@ -3320,7 +3626,7 @@ export function TasksPage() {
                                     <Badge key={item} variant="outline">{item}</Badge>
                                 ))}
                                 {activeAdvancedFilterCount > 0 ? (
-                                    <Badge variant="outline">Advanced: {activeAdvancedFilterCount}</Badge>
+                                    <Badge variant="outline">Advanced {activeAdvancedFilterCount}</Badge>
                                 ) : null}
                                 {hiddenAdvancedFilterSummary.length > 0 ? (
                                     <div
@@ -3345,6 +3651,7 @@ export function TasksPage() {
                                             placeholder="Sort tasks"
                                             searchPlaceholder="Search sort order..."
                                             className="w-full lg:w-[220px]"
+                                            triggerAriaLabel="Sort tasks"
                                             triggerTestId="tasks-sort-combobox"
                                         />
                                     </div>
@@ -3370,7 +3677,7 @@ export function TasksPage() {
                                     </PopoverTrigger>
                                     <PopoverContent
                                         align="end"
-                                        className="w-[min(94vw,760px)] space-y-5 p-4"
+                                        className="max-h-[80vh] w-[min(94vw,760px)] space-y-5 overflow-y-auto p-4"
                                         data-testid="tasks-advanced-filters-panel"
                                     >
                                         <div className="space-y-3">
@@ -3440,6 +3747,7 @@ export function TasksPage() {
                                                         placeholder="Assignee"
                                                         searchPlaceholder="Search assignee..."
                                                         className="w-full"
+                                                        triggerAriaLabel="Filter tasks by assignee"
                                                         triggerTestId="tasks-filter-assignee-combobox"
                                                     />
                                                 </div>
@@ -3452,6 +3760,7 @@ export function TasksPage() {
                                                         placeholder="Schedule status"
                                                         searchPlaceholder="Search schedule status..."
                                                         className="w-full"
+                                                        triggerAriaLabel="Filter tasks by schedule status"
                                                         triggerTestId="tasks-filter-schedule-status-combobox"
                                                     />
                                                 </div>
@@ -3464,12 +3773,15 @@ export function TasksPage() {
                                                         placeholder="Health"
                                                         searchPlaceholder="Search health..."
                                                         className="w-full"
+                                                        triggerAriaLabel="Filter tasks by health"
                                                         triggerTestId="tasks-filter-health-status-combobox"
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Start from</Label>
+                                                    <Label htmlFor="tasks-filter-start-from-input" className="text-xs text-muted-foreground">Start from</Label>
                                                     <Input
+                                                        id="tasks-filter-start-from-input"
+                                                        name="tasksStartFrom"
                                                         type="date"
                                                         value={startFromFilter}
                                                         onChange={(event) => setStartFromFilter(event.target.value)}
@@ -3478,8 +3790,10 @@ export function TasksPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Start to</Label>
+                                                    <Label htmlFor="tasks-filter-start-to-input" className="text-xs text-muted-foreground">Start to</Label>
                                                     <Input
+                                                        id="tasks-filter-start-to-input"
+                                                        name="tasksStartTo"
                                                         type="date"
                                                         value={startToFilter}
                                                         onChange={(event) => setStartToFilter(event.target.value)}
@@ -3488,8 +3802,10 @@ export function TasksPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Due from</Label>
+                                                    <Label htmlFor="tasks-filter-due-from-input" className="text-xs text-muted-foreground">Due from</Label>
                                                     <Input
+                                                        id="tasks-filter-due-from-input"
+                                                        name="tasksDueFrom"
                                                         type="date"
                                                         value={dueFromFilter}
                                                         onChange={(event) => setDueFromFilter(event.target.value)}
@@ -3498,8 +3814,10 @@ export function TasksPage() {
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label className="text-xs text-muted-foreground">Due to</Label>
+                                                    <Label htmlFor="tasks-filter-due-to-input" className="text-xs text-muted-foreground">Due to</Label>
                                                     <Input
+                                                        id="tasks-filter-due-to-input"
+                                                        name="tasksDueTo"
                                                         type="date"
                                                         value={dueToFilter}
                                                         onChange={(event) => setDueToFilter(event.target.value)}
@@ -3523,156 +3841,68 @@ export function TasksPage() {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="space-y-1.5 border-t border-border/70 pt-1.5" data-testid="tasks-secondary-insights-card">
-                        <div className="flex flex-col gap-1.5 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="min-w-0 flex-1 space-y-1.5" data-testid="tasks-health-summary-strip">
-                                <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                                        <Badge
-                                            variant={healthSummaryExceptionCount > 0 ? "warning" : "outline"}
-                                            className={cn(
-                                                "shrink-0 rounded-full",
-                                                isHealthSummaryAllClear
-                                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                                    : undefined,
-                                            )}
-                                        >
-                                            {isHealthSummaryAllClear ? "All clear" : `${healthSummaryExceptionCount} attention`}
-                                        </Badge>
-                                        <div className="flex h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-muted">
-                                            {healthSummaryLegendItems.map((item) => (
-                                                    <div
-                                                        key={item.healthStatus}
-                                                        className={cn(getTaskHealthBarClass(item.healthStatus))}
-                                                        style={{
-                                                            width: `${healthSummaryTotalCount === 0 ? 0 : (item.count / healthSummaryTotalCount) * 100}%`,
-                                                        }}
-                                                        title={`${item.label}: ${item.count}`}
-                                                    />
-                                                ))}
-                                        </div>
-                                        {healthSummaryLegendItems.length > 0 ? (
-                                            <TooltipProvider delayDuration={120}>
-                                                <div className="hidden shrink-0 items-center gap-1 sm:flex" data-testid="tasks-health-summary-legend">
-                                                    {healthSummaryLegendItems.map((item) => (
-                                                        <Tooltip key={item.healthStatus}>
-                                                            <TooltipTrigger asChild>
-                                                                <span
-                                                                    className={cn("h-2 w-2 rounded-full", getTaskHealthBarClass(item.healthStatus))}
-                                                                    aria-label={`${item.label}: ${item.count}`}
-                                                                />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                {item.label}: {item.count}
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    ))}
-                                                </div>
-                                            </TooltipProvider>
-                                        ) : null}
-                                        <span className="hidden text-[11px] text-muted-foreground xl:inline" data-testid="tasks-health-summary-scope">
-                                            {healthSummaryScopeLabel}
-                                        </span>
-                                    </div>
-                                    {isHealthSummaryAllClear ? null : (
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            {visibleHealthSummaryItems.map((item) => (
-                                                <Button
-                                                    key={item.healthStatus}
-                                                    type="button"
-                                                    variant={item.active ? "secondary" : "outline"}
-                                                    size="sm"
-                                                    className="h-6 gap-1.5 rounded-full px-2 text-[11px]"
-                                                    onClick={() => {
-                                                        setHealthStatusFilter((current) => (
-                                                            current === item.healthStatus ? "all" : item.healthStatus
-                                                        ));
-                                                    }}
-                                                    data-testid="tasks-health-summary-chip"
-                                                >
-                                                    <span>{item.label}</span>
-                                                    <span>{item.count}</span>
-                                                </Button>
-                                            ))}
-                                            {healthStatusFilter !== "all" ? (
+                                <div className="flex items-center justify-end" data-testid="tasks-time-to-task-summary">
+                                    <Popover open={showTimeToTaskInsights} onOpenChange={setShowTimeToTaskInsights}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant={showTimeToTaskInsights ? "secondary" : "ghost"}
+                                                size="sm"
+                                                className="h-8 gap-2 px-3"
+                                                data-testid="tasks-time-to-task-toggle-button"
+                                            >
+                                                <span className="font-medium text-foreground">Telemetry</span>
+                                                <span className="text-muted-foreground">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</span>
+                                                <span className="hidden text-muted-foreground sm:inline">Last {formatDurationMs(timeToTaskSummary.lastMs)}</span>
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent align="end" className="w-[min(92vw,320px)] space-y-3 p-3">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-semibold text-foreground">Time to task</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Open when you want telemetry detail, then get back to the task list.
+                                                </p>
+                                            </div>
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                <Badge variant="outline" className="justify-start">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
+                                                <Badge variant="outline" className="justify-start">Last {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
+                                                <Badge variant="outline" className="justify-start">
+                                                    Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
+                                                </Badge>
+                                                <Badge variant="outline" className="justify-start">Samples {timeToTaskSummary.intentSampleCount}</Badge>
+                                                <Badge variant="outline" className="justify-start">Passive exits {timeToTaskSummary.passiveExitCount}</Badge>
+                                            </div>
+                                            <div className="flex justify-end">
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-6 rounded-full px-2 text-[11px]"
-                                                    onClick={() => setHealthStatusFilter("all")}
-                                                    data-testid="tasks-health-summary-clear-button"
+                                                    className="h-8 px-2"
+                                                    onClick={() => {
+                                                        clearTimeToTaskRecords(currentUserId);
+                                                        if (timeToTaskSessionIdRef.current) {
+                                                            abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
+                                                        }
+                                                        beginTimeToTaskSession();
+                                                        refreshTimeToTaskSummary();
+                                                    }}
+                                                    data-testid="tasks-time-to-task-reset-button"
+                                                    disabled={timeToTaskSummary.trackedSessionCount === 0}
                                                 >
-                                                    Clear
+                                                    Reset
                                                 </Button>
-                                            ) : null}
-                                        </div>
-                                    )}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <span className="sr-only">
+                                        Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%. Passive exits {timeToTaskSummary.passiveExitCount}.
+                                    </span>
                                 </div>
                             </div>
-
-                            <div className="flex items-center justify-end" data-testid="tasks-time-to-task-summary">
-                                <Popover open={showTimeToTaskInsights} onOpenChange={setShowTimeToTaskInsights}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            variant={showTimeToTaskInsights ? "secondary" : "ghost"}
-                                            size="sm"
-                                            className="h-8 gap-2 px-3"
-                                            data-testid="tasks-time-to-task-toggle-button"
-                                        >
-                                            <span className="font-medium text-foreground">Telemetry</span>
-                                            <span className="text-muted-foreground">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</span>
-                                            <span className="hidden text-muted-foreground sm:inline">Last {formatDurationMs(timeToTaskSummary.lastMs)}</span>
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent align="end" className="w-[min(92vw,320px)] space-y-3 p-3">
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-foreground">Time to task</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Open when you want telemetry detail, then get back to the task list.
-                                            </p>
-                                        </div>
-                                        <div className="grid gap-2 sm:grid-cols-2">
-                                            <Badge variant="outline" className="justify-start">P50 {formatDurationMs(timeToTaskSummary.p50Ms)}</Badge>
-                                            <Badge variant="outline" className="justify-start">Last {formatDurationMs(timeToTaskSummary.lastMs)}</Badge>
-                                            <Badge variant="outline" className="justify-start">
-                                                Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%
-                                            </Badge>
-                                            <Badge variant="outline" className="justify-start">Samples {timeToTaskSummary.intentSampleCount}</Badge>
-                                            <Badge variant="outline" className="justify-start">Passive exits {timeToTaskSummary.passiveExitCount}</Badge>
-                                        </div>
-                                        <div className="flex justify-end">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 px-2"
-                                                onClick={() => {
-                                                    clearTimeToTaskRecords(currentUserId);
-                                                    if (timeToTaskSessionIdRef.current) {
-                                                        abandonTimeToTaskSession(timeToTaskSessionIdRef.current, { reason: "metrics-reset" });
-                                                    }
-                                                    beginTimeToTaskSession();
-                                                    refreshTimeToTaskSummary();
-                                                }}
-                                                data-testid="tasks-time-to-task-reset-button"
-                                                disabled={timeToTaskSummary.trackedSessionCount === 0}
-                                            >
-                                                Reset
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                <span className="sr-only">
-                                    Intent completion {Math.round(timeToTaskSummary.intentCompletionRate * 100)}%. Passive exits {timeToTaskSummary.passiveExitCount}.
-                                </span>
-                            </div>
                         </div>
+                    </section>
+
+                    <section className="border-t border-border/70 pt-1.5 lg:hidden" data-testid="tasks-secondary-insights-card">
                         <div className="lg:hidden">
                             {mobileListQuickControls}
                         </div>
@@ -3681,18 +3911,24 @@ export function TasksPage() {
             </Card>
 
             <Card className="border-border/70 shadow-sm">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2 pt-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <CardTitle>{currentProject?.name ?? "Execution grid"}</CardTitle>
-                        <Badge variant="outline">{currentViewLabel} view</Badge>
+                        <CardTitle>Task list</CardTitle>
+                        <Badge variant="outline" className="rounded-full px-2 py-0 text-[11px]">
+                            {currentViewLabel} view
+                        </Badge>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4 pt-0">
+                <CardContent className="space-y-3 pt-0">
                     {view === "list" && selectedTaskIds.length > 0 ? (
-                        <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
-                            <div className="text-sm text-foreground">
-                                {selectedTaskIds.length} task{selectedTaskIds.length === 1 ? "" : "s"} selected
-                                {selectionScopeLabel}
+                        <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/25 p-2.5 md:flex-row md:items-center md:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
+                                <Badge variant="secondary" className="rounded-full px-2 py-0">
+                                    {selectedTaskIds.length} selected
+                                </Badge>
+                                <span className="text-muted-foreground">
+                                    {selectionScopeLabel ? selectionScopeLabel.replace(/^\s*/, "") : "Ready for bulk actions"}
+                                </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                                 <Popover open={isSelectionActionsOpen} onOpenChange={setIsSelectionActionsOpen}>
@@ -3700,24 +3936,32 @@ export function TasksPage() {
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            className="h-10"
+                                            className="h-9"
                                             data-testid="tasks-selection-actions-toggle"
                                         >
                                             <ListTodo className="mr-2 h-4 w-4" />
-                                            Selection actions
+                                            Bulk edit
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent
                                         align="end"
-                                        className="w-[min(95vw,860px)] space-y-4 p-4"
+                                        className="max-h-[80vh] w-[min(95vw,860px)] space-y-3 overflow-y-auto p-4"
                                         data-testid="tasks-selection-actions-panel"
                                     >
-                                        <p className="text-xs text-muted-foreground">
-                                            Apply bulk updates to selected tasks in one place.
-                                        </p>
-                                        <div className="grid gap-4 xl:grid-cols-3">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">Status</Label>
+                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-2">
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-semibold text-foreground">Bulk edit</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Update the current selection in one pass.
+                                                </p>
+                                            </div>
+                                            <Badge variant="outline" className="rounded-full px-2 py-0">
+                                                {selectedTaskIds.length} task{selectedTaskIds.length === 1 ? "" : "s"}
+                                            </Badge>
+                                        </div>
+                                        <div className="grid gap-3 xl:grid-cols-3">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</Label>
                                                 <Combobox
                                                     value={bulkStatus}
                                                     onChange={setBulkStatus}
@@ -3730,11 +3974,12 @@ export function TasksPage() {
                                                     placeholder="Bulk status"
                                                     searchPlaceholder="Search status..."
                                                     className="w-full"
+                                                    triggerAriaLabel="Set bulk status"
                                                     triggerTestId="tasks-bulk-status-combobox"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">Assignee</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Assignee</Label>
                                                 <Combobox
                                                     value={bulkAssignee}
                                                     onChange={setBulkAssignee}
@@ -3742,14 +3987,22 @@ export function TasksPage() {
                                                     placeholder="Bulk assignee"
                                                     searchPlaceholder="Search assignee..."
                                                     className="w-full"
+                                                    triggerAriaLabel="Set bulk assignee"
                                                     triggerTestId="tasks-bulk-assignee-combobox"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">Progress</Label>
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Progress</Label>
+                                                    {selectedWeightedTaskCount > 0 ? (
+                                                        <Badge variant="outline" className="rounded-full px-2 py-0 text-[10px] text-muted-foreground">
+                                                            Skip weighted {selectedWeightedTaskCount}
+                                                        </Badge>
+                                                    ) : null}
+                                                </div>
                                                 {selectedWeightedTaskCount > 0 ? (
                                                     <p className="text-[11px] text-muted-foreground">
-                                                        Weighted tasks use component-based progress. Direct progress changes will skip {selectedWeightedTaskCount} selected task{selectedWeightedTaskCount === 1 ? "" : "s"}.
+                                                        Component-based tasks keep their own progress.
                                                     </p>
                                                 ) : null}
                                                 <div className="flex items-center gap-2">
@@ -3798,12 +4051,13 @@ export function TasksPage() {
                                         </div>
                                         <div className="flex flex-col gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between">
                                             <p className="text-xs text-muted-foreground">
-                                                Select one or more fields, then apply once for all selected tasks.
+                                                Choose the fields you want to change, then apply once.
                                             </p>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
+                                                    className="h-9"
                                                     onClick={resetBulkDraft}
                                                     disabled={!hasBulkDraftChanges || isBulkBusy}
                                                     data-testid="tasks-bulk-reset-fields-button"
@@ -3812,6 +4066,7 @@ export function TasksPage() {
                                                 </Button>
                                                 <Button
                                                     type="button"
+                                                    className="h-9"
                                                     onClick={() => {
                                                         void handleBulkApplyChanges();
                                                     }}
@@ -3822,10 +4077,11 @@ export function TasksPage() {
                                                 </Button>
                                             </div>
                                         </div>
-                                        <div className="flex justify-end">
+                                        <div className="flex justify-end border-t border-border/70 pt-3">
                                             <Button
                                                 type="button"
                                                 variant="destructive-outline"
+                                                className="h-9"
                                                 onClick={() => {
                                                     requestBulkDelete();
                                                 }}
@@ -3840,6 +4096,7 @@ export function TasksPage() {
                                 <Button
                                     type="button"
                                     variant="ghost"
+                                    className="h-9"
                                     onClick={() => {
                                         setSelectedTaskIds([]);
                                         resetBulkDraft();
@@ -3979,6 +4236,7 @@ export function TasksPage() {
                                             placeholder="Select assignee"
                                             searchPlaceholder="Search team member..."
                                             className="w-full"
+                                            triggerAriaLabel="Select assignee for this task"
                                             triggerTestId="tasks-edit-assignee-combobox"
                                         />
                                         <p className="text-xs text-muted-foreground">
@@ -4074,6 +4332,7 @@ export function TasksPage() {
                                             placeholder="Duration"
                                             searchPlaceholder="Search days..."
                                             className="w-full sm:w-36"
+                                            triggerAriaLabel="Select task duration"
                                         />
                                     )}
                                 </div>
@@ -4354,6 +4613,7 @@ export function TasksPage() {
                                             placeholder="Select role"
                                             searchPlaceholder="Search role..."
                                             className="w-full"
+                                            triggerAriaLabel="Select work log role"
                                             triggerTestId="tasks-work-log-role-combobox"
                                         />
                                     </div>

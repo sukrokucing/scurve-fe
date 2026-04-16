@@ -106,6 +106,8 @@ App default URL: `http://localhost:3001`
 - `npm run test:e2e:persona`: run persona workflow ergonomics checks
 - `npm run test:e2e:roles-live`: run a live-auth role details dialog smoke on chromium
 - `npm run test:e2e:user-access-live`: run a live-auth user access assign/revoke smoke on chromium
+- `npm run test:e2e:tasks-bulk-live`: run a live-auth Tasks bulk edit + bulk delete smoke on chromium
+- `npm run test:e2e:access-flow-visual`: run the mocked laptop visual regression for Access Flow on chromium
 - `npm run test:e2e:critical`: smoke + menu shell + runtime perf probes (chromium)
 - `npm run qa:be-update:20260311`: run FE QA checklist for BE contract update (March 11, 2026)
 - `npm run audit:ui && npm run audit:perf:strict`: full audit gate
@@ -115,7 +117,7 @@ App default URL: `http://localhost:3001`
 
 - `npm run dev`, `npm run preview`, `npm run build`, `npm run lint`, `npm run typecheck`
 - `npm run seed:demo-personas`, `npm run seed:dashboard-demo`
-- `npm run test:e2e`, `npm run test:e2e:menu`, `npm run test:e2e:persona`, `npm run test:e2e:roles-live`, `npm run test:e2e:user-access-live`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
+- `npm run test:e2e`, `npm run test:e2e:menu`, `npm run test:e2e:persona`, `npm run test:e2e:roles-live`, `npm run test:e2e:user-access-live`, `npm run test:e2e:tasks-bulk-live`, `npm run test:e2e:access-flow-visual`, `npm run test:e2e:flows`, `npm run test:e2e:smoke`, `npm run test:e2e:perf`
 - `npm run generate:e2e:scenario`, `npm run test:e2e:scenario`
 - `npm run sync:openapi`, `npm run generate:types`, `npm run generate:types:remote`, `npm run generate:zod`, `npm run generate:schemas`, `npm run generate:schemas:remote`
 - `npm run generate:theme`, `npm run check:theme`
@@ -155,9 +157,11 @@ Some higher-signal suites depend on an authenticated browser session:
 - `npm run test:e2e:project-settings`
 - `npm run test:e2e:project-dialogs-live`
 - `npm run test:e2e:project-settings-visual`
+- `npm run test:e2e:access-flow-visual`
 - `npm run test:e2e:projects-mobile`
 - `npm run test:e2e:roles-live`
 - `npm run test:e2e:user-access-live`
+- `npm run test:e2e:tasks-bulk-live`
 - `npm run test:e2e:tasks-health`
 
 Recommended env setup:

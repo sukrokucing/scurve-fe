@@ -81,6 +81,7 @@ export function DataTablePagination<TData>(props: DataTablePaginationProps<TData
                         className="h-11 min-h-11 w-[112px]"
                         placeholder={`${pageSize}`}
                         options={sizeOptions}
+                        triggerAriaLabel="Rows per page"
                         triggerTestId={props.testIdPrefix ? `${props.testIdPrefix}-page-size-combobox` : undefined}
                     />
                 </div>

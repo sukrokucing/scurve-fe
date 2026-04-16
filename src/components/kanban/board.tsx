@@ -89,7 +89,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
         <div
             ref={setNodeRef}
             className={cn(
-                "flex h-full w-[300px] min-w-[300px] flex-col rounded-xl border bg-secondary/50 backdrop-blur-sm transition-colors",
+                "flex h-full min-h-0 min-w-0 flex-col rounded-xl border bg-secondary/50 backdrop-blur-sm transition-colors",
                 isOver ? "bg-secondary/80" : "",
                 className
             )}
@@ -409,7 +409,7 @@ export const KanbanProvider = <
                 onDragOver={handleDragOver}
                 {...props}
             >
-                <div className={cn("flex h-full gap-4 overflow-x-auto pb-4", className)}>
+                <div className={cn("flex h-full min-h-0 gap-4 pb-4", className)}>
                     {columns.map((column) => children(column))}
                 </div>
                 {typeof window !== "undefined" &&

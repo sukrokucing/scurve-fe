@@ -1,5 +1,5 @@
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3MzA3MWFjMy1hYmVkLTQ3MmYtODRjZC00YTY3ODNiOTRlNzYiLCJleHAiOjE3NzQ1MDU0NDYsImlhdCI6MTc3NDQxOTA0Nn0.xEjbsMjcoVOvephSgxBlNlG67EXACiRTK1D628OLyJM",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3MzA3MWFjMy1hYmVkLTQ3MmYtODRjZC00YTY3ODNiOTRlNzYiLCJleHAiOjE3NzUwMTg2ODEsImlhdCI6MTc3NDkzMjI4MX0.yAObnRvR3F-6DMyY3weOP15ZVv0YKnCo561J0OfRI4s",
   "user": {
     "id": "73071ac3-abed-472f-84cd-4a6783b94e76",
     "name": "Demo System Analyst",
@@ -47,5 +47,5 @@
       "role_name": "system_analyst"
     }
   ],
-  "createdAt": "2026-03-25T06:10:46.635Z"
+  "createdAt": "2026-03-31T04:44:42.054Z"
 }

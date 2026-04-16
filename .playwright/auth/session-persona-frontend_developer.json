@@ -1,5 +1,5 @@
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjOWQ0ZGRmZC04OGZmLTQ1YTktYTQwMi02ODFlY2ViYjA1MjciLCJleHAiOjE3NzQ1MDU0NDYsImlhdCI6MTc3NDQxOTA0Nn0.Miccbp46h-HTBeiq_ian6Sdp5sqm0_e1N9BQouv-0Go",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjOWQ0ZGRmZC04OGZmLTQ1YTktYTQwMi02ODFlY2ViYjA1MjciLCJleHAiOjE3NzUwMTg2ODMsImlhdCI6MTc3NDkzMjI4M30.LklgYikbbu2KVSFPKsqhft8ikUOt-IagZCDw1cGoeOc",
   "user": {
     "id": "c9d4ddfd-88ff-45a9-a402-681ecebb0527",
     "name": "Demo Frontend Developer",
@@ -37,5 +37,5 @@
       "role_name": "frontend_developer"
     }
   ],
-  "createdAt": "2026-03-25T06:10:46.982Z"
+  "createdAt": "2026-03-31T04:44:43.212Z"
 }

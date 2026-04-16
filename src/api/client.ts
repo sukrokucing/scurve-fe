@@ -136,7 +136,9 @@ api.interceptors.response.use(
         }
 
         if (isAxiosError(error)) {
-            if (error.response?.status === 429) {
+            const status = error.response?.status;
+
+            if (status === 429) {
                 // Rate Limited!
                 const wasRateLimited = useNetworkStore.getState().isRateLimited;
                 if (!wasRateLimited) {
@@ -147,6 +149,21 @@ api.interceptors.response.use(
                     });
                 }
                 useNetworkStore.getState().setRateLimited(true);
+            }
+
+            if (status === 403) {
+                const message = error.response?.data?.message ?? error.response?.data?.error;
+                toast.error("Permission denied", {
+                    description: typeof message === "string" ? message : "You do not have access to this resource. Contact your administrator if this is unexpected.",
+                    duration: 6000,
+                });
+            }
+
+            if (status === 413) {
+                toast.error("Request too large", {
+                    description: "The request body exceeds the 1 MB server limit. Try reducing the payload size.",
+                    duration: 6000,
+                });
             }
 
             // Connection/network-level errors (no response) — show a friendly toast
@@ -175,7 +192,7 @@ api.interceptors.response.use(
                 }
             }
 
-            if (error.response?.status === 401) {
+            if (status === 401) {
                 useAuthStore.getState().reset();
             }
         }

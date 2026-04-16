@@ -213,7 +213,14 @@ async function sendWithFetch(batch: TelemetryEvent[]) {
     });
 
     if (!response.ok) {
-        throw new Error(`telemetry_http_${response.status}`);
+        let detail = "";
+        try {
+            const body = await response.json() as { error?: string; message?: string };
+            detail = body.message ?? body.error ?? "";
+        } catch {
+            // non-JSON body
+        }
+        throw new Error(`telemetry_http_${response.status}${detail ? `: ${detail}` : ""}`);
     }
 }
 

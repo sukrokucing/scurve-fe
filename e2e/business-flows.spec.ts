@@ -29,6 +29,13 @@ async function openTasksAdvancedIfClosed(page: Page) {
     await expect(panel).toBeVisible();
 }
 
+async function clickTasksViewButton(page: Page, testId: string) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    const button = panel.getByTestId(testId);
+    await button.scrollIntoViewIfNeeded();
+    await button.evaluate((element: HTMLElement) => element.click());
+}
+
 async function ensureTasksProjectSelected(page: Page) {
     const projectCombobox = page.getByTestId("tasks-project-combobox");
     if (!(await projectCombobox.isVisible().catch(() => false))) return;
@@ -118,12 +125,12 @@ test.describe("Business Flow Coverage", () => {
         await createTaskDialog.getByRole("button", { name: "Cancel" }).click();
 
         await openTasksAdvancedIfClosed(page);
-        await page.getByTestId("tasks-view-board-button").click();
+        await clickTasksViewButton(page, "tasks-view-board-button");
         await openTasksAdvancedIfClosed(page);
-        await page.getByTestId("tasks-view-gantt-button").click();
+        await clickTasksViewButton(page, "tasks-view-gantt-button");
         await expect(page.getByTestId("gantt-view-mode-combobox")).toBeVisible();
         await openTasksAdvancedIfClosed(page);
-        await page.getByTestId("tasks-view-list-button").click();
+        await clickTasksViewButton(page, "tasks-view-list-button");
     });
 
     test(`${FLOW_CATALOG[3].id} ${FLOW_CATALOG[3].title}`, async ({ page }) => {

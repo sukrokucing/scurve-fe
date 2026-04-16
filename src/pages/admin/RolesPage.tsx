@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Plus, Trash2, Loader2, Shield, Settings, Check, KeyRound, Layers3 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -54,22 +53,9 @@ import {
 } from "@/api/queries/rbac";
 
 import type { Permission, Role } from "@/api/rbac";
+import { roleSchema, assignPermSchema, type RoleFormValues, type AssignPermValues } from "@/schemas/roles";
 
 const roleColumnHelper = createColumnHelper<Role>();
-
-// --- Schemas ---
-const roleSchema = z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    description: z.string().optional(),
-});
-
-type RoleFormValues = z.infer<typeof roleSchema>;
-
-const assignPermSchema = z.object({
-    permissionId: z.string().min(1, "Select a permission"),
-});
-
-type AssignPermValues = z.infer<typeof assignPermSchema>;
 
 // --- Components ---
 

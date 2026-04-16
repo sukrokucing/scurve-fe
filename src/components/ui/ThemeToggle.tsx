@@ -56,7 +56,7 @@ export function ThemeToggle() {
         <Button
             variant="outline"
             onClick={toggleTheme}
-            aria-label="Toggle theme"
+            aria-label={`Toggle theme, current ${THEME_LABELS[theme]}`}
             className={THEME_TOGGLE_CLASS}
         >
             {THEME_LABELS[theme]}

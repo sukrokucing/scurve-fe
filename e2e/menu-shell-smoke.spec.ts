@@ -92,7 +92,7 @@ test.describe("menu shell smoke", () => {
         const tasksRoute = projects.length > 0 ? `/tasks?project=${projects[0].id}` : "/tasks";
 
         await visitMenus(page, [
-            { route: "/", heading: "Dashboard", readyTestId: "dashboard-kpi-total-projects-value" },
+            { route: "/", heading: "Dashboard", readyTestId: "dashboard-kpi-total-projects" },
             { route: "/projects", heading: "Projects", readyTestId: "projects-page-table-card" },
             { route: tasksRoute, heading: "Tasks", readyTestId: "tasks-page-context-card" },
             { route: "/settings/users", heading: "User Management", readyTestId: "users-page-table-card" },
@@ -107,6 +107,8 @@ test.describe("menu shell smoke", () => {
         await expect(page.getByTestId("user-access-page-identity-card")).toBeVisible();
         await expect(page.getByTestId("user-access-page-roles-section")).toBeVisible();
         await expect(page.getByTestId("user-access-page-permissions-section")).toBeVisible();
+        await expect(page.getByTestId("user-access-permission-domain-filter-combobox")).toBeVisible();
+        await expect(page.getByTestId("user-access-permissions-summary")).toBeVisible();
 
         await page.goto("/settings/policy", { waitUntil: "domcontentloaded" });
         await page.getByTestId("policy-audit-log-button").click();
@@ -133,7 +135,7 @@ test.describe("menu shell smoke", () => {
             const tasksRoute = projects.length > 0 ? `/tasks?project=${projects[0].id}` : "/tasks";
 
             const menus: MenuExpectation[] = [
-                { route: "/", heading: "Dashboard", readyTestId: "dashboard-kpi-total-projects-value" },
+                { route: "/", heading: "Dashboard", readyTestId: "dashboard-kpi-total-projects" },
                 { route: "/projects", heading: "Projects", readyTestId: "projects-page-table-card" },
                 { route: tasksRoute, heading: "Tasks", readyTestId: "tasks-mobile-quick-controls" },
                 { route: "/settings/users", heading: "User Management", readyTestId: "users-page-table-card" },

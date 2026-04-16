@@ -57,6 +57,13 @@ async function openAdvancedPanel(page: Page) {
     await expect(panel).toBeVisible();
 }
 
+async function clickTasksViewButton(page: Page, testId: string) {
+    const panel = page.getByTestId("tasks-advanced-filters-panel");
+    const button = panel.getByTestId(testId);
+    await button.scrollIntoViewIfNeeded();
+    await button.evaluate((element: HTMLElement) => element.click());
+}
+
 async function createTaskViaDialog(page: Page, title: string): Promise<void> {
     await page.getByTestId("tasks-new-button").click();
     const createDialog = page.getByRole("dialog", { name: "Create task" });
@@ -120,15 +127,15 @@ test.describe("persona workflow ergonomics", () => {
             await expect(page.locator("table").getByText(title)).toBeVisible({ timeout: 15_000 });
 
             await openAdvancedPanel(page);
-            await page.getByTestId("tasks-view-board-button").click();
+            await clickTasksViewButton(page, "tasks-view-board-button");
             await expect(page.getByText("To Do").first()).toBeVisible();
 
             await openAdvancedPanel(page);
-            await page.getByTestId("tasks-view-gantt-button").click();
+            await clickTasksViewButton(page, "tasks-view-gantt-button");
             await expect(page.getByTestId("gantt-view-mode-combobox")).toBeVisible();
 
             await openAdvancedPanel(page);
-            await page.getByTestId("tasks-view-list-button").click();
+            await clickTasksViewButton(page, "tasks-view-list-button");
             await expect(page.getByTestId("tasks-search-input")).toBeVisible();
 
             await page.goto("/");
